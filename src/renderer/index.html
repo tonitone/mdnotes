@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- The Content Security Policy is injected at build time (vite-plugins/csp.ts). -->
+    <title>mdnotes</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#editor-host">Zum Editor springen</a>
+
+    <ui5-shellbar id="shell" primary-title="mdnotes" data-sap-ui-fastnavgroup="true">
+      <ui5-shellbar-item id="themeItem" icon="palette" text="Darstellung"></ui5-shellbar-item>
+      <ui5-shellbar-item id="workspaceItem" icon="open-folder" text="Workspace wählen"></ui5-shellbar-item>
+    </ui5-shellbar>
+
+    <ui5-menu id="themeMenu" header-text="Darstellung"></ui5-menu>
+
+    <ui5-message-strip id="browserModeStrip" design="Information" hide-close-button hidden>
+      Browser-Modus: Die Notizen liegen nur im Speicher und gehen beim Neuladen verloren.
+    </ui5-message-strip>
+
+    <ui5-flexible-column-layout id="fcl" layout="ThreeColumnsEndExpanded">
+      <!-- Spalte 1: Bibliothek -->
+      <section slot="startColumn" class="column" data-sap-ui-fastnavgroup="true">
+        <header class="column-header">
+          <ui5-title level="H2" size="H5">Bibliothek</ui5-title>
+        </header>
+        <ui5-list id="libraryList" accessible-name="Bibliothek" selection-mode="Single">
+          <ui5-li id="allNotesItem" icon="documents" selected>Alle Notizen</ui5-li>
+        </ui5-list>
+        <p class="workspace-path" id="workspacePath"></p>
+      </section>
+
+      <!-- Spalte 2: Notizliste -->
+      <section slot="midColumn" class="column" data-sap-ui-fastnavgroup="true">
+        <header class="column-header">
+          <ui5-title level="H2" size="H5" id="notesTitle">Notizen</ui5-title>
+          <ui5-button id="newNoteButton" design="Emphasized" icon="add" disabled>Neue Notiz</ui5-button>
+        </header>
+        <div class="search-row">
+          <ui5-input id="searchInput" type="Search" placeholder="Suchen" accessible-name="Notizen durchsuchen" show-clear-icon disabled>
+            <ui5-icon slot="icon" name="search"></ui5-icon>
+          </ui5-input>
+        </div>
+        <ui5-list id="notesList" accessible-name="Notizen" selection-mode="Single" no-data-text="Noch keine Notizen"></ui5-list>
+      </section>
+
+      <!-- Spalte 3: Editor -->
+      <section slot="endColumn" class="column editor-column" data-sap-ui-fastnavgroup="true">
+        <header class="column-header editor-header">
+          <ui5-button id="backButton" design="Transparent" icon="nav-back" tooltip="Zur Notizliste" accessible-name="Zur Notizliste" hidden></ui5-button>
+          <div class="editor-meta">
+            <span id="fileName" class="file-name"></span>
+            <span id="saveStatus" class="save-status" role="status" aria-live="polite"></span>
+          </div>
+        </header>
+        <div id="errorRegion" role="alert" aria-live="assertive"></div>
+        <div id="editor-host" class="editor-host" tabindex="-1" hidden></div>
+        <p id="editor-help" class="visually-hidden">
+          Markdown-Editor. Die erste Zeile ist der Titel. Esc und danach Tab verlässt den Editor, F6 wechselt den Bereich.
+        </p>
+
+        <ui5-illustrated-message id="noSelection" name="NoEntries" title-text="Keine Notiz ausgewählt" subtitle-text="Wähle links eine Notiz oder lege eine neue an." hidden></ui5-illustrated-message>
+
+        <ui5-illustrated-message id="noWorkspace" name="NoData" title-text="Noch kein Workspace" subtitle-text="Wähle einen Ordner. Deine Notizen bleiben dort als normale Markdown-Dateien liegen." hidden>
+          <ui5-button id="chooseWorkspaceButton" design="Emphasized" icon="open-folder">Ordner wählen</ui5-button>
+        </ui5-illustrated-message>
+      </section>
+    </ui5-flexible-column-layout>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
