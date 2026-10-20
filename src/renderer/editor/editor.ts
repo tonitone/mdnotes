@@ -97,7 +97,11 @@ export function createEditor(parent: HTMLElement, onChange: (doc: string) => voi
     }),
   ];
 
-  const view = new EditorView({ parent, state: EditorState.create({ doc: '', extensions }) });
+  // `root: document` is required: CodeMirror follows `assignedSlot` to find
+  // its root, which for content slotted into a UI5 component is that
+  // component's shadow root. Focus is then never detected and the DOM
+  // selection is not kept in sync (characters land in the wrong place).
+  const view = new EditorView({ parent, root: document, state: EditorState.create({ doc: '', extensions }) });
 
   return {
     view,

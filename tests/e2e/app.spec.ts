@@ -104,12 +104,31 @@ for (const [choice, theme] of [
   });
 }
 
+/**
+ * Violations inside UI5 components that the app cannot fix. Keep this list
+ * short, name the UI5 version and remove entries once UI5 fixes them.
+ */
+const KNOWN_UI5_ISSUES: Array<{ rule: string; target: string; reason: string }> = [
+  {
+    rule: 'nested-interactive',
+    target: '.ui5-fcl-separator',
+    reason: 'UI5 2.27.2: the FCL column separator (role=separator) contains its focusable resize grip.',
+  },
+];
+
+function isKnownUi5Issue(rule: string, target: string): boolean {
+  return KNOWN_UI5_ISSUES.some((issue) => issue.rule === rule && target.includes(issue.target));
+}
+
 test('no serious accessibility violations (axe, WCAG 2.2 AA)', async ({ page }) => {
   await openApp(page);
   await listItems(page).first().click();
   await expect(editor(page)).toBeVisible();
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
-  const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+  const serious = results.violations
+    .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+    .map((v) => ({ ...v, nodes: v.nodes.filter((n) => !isKnownUi5Issue(v.id, n.target.join(' > '))) }))
+    .filter((v) => v.nodes.length > 0);
   // List every offending node so CI annotations alone are enough to fix them.
   const report = serious.flatMap((v) =>
     v.nodes.map((n) => `${v.id}: ${n.target.join(' > ')} | ${n.failureSummary?.replace(/\s+/g, ' ')} | ${n.html.slice(0, 160)}`),

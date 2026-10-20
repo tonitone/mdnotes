@@ -64,6 +64,8 @@ export class App {
       midColumn: { role: 'region', name: 'Notizen' },
       endColumn: { role: 'main', name: 'Editor' },
     };
+    // The title area is a link; its accessible name must contain the visible text.
+    this.els.shell.accessibilityAttributes = { logo: { name: 'mdnotes' } };
     this.els.browserModeStrip.hidden = this.api.mode !== 'browser';
     this.editor = createEditor(this.els.editorHost, () => this.onEditorChange());
     // Expose the editor to e2e tests in browser mode only.
@@ -103,9 +105,10 @@ export class App {
       this.buildThemeMenu();
     });
 
-    els.notesList.addEventListener('selection-change', (event: Event) => {
-      const selected = (event as CustomEvent<{ selectedItems: HTMLElement[] }>).detail.selectedItems[0];
-      const id = selected?.dataset.id;
+    // Fiori master-detail pattern: no selection mode (which renders invalid
+    // aria-selected on role=listitem), the open note is marked as `navigated`.
+    els.notesList.addEventListener('item-click', (event: Event) => {
+      const id = (event as CustomEvent<{ item: HTMLElement }>).detail.item?.dataset.id;
       if (id && id !== this.currentId) void this.openNote(id);
     });
 
@@ -116,7 +119,7 @@ export class App {
 
     els.backButton.addEventListener('click', () => {
       els.fcl.layout = 'TwoColumnsMidExpanded';
-      (els.notesList.querySelector('[selected]') as HTMLElement | null)?.focus();
+      (els.notesList.querySelector('[navigated]') as HTMLElement | null)?.focus();
     });
     els.fcl.addEventListener('layout-change', (event: Event) => {
       const detail = (event as CustomEvent<{ midColumnVisible: boolean }>).detail;
@@ -193,7 +196,7 @@ export class App {
         item.icon = 'document-text';
         item.tooltip = note.fileName;
         item.dataset.id = note.id;
-        item.selected = note.id === this.currentId;
+        item.navigated = note.id === this.currentId;
         return item;
       }),
     );
@@ -202,7 +205,7 @@ export class App {
   /** Marks the current note without rebuilding the list (keeps focus). */
   private updateSelection(): void {
     for (const item of this.els.notesList.children as HTMLCollectionOf<Ui5Element>) {
-      item.selected = item.dataset.id === this.currentId;
+      item.navigated = item.dataset.id === this.currentId;
     }
   }
 
