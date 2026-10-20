@@ -66,6 +66,8 @@ export class App {
     };
     this.els.browserModeStrip.hidden = this.api.mode !== 'browser';
     this.editor = createEditor(this.els.editorHost, () => this.onEditorChange());
+    // Expose the editor to e2e tests in browser mode only.
+    if (__BROWSER_MODE__) (window as unknown as { __editorView: unknown }).__editorView = this.editor.view;
     this.buildThemeMenu();
     this.bindEvents();
 
