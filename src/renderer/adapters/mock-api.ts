@@ -1,6 +1,7 @@
 import type { BackupInfo, BackupSettings, ExportFormat, ImportReport, NotesApi, NotesChangedEvent } from '../../shared/api';
 import { assetNameFor, assetNameFromPath } from '../../shared/assets';
 import { MemoryFs } from '../../shared/fs-port';
+import { markdownToHtmlDocument } from '../../shared/markdown/html';
 import { markdownToWiki } from '../../shared/markdown/wiki';
 import { newId, parseNote, serializeNote, slugify, titleFromBody } from '../../shared/note';
 import { NoteStore } from '../../shared/note-store';
@@ -192,13 +193,15 @@ export async function createMockApi(): Promise<NotesApi> {
     async exportNote(id, format) {
       const doc = store.read(id);
       const base = slugify(doc.title);
-      if (format === 'pdf') {
-        // Printing to PDF needs Electron; browser mode only records the request.
-        exports.push({ format, fileName: `${base}.pdf`, content: doc.body });
-        return `${base}.pdf`;
+      if (format === 'pdf' || format === 'docx') {
+        // PDF and DOCX need the main process (printing, ZIP); browser mode only records the request.
+        exports.push({ format, fileName: `${base}.${format}`, content: doc.body });
+        return `${base}.${format}`;
       }
-      const fileName = `${base}.${format === 'wiki' ? 'txt' : 'md'}`;
-      const content = format === 'wiki' ? markdownToWiki(doc.body) : doc.body;
+      const ext = { wiki: 'txt', markdown: 'md', html: 'html' }[format];
+      const fileName = `${base}.${ext}`;
+      const content =
+        format === 'wiki' ? markdownToWiki(doc.body) : format === 'html' ? markdownToHtmlDocument(doc.body, doc.title) : doc.body;
       exports.push({ format, fileName, content });
       download(fileName, content);
       return fileName;

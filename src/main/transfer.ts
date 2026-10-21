@@ -6,7 +6,10 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { ExportFormat, ImportReport } from '../shared/api';
 import { ASSET_DIR, MAX_ASSET_BYTES, MIME_BY_EXT, assetNameFor, assetNameFromPath, referencedAssets } from '../shared/assets';
-import { markdownToPrintDocument } from '../shared/markdown/html';
+import { markdownToDocx, type DocxImage } from '../shared/markdown/docx';
+import { markdownToHtmlDocument, markdownToPrintDocument } from '../shared/markdown/html';
+import { imageSize } from '../shared/image-size';
+import { createZip } from './zip';
 import { markdownToWiki } from '../shared/markdown/wiki';
 import { t, type MessageKey } from '../shared/i18n';
 import { slugify } from '../shared/note';
@@ -18,7 +21,51 @@ const FORMATS: Record<ExportFormat, { ext: string; filter: MessageKey; title: Me
   markdown: { ext: 'md', filter: 'filter.markdown', title: 'dialog.exportMarkdown' },
   wiki: { ext: 'txt', filter: 'filter.wiki', title: 'dialog.exportWiki' },
   pdf: { ext: 'pdf', filter: 'filter.pdf', title: 'dialog.exportPdf' },
+  html: { ext: 'html', filter: 'filter.html', title: 'dialog.exportHtml' },
+  docx: { ext: 'docx', filter: 'filter.docx', title: 'dialog.exportDocx' },
 };
+
+/** Reads the workspace images a note references, by asset name. Missing ones are skipped. */
+async function loadAssets(ws: Workspace, body: string): Promise<Map<string, Uint8Array>> {
+  const assets = new Map<string, Uint8Array>();
+  for (const name of referencedAssets(body)) {
+    try {
+      assets.set(name, new Uint8Array(await readFile(path.join(ws.root, ASSET_DIR, name))));
+    } catch {
+      // Image is gone: the export shows its alt text.
+    }
+  }
+  return assets;
+}
+
+/** Self-contained HTML: workspace images become data URLs. */
+async function renderHtml(ws: Workspace, body: string, title: string): Promise<string> {
+  const assets = await loadAssets(ws, body);
+  return markdownToHtmlDocument(body, title, {
+    resolveImage: (src) => {
+      const name = assetNameFromPath(src);
+      const bytes = name ? assets.get(name) : undefined;
+      if (!name || !bytes) return src;
+      return `data:${MIME_BY_EXT[name.split('.').pop()!]};base64,${Buffer.from(bytes).toString('base64')}`;
+    },
+  });
+}
+
+const DOCX_EXT: Record<string, DocxImage['ext']> = { png: 'png', jpg: 'jpeg', jpeg: 'jpeg', gif: 'gif' };
+
+async function renderDocx(ws: Workspace, body: string, title: string): Promise<Buffer> {
+  const assets = await loadAssets(ws, body);
+  const parts = markdownToDocx(body, title, {
+    loadImage: (src) => {
+      const name = assetNameFromPath(src);
+      const bytes = name ? assets.get(name) : undefined;
+      const ext = name ? DOCX_EXT[name.split('.').pop()!] : undefined;
+      const size = bytes ? imageSize(bytes) : null;
+      return bytes && ext && size ? { data: bytes, ext, ...size } : null;
+    },
+  });
+  return createZip(parts);
+}
 
 const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
 
@@ -76,6 +123,10 @@ export async function exportNote(ws: Workspace, parent: BrowserWindow, id: strin
     await copyAssets(ws, doc.body, path.dirname(target));
   } else if (format === 'wiki') {
     await writeFile(target, markdownToWiki(doc.body), 'utf8');
+  } else if (format === 'html') {
+    await writeFile(target, await renderHtml(ws, doc.body, doc.title), 'utf8');
+  } else if (format === 'docx') {
+    await writeFile(target, await renderDocx(ws, doc.body, doc.title));
   } else {
     const html = markdownToPrintDocument(doc.body, doc.title, {
       resolveImage: (src) => {

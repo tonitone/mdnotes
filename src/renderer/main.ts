@@ -45,6 +45,8 @@ import '@ui5/webcomponents-icons/dist/delete.js';
 import '@ui5/webcomponents-icons/dist/download.js';
 import '@ui5/webcomponents-icons/dist/overflow.js';
 import '@ui5/webcomponents-icons/dist/pdf-attachment.js';
+import '@ui5/webcomponents-icons/dist/attachment-html.js';
+import '@ui5/webcomponents-icons/dist/doc-attachment.js';
 import '@ui5/webcomponents-icons/dist/tag.js';
 import '@ui5/webcomponents-icons/dist/undo.js';
 import '@ui5/webcomponents-icons/dist/upload.js';
