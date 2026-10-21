@@ -1,20 +1,26 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, session, shell, type IpcMainInvokeEvent } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, protocol, session, shell, type IpcMainInvokeEvent } from 'electron';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { MenuCommand } from '../shared/api';
+import type { ExportFormat, MenuCommand, NotesChangedEvent } from '../shared/api';
+import { ASSET_DIR, MAX_ASSET_BYTES, MIME_BY_EXT, assetNameFor, isAssetName, isImageMime } from '../shared/assets';
 import { isNoteId } from '../shared/note';
-import { NoteStore } from '../shared/note-store';
-import { NodeFs } from './node-fs';
+import { exportAll, exportNote, importFromDialog, importTexts } from './transfer';
+import { Workspace } from './workspace';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const devServerUrl = process.env.ELECTRON_RENDERER_URL; // set by electron-vite in dev mode
 const MAX_NOTE_BYTES = 10 * 1024 * 1024;
+const ASSET_SCHEME = 'mdnotes-asset';
 
 let mainWindow: BrowserWindow | null = null;
-let store: NoteStore | null = null;
-let workspace: string | null = null;
+let workspace: Workspace | null = null;
+
+// Must happen before the app is ready.
+protocol.registerSchemesAsPrivileged([
+  { scheme: ASSET_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true } },
+]);
 
 // ---------------------------------------------------------------------------
 // Config (only the workspace path), stored in the app's user data folder.
@@ -35,10 +41,15 @@ async function saveConfig(config: { workspace?: string }): Promise<void> {
   await writeFile(configPath(), JSON.stringify(config, null, 2), 'utf8');
 }
 
+function notifyChanged(event: NotesChangedEvent): void {
+  mainWindow?.webContents.send('notes:changed', event);
+}
+
 async function openWorkspace(dir: string): Promise<void> {
-  workspace = dir;
-  store = new NoteStore(new NodeFs(dir));
-  await store.scan();
+  const next = new Workspace(dir, notifyChanged);
+  await next.open();
+  workspace?.close();
+  workspace = next;
 }
 
 // ---------------------------------------------------------------------------
@@ -46,9 +57,7 @@ async function openWorkspace(dir: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 function isAllowedUrl(url: string): boolean {
-  if (url.startsWith('file://') || url.startsWith('devtools://') || url.startsWith('data:') || url.startsWith('blob:')) {
-    return true;
-  }
+  if (/^(file|devtools|data|blob|mdnotes-asset):/.test(url)) return true;
   if (devServerUrl) {
     const dev = new URL(devServerUrl);
     try {
@@ -71,6 +80,26 @@ function hardenSession(): void {
   });
 }
 
+/** Serves images from the workspace's assets folder as mdnotes-asset://local/<name>. */
+function registerAssetProtocol(): void {
+  protocol.handle(ASSET_SCHEME, async (request) => {
+    const name = decodeURIComponent(new URL(request.url).pathname.replace(/^\//, ''));
+    if (!workspace || !isAssetName(name)) return new Response(null, { status: 404 });
+    try {
+      const bytes = await workspace.fs.readAsset(name);
+      return new Response(bytes.slice().buffer as ArrayBuffer, {
+        headers: {
+          'content-type': MIME_BY_EXT[name.split('.').pop()!] ?? 'application/octet-stream',
+          // SVGs must never run scripts.
+          'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'",
+        },
+      });
+    } catch {
+      return new Response(null, { status: 404 });
+    }
+  });
+}
+
 /** Only accept IPC from our own window. */
 function assertTrustedSender(event: IpcMainInvokeEvent): void {
   const url = event.senderFrame?.url ?? '';
@@ -79,9 +108,18 @@ function assertTrustedSender(event: IpcMainInvokeEvent): void {
   }
 }
 
-function requireStore(): NoteStore {
-  if (!store) throw new Error('No workspace selected.');
-  return store;
+// ---------------------------------------------------------------------------
+// Argument validation. Everything coming from the renderer is untrusted.
+// ---------------------------------------------------------------------------
+
+function requireWorkspace(): Workspace {
+  if (!workspace) throw new Error('No workspace selected.');
+  return workspace;
+}
+
+function requireWindow(): BrowserWindow {
+  if (!mainWindow) throw new Error('No window.');
+  return mainWindow;
 }
 
 function requireId(id: unknown): string {
@@ -89,11 +127,34 @@ function requireId(id: unknown): string {
   return id;
 }
 
-function requireBody(body: unknown): string {
-  if (typeof body !== 'string' || Buffer.byteLength(body, 'utf8') > MAX_NOTE_BYTES) {
-    throw new Error('Invalid note content.');
+function requireText(text: unknown, max = MAX_NOTE_BYTES): string {
+  if (typeof text !== 'string' || Buffer.byteLength(text, 'utf8') > max) throw new Error('Invalid text.');
+  return text;
+}
+
+function requireLabels(labels: unknown): string[] {
+  if (!Array.isArray(labels) || labels.length > 50 || !labels.every((l) => typeof l === 'string' && l.length <= 100)) {
+    throw new Error('Invalid labels.');
   }
-  return body;
+  return labels;
+}
+
+function requireTrashName(name: unknown): string {
+  if (typeof name !== 'string' || !/^\d{10,}--[^/\\]+\.md$/i.test(name)) throw new Error('Invalid trash entry.');
+  return name;
+}
+
+function requireFormat(format: unknown): ExportFormat {
+  if (format !== 'markdown' && format !== 'wiki' && format !== 'pdf') throw new Error('Invalid export format.');
+  return format;
+}
+
+function requireFiles(files: unknown): Array<{ name: string; text: string }> {
+  if (!Array.isArray(files) || files.length > 200) throw new Error('Invalid files.');
+  return files.map((f) => {
+    const { name, text } = (f ?? {}) as { name?: unknown; text?: unknown };
+    return { name: requireText(name, 255), text: requireText(text) };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -107,25 +168,47 @@ function registerIpc(): void {
       return fn(...args);
     });
 
-  handle('workspace:get', () => workspace);
+  handle('workspace:get', () => workspace?.root ?? null);
 
   handle('workspace:choose', async () => {
-    if (!mainWindow) return null;
-    const result = await dialog.showOpenDialog(mainWindow, {
+    const result = await dialog.showOpenDialog(requireWindow(), {
       title: 'Workspace-Ordner wählen',
       properties: ['openDirectory', 'createDirectory'],
     });
     if (result.canceled || result.filePaths.length === 0) return null;
     await openWorkspace(result.filePaths[0]);
-    await saveConfig({ workspace: workspace ?? undefined });
-    return workspace;
+    await saveConfig({ workspace: workspace?.root });
+    return workspace?.root ?? null;
   });
 
-  handle('notes:list', () => requireStore().summaries());
-  handle('notes:read', (id) => requireStore().read(requireId(id)));
-  handle('notes:create', () => requireStore().create());
-  handle('notes:save', (id, body) => requireStore().save(requireId(id), requireBody(body)));
-  handle('notes:finalize', (id) => requireStore().finalize(requireId(id)));
+  handle('notes:list', () => requireWorkspace().store.summaries());
+  handle('notes:read', (id) => requireWorkspace().store.read(requireId(id)));
+  handle('notes:create', () => requireWorkspace().store.create());
+  handle('notes:save', (id, body) => requireWorkspace().store.save(requireId(id), requireText(body)));
+  handle('notes:finalize', (id) => requireWorkspace().store.finalize(requireId(id)));
+  handle('notes:setLabels', (id, labels) => requireWorkspace().store.setLabels(requireId(id), requireLabels(labels)));
+  handle('notes:search', (query) => requireWorkspace().store.search(requireText(query, 500)));
+
+  handle('trash:move', (id) => requireWorkspace().store.trash(requireId(id)));
+  handle('trash:list', () => requireWorkspace().store.listTrash());
+  handle('trash:read', (name) => requireWorkspace().store.readTrash(requireTrashName(name)));
+  handle('trash:restore', (name) => requireWorkspace().store.restore(requireTrashName(name)));
+  handle('trash:delete', (name) => requireWorkspace().store.deleteFromTrash(requireTrashName(name)));
+
+  handle('assets:save', async (bytes, mime) => {
+    if (!(bytes instanceof Uint8Array) || bytes.byteLength === 0 || bytes.byteLength > MAX_ASSET_BYTES) {
+      throw new Error('Invalid image data.');
+    }
+    if (typeof mime !== 'string' || !isImageMime(mime)) throw new Error('Unsupported image type.');
+    const name = await assetNameFor(bytes, mime);
+    await requireWorkspace().fs.writeAsset(name, bytes);
+    return `${ASSET_DIR}/${name}`;
+  });
+
+  handle('transfer:exportNote', (id, format) => exportNote(requireWorkspace(), requireWindow(), requireId(id), requireFormat(format)));
+  handle('transfer:exportAll', () => exportAll(requireWorkspace(), requireWindow()));
+  handle('transfer:import', () => importFromDialog(requireWorkspace(), requireWindow()));
+  handle('transfer:importTexts', (files) => importTexts(requireWorkspace(), requireFiles(files)));
 }
 
 // ---------------------------------------------------------------------------
@@ -145,6 +228,12 @@ function buildMenu(): void {
       submenu: [
         { label: 'Neue Notiz', accelerator: 'CmdOrCtrl+N', click: () => sendMenu('new-note') },
         { label: 'Workspace wählen …', accelerator: 'CmdOrCtrl+O', click: () => sendMenu('choose-workspace') },
+        { type: 'separator' },
+        { label: 'Importieren …', click: () => sendMenu('import') },
+        { label: 'Alle Notizen exportieren …', click: () => sendMenu('export-all') },
+        { type: 'separator' },
+        // No shortcut on purpose: Cmd+Backspace deletes text in the editor.
+        { label: 'Notiz in den Papierkorb', click: () => sendMenu('delete-note') },
         { type: 'separator' },
         isMac ? { role: 'close' } : { role: 'quit', label: 'Beenden' },
       ],
@@ -200,7 +289,8 @@ function createWindow(): void {
     return { action: 'deny' };
   });
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    if (!isAllowedUrl(url)) event.preventDefault();
+    // Never navigate away from the app, e.g. when a file is dropped on the window.
+    if (url !== mainWindow?.webContents.getURL()) event.preventDefault();
   });
 
   mainWindow.on('close', (event) => {
@@ -232,12 +322,17 @@ function createWindow(): void {
 
 app.whenReady().then(async () => {
   hardenSession();
+  registerAssetProtocol();
   registerIpc();
   buildMenu();
 
   const config = await loadConfig();
   if (config.workspace && existsSync(config.workspace)) {
-    await openWorkspace(config.workspace);
+    try {
+      await openWorkspace(config.workspace);
+    } catch (err) {
+      console.error('Could not open last workspace:', err);
+    }
   }
 
   createWindow();
@@ -247,5 +342,6 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
+  workspace?.close();
   if (process.platform !== 'darwin') app.quit();
 });
