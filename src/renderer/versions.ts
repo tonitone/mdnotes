@@ -5,6 +5,7 @@ import type { NoteDoc, NotesApi, VersionSummary } from '../shared/api';
 import { el, type Ui5Element } from './ui';
 import { t, tp } from '../shared/i18n';
 import { formatVersionTime } from './format';
+import { cspNonce } from './editor/csp';
 
 /**
  * Version dialog: a timeline of versions on the left, a side-by-side diff of
@@ -16,6 +17,7 @@ function readOnlyEditor(label: string): Extension[] {
     EditorState.readOnly.of(true),
     EditorView.editable.of(false),
     EditorView.lineWrapping,
+    cspNonce(),
     EditorView.contentAttributes.of({ 'aria-label': label }),
     EditorView.theme({
       '&': { fontFamily: 'var(--sapContent_MonospaceFontFamily, monospace)', fontSize: 'var(--sapFontSize)' },
