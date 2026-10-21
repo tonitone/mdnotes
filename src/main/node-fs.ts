@@ -1,21 +1,33 @@
 import { randomBytes } from 'node:crypto';
 import { constants, promises as fsp } from 'node:fs';
 import path from 'node:path';
+import { ASSET_DIR, isAssetName } from '../shared/assets';
 import { FileExistsError, type FsPort } from '../shared/fs-port';
+
+export const TRASH_DIR = '.trash';
 
 /**
  * `FsPort` on the real file system, restricted to one workspace folder.
  * Runs in the main process only, never in the renderer.
  */
 export class NodeFs implements FsPort {
-  constructor(private readonly root: string) {}
+  constructor(readonly root: string) {}
 
   /** Rejects paths outside the workspace (e.g. "../" or subfolders). */
-  private resolve(name: string): string {
-    if (!name || name !== path.basename(name) || name === '.' || name === '..') {
+  private resolve(name: string, dir = ''): string {
+    if (!name || name !== path.basename(name) || name === '.' || name === '..' || name.includes('\0')) {
       throw new Error(`Invalid file name: ${name}`);
     }
-    return path.join(this.root, name);
+    return path.join(this.root, dir, name);
+  }
+
+  private async pathExists(file: string): Promise<boolean> {
+    try {
+      await fsp.access(file, constants.F_OK);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async list(): Promise<string[]> {
@@ -35,12 +47,7 @@ export class NodeFs implements FsPort {
   }
 
   async exists(name: string): Promise<boolean> {
-    try {
-      await fsp.access(this.resolve(name), constants.F_OK);
-      return true;
-    } catch {
-      return false;
-    }
+    return this.pathExists(this.resolve(name));
   }
 
   async create(name: string, text: string): Promise<void> {
@@ -71,11 +78,58 @@ export class NodeFs implements FsPort {
     }
   }
 
-  async rename(from: string, to: string): Promise<void> {
-    const source = this.resolve(from);
-    const target = this.resolve(to);
-    const sameFile = from.toLowerCase() === to.toLowerCase();
-    if (!sameFile && (await this.exists(to))) throw new FileExistsError(to);
+  /** Renames without ever replacing another file. */
+  private async move(source: string, target: string, sameFile: boolean, targetName: string): Promise<void> {
+    if (!sameFile && (await this.pathExists(target))) throw new FileExistsError(targetName);
     await fsp.rename(source, target);
+  }
+
+  async rename(from: string, to: string): Promise<void> {
+    await this.move(this.resolve(from), this.resolve(to), from.toLowerCase() === to.toLowerCase(), to);
+  }
+
+  async listTrash(): Promise<string[]> {
+    try {
+      const entries = await fsp.readdir(path.join(this.root, TRASH_DIR), { withFileTypes: true });
+      return entries.filter((e) => e.isFile()).map((e) => e.name);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') return [];
+      throw err;
+    }
+  }
+
+  async readTrash(trashName: string): Promise<string> {
+    return fsp.readFile(this.resolve(trashName, TRASH_DIR), 'utf8');
+  }
+
+  async moveToTrash(name: string, trashName: string): Promise<void> {
+    await fsp.mkdir(path.join(this.root, TRASH_DIR), { recursive: true });
+    await this.move(this.resolve(name), this.resolve(trashName, TRASH_DIR), false, trashName);
+  }
+
+  async restoreFromTrash(trashName: string, name: string): Promise<void> {
+    await this.move(this.resolve(trashName, TRASH_DIR), this.resolve(name), false, name);
+  }
+
+  async deleteFromTrash(trashName: string): Promise<void> {
+    await fsp.rm(this.resolve(trashName, TRASH_DIR));
+  }
+
+  async writeAsset(name: string, bytes: Uint8Array): Promise<boolean> {
+    if (!isAssetName(name)) throw new Error(`Invalid asset name: ${name}`);
+    await fsp.mkdir(path.join(this.root, ASSET_DIR), { recursive: true });
+    try {
+      await fsp.writeFile(this.resolve(name, ASSET_DIR), bytes, { flag: 'wx' });
+      return true;
+    } catch (err) {
+      // Same name means same content (content-addressed), so nothing to do.
+      if ((err as NodeJS.ErrnoException).code === 'EEXIST') return false;
+      throw err;
+    }
+  }
+
+  async readAsset(name: string): Promise<Uint8Array> {
+    if (!isAssetName(name)) throw new Error(`Invalid asset name: ${name}`);
+    return new Uint8Array(await fsp.readFile(this.resolve(name, ASSET_DIR)));
   }
 }
