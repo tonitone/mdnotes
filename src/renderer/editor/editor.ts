@@ -8,6 +8,7 @@ import { drawSelection, EditorView, keymap, placeholder } from '@codemirror/view
 import { tags } from '@lezer/highlight';
 import { assetResolver, livePreview } from './live-preview';
 import { t } from '../../shared/i18n';
+import { cspNonce } from './csp';
 
 /**
  * CodeMirror editor with live preview. All colors and fonts come from the
@@ -107,6 +108,7 @@ export function createEditor(parent: HTMLElement, options: EditorOptions): NoteE
     history(),
     drawSelection(),
     EditorView.lineWrapping,
+    cspNonce(),
     search({ top: true }),
     highlightSelectionMatches(),
     markdown({ base: markdownLanguage, codeLanguages: languages, addKeymap: true }),
