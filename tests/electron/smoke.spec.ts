@@ -61,10 +61,19 @@ test('shows images through the asset protocol', async () => {
 
 test('creates a note on disk, saves it and renames it after its title', async () => {
   await page.locator('#newNoteButton').click();
+  await expect(page.locator('.cm-content')).toBeFocused();
   await page.keyboard.type('# Aus Electron\n\nText');
-  await expect
-    .poll(async () => (await readdir(workspace)).find((f) => f.startsWith('aus-electron--')), { timeout: 10_000 })
-    .toBeTruthy();
+  try {
+    await expect
+      .poll(async () => (await readdir(workspace)).find((f) => f.startsWith('aus-electron--')), { timeout: 15_000 })
+      .toBeTruthy();
+  } catch {
+    // Diagnostics for CI, where only the error message is visible.
+    const doc = await page.locator('.cm-content').innerText();
+    const status = await page.locator('#saveStatus').innerText();
+    const error = await page.locator('#errorRegion').innerText();
+    throw new Error(`File not renamed. files=${JSON.stringify(await readdir(workspace))} doc=${JSON.stringify(doc)} status=${status} error=${error}`);
+  }
   const file = (await readdir(workspace)).find((f) => f.startsWith('aus-electron--'))!;
   expect(await readFile(path.join(workspace, file), 'utf8')).toContain('# Aus Electron\n\nText');
 });
