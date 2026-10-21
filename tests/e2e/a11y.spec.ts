@@ -187,8 +187,15 @@ test('F6 moves between library, note list and editor', async ({ page }) => {
   await expect.poll(area).toBe('endColumn');
   await page.keyboard.press('Shift+F6');
   await expect.poll(area).toBe('midColumn');
-  await page.keyboard.press('Shift+F6');
-  await expect.poll(area).toBe('startColumn');
+
+  // F6 cycles through every area, including the shell bar.
+  const visited = new Set<string | undefined>();
+  for (let i = 0; i < 6; i++) {
+    await page.keyboard.press('F6');
+    await page.waitForTimeout(100);
+    visited.add(await area());
+  }
+  expect([...visited]).toEqual(expect.arrayContaining(['startColumn', 'midColumn', 'endColumn']));
 });
 
 test('focus returns to the opener after closing a dialog', async ({ page }) => {

@@ -222,18 +222,16 @@ export class App {
     });
 
     els.backButton.addEventListener('click', () => {
-      els.fcl.layout = 'TwoColumnsMidExpanded';
+      this.setLayout('TwoColumnsMidExpanded');
       (els.notesList.querySelector('[navigated]') as HTMLElement | null)?.focus();
     });
     els.libraryButton.addEventListener('click', () => {
-      els.fcl.layout = 'OneColumn';
-      (els.libraryList.querySelector('[navigated]') ?? els.labelList.querySelector('[navigated]') ?? els.allNotesItem as HTMLElement | null)?.focus();
+      this.setLayout('OneColumn');
+      const current = (els.libraryList.querySelector('[navigated]') ?? els.labelList.querySelector('[navigated]')) as HTMLElement | null;
+      (current ?? els.allNotesItem).focus();
     });
-    els.fcl.addEventListener('layout-change', (event: Event) => {
-      const detail = (event as CustomEvent<{ startColumnVisible: boolean; midColumnVisible: boolean }>).detail;
-      els.backButton.hidden = detail.midColumnVisible;
-      els.libraryButton.hidden = detail.startColumnVisible || !detail.midColumnVisible;
-    });
+    // Fired on resize and user interaction, not when the app sets the layout.
+    els.fcl.addEventListener('layout-change', () => this.updateColumnButtons());
 
     // The skip link jumps to the editor, or to the note list when no note is open.
     document.querySelector('.skip-link')?.addEventListener('click', (event) => {
@@ -306,6 +304,19 @@ export class App {
     } catch (err) {
       this.showError(t('language.reloadFailed'), err);
     }
+  }
+
+  private setLayout(layout: 'OneColumn' | 'TwoColumnsMidExpanded' | 'ThreeColumnsEndExpanded'): void {
+    this.els.fcl.layout = layout;
+    // Column visibility is known after UI5 has rendered the new layout.
+    requestAnimationFrame(() => this.updateColumnButtons());
+  }
+
+  /** In narrow windows, back buttons lead to the hidden columns. */
+  private updateColumnButtons(): void {
+    const { fcl } = this.els;
+    this.els.backButton.hidden = Boolean(fcl.midColumnVisible);
+    this.els.libraryButton.hidden = Boolean(fcl.startColumnVisible) || !fcl.midColumnVisible;
   }
 
   private focusContent(): void {
@@ -482,7 +493,7 @@ export class App {
     this.els.noticeRegion.replaceChildren();
     this.showView('noSelection');
     // In a single column the empty editor would hide the list; show the list instead.
-    this.els.fcl.layout = narrowQuery.matches ? 'TwoColumnsMidExpanded' : 'ThreeColumnsEndExpanded';
+    this.setLayout(narrowQuery.matches ? 'TwoColumnsMidExpanded' : 'ThreeColumnsEndExpanded');
   }
 
   // -------------------------------------------------------------------------
@@ -500,7 +511,7 @@ export class App {
       this.setStatus(t('status.modifiedAt', { time: formatModified(doc.modified) }));
       this.renderTokens(doc.labels);
       this.showView('editor');
-      this.els.fcl.layout = 'ThreeColumnsEndExpanded';
+      this.setLayout('ThreeColumnsEndExpanded');
       this.updateSelection();
     } catch (err) {
       this.showError(t('error.openNote'), err);
@@ -527,7 +538,7 @@ export class App {
       this.setStatus(t('status.created'));
       this.renderTokens([]);
       this.showView('editor');
-      this.els.fcl.layout = 'ThreeColumnsEndExpanded';
+      this.setLayout('ThreeColumnsEndExpanded');
       this.editor?.focus();
     } catch (err) {
       this.showError(t('error.createNote'), err);
@@ -709,7 +720,7 @@ export class App {
       this.els.fileName.textContent = entry?.title ?? '';
       this.setStatus(entry ? t('trash.deletedAt', { time: formatModified(entry.trashedAt) }) : '');
       this.showView('trashEntry');
-      this.els.fcl.layout = 'ThreeColumnsEndExpanded';
+      this.setLayout('ThreeColumnsEndExpanded');
       this.updateSelection();
     } catch (err) {
       this.showError(t('error.openTrash'), err);
