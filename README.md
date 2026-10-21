@@ -3,7 +3,24 @@
 Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori (Horizon).
 Läuft auf macOS, Windows und Linux. Notizen sind normale `.md`-Dateien in einem Ordner deiner Wahl.
 
-Stand: MVP-Gerüst (Phase 1 des Plans).
+Stand: Phase 2 des Plans abgeschlossen.
+
+## Funktionen
+
+- Notizen anlegen, Titel aus der ersten Zeile, Autosave, Dateiname folgt dem Titel
+- Live Preview: Überschriften, Hervorhebungen, Links, Listen, Aufgaben, Zitate, Bilder
+- Labels mit Vorschlägen, Filter nach Label in der Bibliothek
+- Bilder per Einfügen oder Ziehen, gespeichert in `assets/`, mit Abfrage einer Bildbeschreibung
+- Code-Blöcke mit Syntax-Highlighting, Sprachauswahl und Kopieren-Knopf
+- Volltextsuche über Titel und Inhalt, Treffer mit Textausschnitt
+- Papierkorb (`.trash/`, 30 Tage), Wiederherstellen und endgültiges Löschen
+- Export einer Notiz als Markdown (mit Bildern), Jira/Confluence-Wiki-Markup oder PDF,
+  Wiki-Markup und Markdown auch direkt in die Zwischenablage
+- Export aller Notizen in einen neuen Ordner, Import von Markdown-Dateien (per Menü mit
+  Bildübernahme oder per Ziehen ins Fenster)
+- Änderungen von außen (anderer Editor, Sync-Tool) werden erkannt; bei gleichzeitiger
+  Bearbeitung fragt die App, welche Version gilt
+- Themes Hell, Dunkel und zwei Hochkontrast-Varianten, Dichte Kompakt oder Komfortabel
 
 ## Schnellstart
 
@@ -15,8 +32,6 @@ npm run dev:browser    # Oberfläche im Browser mit Demo-Notizen: http://127.0.0
 npm run dev            # echte App mit Electron, Hot Reload, ohne Installer-Build
 ```
 
-Nach dem ersten `npm install` die entstandene `package-lock.json` einchecken. Die CI nutzt `npm ci`.
-
 ## Befehle
 
 | Befehl | Zweck |
@@ -26,6 +41,7 @@ Nach dem ersten `npm install` die entstandene `package-lock.json` einchecken. Di
 | `npm run typecheck` | TypeScript-Prüfung |
 | `npm run test:unit` | Kernlogik gegen Speicher und echtes Dateisystem |
 | `npm run test:e2e` | UI- und Barrierefreiheitstests im Browser-Modus (Playwright, axe) |
+| `npm run test:electron` | Smoke-Test der echten App (vorher `npm run build`) |
 | `npm run package` | Installer für das aktuelle System (`release/`) |
 
 Beim ersten E2E-Lauf einmal `npx playwright install chromium` ausführen.
@@ -36,16 +52,22 @@ Beim ersten E2E-Lauf einmal `npx playwright install chromium` ausführen.
 src/
   shared/         Kernlogik ohne Abhängigkeiten, läuft überall
     note.ts         ULID, Dateiname, Titel, Front Matter
-    note-store.ts   Anlegen, Speichern, Umbenennen nach Titel
+    note-store.ts   Speichern, Umbenennen, Labels, Suche, Papierkorb, Import, Änderungserkennung
     fs-port.ts      Dateisystem-Schnittstelle + MemoryFs
+    assets.ts       Bilder in assets/ (Name aus dem Inhalts-Hash)
+    markdown/       Parser und Export nach Wiki-Markup und HTML
     api.ts          Schnittstelle zwischen Oberfläche und Dateisystem
-  main/           Electron-Hauptprozess: Fenster, Menü, IPC, NodeFs, Sicherheit
+  main/           Electron-Hauptprozess: Fenster, Menü, IPC, Sicherheit
+    workspace.ts    Workspace mit File-Watcher
+    transfer.ts     Export (Markdown, Wiki, PDF) und Import
+    node-fs.ts      Dateisystem-Zugriff, auf den Workspace beschränkt
   preload/        Stellt die Schnittstelle als window.notesApi bereit
   renderer/       Oberfläche: UI5 Web Components, CodeMirror mit Live Preview
     adapters/       Mock-Adapter für den Browser-Modus
 tests/
   unit/           node:test, laufen gegen MemoryFs und echtes Dateisystem
   e2e/            Playwright im Browser-Modus
+  electron/       Smoke-Test der gebauten App, in der CI auf allen drei Systemen
 ```
 
 Der Browser-Modus und Electron verwenden dieselbe `NoteStore`-Logik. Nur das Dateisystem
@@ -82,14 +104,14 @@ dadurch nicht mit ausgeliefert.
 
 ## Bekannte offene Punkte
 
-- **Oberfläche ungetestet:** Das Gerüst wurde ohne Zugriff auf die npm-Registry erstellt.
-  Kernlogik und Tests liefen, die Oberfläche (UI5, CodeMirror, Electron) wurde noch nie
-  gestartet. Beim ersten `npm run dev:browser` und `npm run test:e2e` sind kleine
-  Korrekturen zu erwarten.
-- **Versionen:** UI5 ist exakt auf 2.27.2 gepinnt. Der Tokenizer-Fehler aus 2.27.2 ist
-  erst ab 2.28.0 behoben, relevant ab den Labels in Phase 2. Die übrigen Pakete stehen auf
-  `^`-Bereichen, die `package-lock.json` fixiert sie.
+- **UI5-Version:** UI5 ist exakt auf 2.27.2 gepinnt. Der Tokenizer-Fehler aus 2.27.2
+  (Render-Schleife bei sehr vielen Labels an einer Notiz) ist erst ab 2.28.0 behoben.
+  Update, sobald 2.28.0 erscheint.
 - **Schrift 72:** `copy-fonts.mjs` sucht die Dateien in den UI5-Theming-Paketen. Findet es
   keine, nutzt die App Arial oder Helvetica. Die Konsole meldet das beim Installieren.
 - **Kleine Fenster:** Unter etwa 600 px zeigt das Flexible Column Layout nur eine Spalte.
   Der Zurück-Knopf im Editor führt zur Liste. Die Bibliothek ist dort noch nicht erreichbar.
+- **Labels umbenennen oder zusammenführen** über alle Notizen fehlt noch.
+- **Wiki-Markup:** Aufgaben werden zu ☐/☑, weil Wiki-Markup keine Checkboxen kennt. Bilder
+  müssen in Jira oder Confluence separat als Anhang hochgeladen werden.
+- **PDF-Export** gibt es nur in der App, nicht im Browser-Modus.

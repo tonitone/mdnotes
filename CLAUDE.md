@@ -24,18 +24,19 @@ Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand
 
 ## Stand und nächste Schritte
 
-- Unit-Tests (`npm run test:unit`, 55 Tests) liefen grün.
-- Die Oberfläche wurde noch nie gestartet, weil beim Erstellen kein npm-Zugriff bestand.
-  Erster Schritt: `npm install`, `npm run typecheck`, `npm run dev:browser`, `npm run test:e2e`
-  und Fehler beheben. Zu erwarten sind kleine API-Abweichungen bei UI5 oder CodeMirror.
-- Danach Phase 2: Labels, Bilder per Paste, Code-Blöcke, Suche, Papierkorb, Content Density,
-  Import/Export `.md`, Export als PDF und Jira/Confluence-Wiki-Markup (klassisches Jira-Wiki-Format).
+- Phase 1 und 2 sind fertig. CI prüft Typen, Unit-Tests (`tests/unit`), UI- und
+  Barrierefreiheitstests im Browser-Modus (`tests/e2e`) und einen Smoke-Test der echten
+  Electron-App auf macOS, Windows und Linux (`tests/electron`).
+- Neue npm-Pakete nur zusammen mit aktualisierter `package-lock.json` (CI nutzt `npm ci`).
+- Commits auf Englisch nach Conventional Commits, Code-Kommentare auf Englisch,
+  Oberfläche vorerst Deutsch.
 - Phase 3: Versionierung (Snapshots pro ID unter `.history/<id>/`, Diff, Wiederherstellen),
   Backup/Restore inkl. einzelner Notizen, Crash-Recovery.
 - Phase 4: Barrierefreiheits-Audit, i18n/RTL, HTML/DOCX-Export, Signierung, Auto-Update, CSP verschärfen.
+- Offen aus Phase 2: Labels über alle Notizen umbenennen/zusammenführen.
 
 ## Bekannte Risiken
 
-- UI5 2.27.2 hat einen Render-Loop-Fehler im `ui5-tokenizer` (behoben ab 2.28.0). Relevant für Labels.
+- UI5 2.27.2 hat einen Render-Loop-Fehler im `ui5-tokenizer` (behoben ab 2.28.0). Betrifft das Label-Feld bei sehr vielen Labels.
 - Die Schrift 72 kopiert `scripts/copy-fonts.mjs` aus node_modules. Pfade prüfen, falls die Konsole warnt.
 - CSP erlaubt vorerst Inline-Styles.
