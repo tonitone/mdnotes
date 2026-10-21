@@ -21,23 +21,32 @@
     </ui5-message-strip>
 
     <ui5-flexible-column-layout id="fcl" layout="ThreeColumnsEndExpanded">
-      <!-- Spalte 1: Bibliothek -->
+      <!-- Column 1: library -->
       <section slot="startColumn" class="column" data-sap-ui-fastnavgroup="true">
         <header class="column-header">
           <ui5-title level="H2" size="H5">Bibliothek</ui5-title>
         </header>
         <ui5-list id="libraryList" accessible-name="Bibliothek">
-          <ui5-li id="allNotesItem" icon="documents" navigated>Alle Notizen</ui5-li>
+          <ui5-li id="allNotesItem" icon="documents" data-view="all" navigated>Alle Notizen</ui5-li>
+          <ui5-li id="trashItem" icon="delete" data-view="trash">Papierkorb</ui5-li>
         </ui5-list>
+        <ui5-list id="labelList" header-text="Labels" accessible-name="Labels" no-data-text="Noch keine Labels"></ui5-list>
         <p class="workspace-path" id="workspacePath"></p>
       </section>
 
-      <!-- Spalte 2: Notizliste -->
+      <!-- Column 2: note list -->
       <section slot="midColumn" class="column" data-sap-ui-fastnavgroup="true">
         <header class="column-header">
           <ui5-title level="H2" size="H5" id="notesTitle">Notizen</ui5-title>
-          <ui5-button id="newNoteButton" design="Emphasized" icon="add" disabled>Neue Notiz</ui5-button>
+          <div class="header-actions">
+            <ui5-button id="newNoteButton" design="Emphasized" icon="add" disabled>Neue Notiz</ui5-button>
+            <ui5-button id="moreButton" design="Transparent" icon="overflow" tooltip="Weitere Aktionen" accessible-name="Weitere Aktionen" disabled></ui5-button>
+          </div>
         </header>
+        <ui5-menu id="moreMenu">
+          <ui5-menu-item text="Importieren …" icon="upload" data-action="import"></ui5-menu-item>
+          <ui5-menu-item text="Alle Notizen exportieren …" icon="download" data-action="export-all"></ui5-menu-item>
+        </ui5-menu>
         <div class="search-row">
           <ui5-input id="searchInput" type="Search" placeholder="Suchen" accessible-name="Notizen durchsuchen" show-clear-icon disabled>
             <ui5-icon slot="icon" name="search"></ui5-icon>
@@ -46,7 +55,7 @@
         <ui5-list id="notesList" accessible-name="Notizen" no-data-text="Noch keine Notizen"></ui5-list>
       </section>
 
-      <!-- Spalte 3: Editor -->
+      <!-- Column 3: editor -->
       <section slot="endColumn" class="column editor-column" data-sap-ui-fastnavgroup="true">
         <header class="column-header editor-header">
           <ui5-button id="backButton" design="Transparent" icon="nav-back" tooltip="Zur Notizliste" accessible-name="Zur Notizliste" hidden></ui5-button>
@@ -54,7 +63,27 @@
             <span id="fileName" class="file-name"></span>
             <span id="saveStatus" class="save-status" role="status" aria-live="polite"></span>
           </div>
+          <div class="header-actions" id="noteActions" hidden>
+            <ui5-button id="exportButton" design="Transparent" icon="action" tooltip="Exportieren" accessible-name="Exportieren"></ui5-button>
+            <ui5-button id="deleteButton" design="Transparent" icon="delete" tooltip="In den Papierkorb" accessible-name="In den Papierkorb"></ui5-button>
+          </div>
+          <div class="header-actions" id="trashActions" hidden>
+            <ui5-button id="restoreButton" design="Emphasized" icon="undo">Wiederherstellen</ui5-button>
+            <ui5-button id="deleteForeverButton" design="Negative" icon="delete">Endgültig löschen</ui5-button>
+          </div>
         </header>
+        <ui5-menu id="exportMenu">
+          <ui5-menu-item text="Wiki-Markup kopieren" icon="copy" data-action="copy-wiki"></ui5-menu-item>
+          <ui5-menu-item text="Markdown kopieren" icon="copy" data-action="copy-markdown"></ui5-menu-item>
+          <ui5-menu-separator></ui5-menu-separator>
+          <ui5-menu-item text="Als Wiki-Markup speichern …" icon="download" data-format="wiki"></ui5-menu-item>
+          <ui5-menu-item text="Als Markdown speichern …" icon="download" data-format="markdown"></ui5-menu-item>
+          <ui5-menu-item text="Als PDF speichern …" icon="pdf-attachment" data-format="pdf"></ui5-menu-item>
+        </ui5-menu>
+        <div id="labelRow" class="label-row" hidden>
+          <ui5-multi-input id="labelInput" placeholder="Label hinzufügen" accessible-name="Labels der Notiz" show-suggestions></ui5-multi-input>
+        </div>
+        <div id="noticeRegion"></div>
         <div id="errorRegion" role="alert" aria-live="assertive"></div>
         <div id="editor-host" class="editor-host" tabindex="-1" hidden></div>
         <p id="editor-help" class="visually-hidden">
@@ -69,6 +98,8 @@
       </section>
     </ui5-flexible-column-layout>
 
+    <div id="announcer" class="visually-hidden" role="status" aria-live="polite"></div>
+    <ui5-toast id="toast" placement="BottomCenter"></ui5-toast>
     <script type="module" src="./main.ts"></script>
   </body>
 </html>

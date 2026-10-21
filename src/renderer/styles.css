@@ -213,3 +213,128 @@ ui5-illustrated-message {
 .cm-md-hr {
   border-bottom: 1px solid var(--sapGroup_TitleBorderColor);
 }
+
+/* Header actions, labels and notices */
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.header-actions[hidden],
+.label-row[hidden] {
+  display: none;
+}
+
+.label-row {
+  padding: 0.25rem 1rem;
+  border-bottom: 1px solid var(--sapGroup_TitleBorderColor);
+}
+
+.label-row ui5-multi-input {
+  width: 100%;
+}
+
+#labelList {
+  flex: 0 1 auto;
+  max-height: 50%;
+}
+
+#noticeRegion:empty {
+  display: none;
+}
+
+#noticeRegion ui5-message-strip {
+  margin: 0.5rem 1rem 0;
+}
+
+.notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+}
+
+/* Dialogs */
+
+.dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: min(28rem, 80vw);
+  padding: 0.5rem 0;
+}
+
+.dialog-content p {
+  margin: 0;
+}
+
+.dialog-hint {
+  color: var(--sapContent_LabelColor);
+  font-size: var(--sapFontSmallSize);
+}
+
+.dialog-list {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.25rem 0;
+}
+
+/* Live preview: images and code block tools */
+
+.cm-md-image {
+  display: block;
+  max-width: 100%;
+  max-height: 28rem;
+  margin: 0.25rem 0;
+  border-radius: 0.25rem;
+}
+
+.cm-md-image-missing {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  border: 1px dashed var(--sapGroup_TitleBorderColor);
+  border-radius: 0.25rem;
+  color: var(--sapContent_LabelColor);
+  font-style: italic;
+}
+
+.cm-md-codetools {
+  float: right;
+  display: inline-flex;
+  gap: 0.25rem;
+  font-family: var(--sapFontFamily);
+  font-size: var(--sapFontSmallSize);
+}
+
+.cm-md-codetools select,
+.cm-md-codetools button {
+  min-height: 1.5rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--sapButton_BorderColor);
+  border-radius: var(--sapButton_BorderCornerRadius);
+  background: var(--sapButton_Background);
+  color: var(--sapButton_TextColor);
+  font: inherit;
+  cursor: pointer;
+}
+
+.cm-md-codetools select:focus-visible,
+.cm-md-codetools button:focus-visible {
+  outline: var(--sapContent_FocusWidth) var(--sapContent_FocusStyle) var(--sapContent_FocusColor);
+  outline-offset: 1px;
+}
+
+.cm-md-codetools button:hover,
+.cm-md-codetools select:hover {
+  background: var(--sapButton_Hover_Background);
+}

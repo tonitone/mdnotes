@@ -6,7 +6,7 @@ import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/sea
 import { EditorState, type Extension } from '@codemirror/state';
 import { drawSelection, EditorView, keymap, placeholder } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
-import { livePreview } from './live-preview';
+import { assetResolver, livePreview } from './live-preview';
 
 /**
  * CodeMirror editor with live preview. All colors and fonts come from the
@@ -55,13 +55,53 @@ const codeHighlight = HighlightStyle.define([
 
 export interface NoteEditor {
   readonly view: EditorView;
-  setDoc(text: string): void;
+  /** Loads a note. A fresh state per note gives each note its own undo history. */
+  setDoc(text: string, options?: { readOnly?: boolean }): void;
   getDoc(): string;
   focus(): void;
 }
 
-export function createEditor(parent: HTMLElement, onChange: (doc: string) => void): NoteEditor {
-  const extensions: Extension[] = [
+export interface EditorOptions {
+  onChange: (doc: string) => void;
+  /** Maps an image `src` from the note to a URL the editor can show. */
+  resolveAsset: (src: string) => string | null;
+  /** Stores pasted or dropped images; returns their relative paths. */
+  saveImages: (files: File[]) => Promise<string[]>;
+  /** Called after images were inserted, with the position of each `![` and its path. */
+  onImagesInserted: (inserted: Array<{ from: number; path: string }>) => void;
+}
+
+function imageFiles(data: DataTransfer | null): File[] {
+  return data ? [...data.files].filter((f) => f.type.startsWith('image/')) : [];
+}
+
+/** Inserts `![](path)` for each stored image at `pos`, one per line. */
+async function insertImages(view: EditorView, files: File[], pos: number, options: EditorOptions): Promise<void> {
+  const paths = await options.saveImages(files);
+  if (paths.length === 0) return;
+  const line = view.state.doc.lineAt(pos);
+  // Put images on their own line so the live preview can render them.
+  const before = pos > line.from ? '\n' : '';
+  const after = pos < line.to ? '\n' : '';
+  const markdown = paths.map((p) => `![](${p})`).join('\n');
+  view.dispatch({
+    changes: { from: pos, insert: before + markdown + after },
+    selection: { anchor: pos + before.length + markdown.length },
+    scrollIntoView: true,
+  });
+  let offset = pos + before.length;
+  const inserted = paths.map((path) => {
+    const item = { from: offset, path };
+    offset += `![](${path})`.length + 1;
+    return item;
+  });
+  options.onImagesInserted(inserted);
+}
+
+export function createEditor(parent: HTMLElement, options: EditorOptions): NoteEditor {
+  const readOnlyExtension = (on: boolean) => [EditorState.readOnly.of(on), EditorView.editable.of(!on)];
+
+  const extensions = (isReadOnly: boolean): Extension[] => [
     history(),
     drawSelection(),
     EditorView.lineWrapping,
@@ -69,9 +109,11 @@ export function createEditor(parent: HTMLElement, onChange: (doc: string) => voi
     highlightSelectionMatches(),
     markdown({ base: markdownLanguage, codeLanguages: languages, addKeymap: true }),
     syntaxHighlighting(codeHighlight),
+    assetResolver.of(options.resolveAsset),
     livePreview,
     placeholder('Die erste Zeile wird der Titel …'),
     fioriTheme,
+    readOnlyExtension(isReadOnly),
     keymap.of([
       // Esc releases focus: afterwards Tab leaves the editor (WCAG 2.1.2).
       {
@@ -92,8 +134,25 @@ export function createEditor(parent: HTMLElement, onChange: (doc: string) => voi
       spellcheck: 'true',
       lang: 'de',
     }),
+    EditorView.domEventHandlers({
+      paste(event, view) {
+        const files = imageFiles(event.clipboardData);
+        if (files.length === 0 || view.state.readOnly) return false;
+        event.preventDefault();
+        void insertImages(view, files, view.state.selection.main.head, options);
+        return true;
+      },
+      drop(event, view) {
+        const files = imageFiles(event.dataTransfer);
+        if (files.length === 0 || view.state.readOnly) return false;
+        event.preventDefault();
+        const pos = view.posAtCoords({ x: event.clientX, y: event.clientY }) ?? view.state.selection.main.head;
+        void insertImages(view, files, pos, options);
+        return true;
+      },
+    }),
     EditorView.updateListener.of((update) => {
-      if (update.docChanged) onChange(update.state.doc.toString());
+      if (update.docChanged) options.onChange(update.state.doc.toString());
     }),
   ];
 
@@ -101,13 +160,12 @@ export function createEditor(parent: HTMLElement, onChange: (doc: string) => voi
   // its root, which for content slotted into a UI5 component is that
   // component's shadow root. Focus is then never detected and the DOM
   // selection is not kept in sync (characters land in the wrong place).
-  const view = new EditorView({ parent, root: document, state: EditorState.create({ doc: '', extensions }) });
+  const view = new EditorView({ parent, root: document, state: EditorState.create({ doc: '', extensions: extensions(false) }) });
 
   return {
     view,
-    // Fresh state per note: separate undo history, no onChange call.
-    setDoc(text) {
-      view.setState(EditorState.create({ doc: text, extensions }));
+    setDoc(text, opts = {}) {
+      view.setState(EditorState.create({ doc: text, extensions: extensions(!!opts.readOnly) }));
     },
     getDoc: () => view.state.doc.toString(),
     focus: () => view.focus(),
