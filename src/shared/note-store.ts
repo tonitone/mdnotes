@@ -1,5 +1,6 @@
 import type { NoteDoc, NoteSummary, NotesChangedEvent, SaveResult, SearchHit, TrashEntry } from './api';
 import { FileExistsError, type FsPort } from './fs-port';
+import { VersionStore, type VersionInfo } from './history';
 import {
   UNTITLED,
   fileNameFor,
@@ -91,8 +92,11 @@ function parseTrashName(trashName: string): { trashedAt: number; fileName: strin
 export class NoteStore {
   private entries = new Map<string, Entry>();
   private queue: Promise<unknown> = Promise.resolve();
+  readonly versions: VersionStore;
 
-  constructor(private readonly fs: FsPort) {}
+  constructor(private readonly fs: FsPort) {
+    this.versions = new VersionStore(fs);
+  }
 
   /** Runs operations one after another so saving and renaming never overlap. */
   private serial<T>(task: () => Promise<T>): Promise<T> {
@@ -160,7 +164,10 @@ export class NoteStore {
         const knownId = byFile.get(fileName);
         if (knownId) {
           seen.add(knownId);
-          if (this.entries.get(knownId)!.text === text) continue;
+          const previous = this.entries.get(knownId)!;
+          if (previous.text === text) continue;
+          // Keep what we had, so an outside change can be undone.
+          await this.versions.snapshot(knownId, previous.body);
           this.entries.delete(knownId);
           const { id, entry } = await this.load(fileName, text, knownId);
           this.entries.set(id, entry);
@@ -316,7 +323,38 @@ export class NoteStore {
         e.fileName = await this.renameTo(e.fileName, desired);
         e.modified = await this.fs.mtime(e.fileName);
       }
+      // finalize() runs after an editing pause or when leaving the note,
+      // which is the right moment for a version.
+      await this.versions.snapshot(id, e.body);
       return this.result(id, e);
+    });
+  }
+
+  listVersions(id: string): Promise<VersionInfo[]> {
+    this.entry(id);
+    return this.versions.list(id);
+  }
+
+  readVersion(id: string, name: string): Promise<string> {
+    this.entry(id);
+    return this.versions.read(id, name);
+  }
+
+  /**
+   * Makes an old version the current content. The current content is kept as
+   * a version first, so restoring never loses anything.
+   */
+  restoreVersion(id: string, name: string, now: Date = new Date()): Promise<NoteDoc> {
+    return this.serial(async () => {
+      const e = this.entry(id);
+      const body = await this.versions.read(id, name);
+      await this.versions.snapshot(id, e.body, now);
+      e.body = body;
+      e.title = titleFromBody(body);
+      e.preview = previewFromBody(body);
+      await this.write(id, e);
+      await this.versions.snapshot(id, body, new Date(now.getTime() + 1));
+      return this.read(id);
     });
   }
 
@@ -326,6 +364,27 @@ export class NoteStore {
       e.meta = { ...e.meta, labels: normalizeLabels(labels) };
       await this.write(id, e);
       return this.summary(id, e);
+    });
+  }
+
+  /**
+   * Renames a label in every note. If a note already has the new label, the
+   * two are merged. Returns the changed notes.
+   */
+  renameLabel(from: string, to: string): Promise<NoteSummary[]> {
+    return this.serial(async () => {
+      const [target] = normalizeLabels([to]);
+      if (!target) throw new Error('Invalid label.');
+      const key = from.toLocaleLowerCase();
+      const changed: NoteSummary[] = [];
+      for (const [id, e] of this.entries) {
+        if (!e.meta.labels.some((l) => l.toLocaleLowerCase() === key)) continue;
+        const labels = normalizeLabels(e.meta.labels.map((l) => (l.toLocaleLowerCase() === key ? target : l)));
+        e.meta = { ...e.meta, labels };
+        await this.write(id, e);
+        changed.push(this.summary(id, e));
+      }
+      return changed;
     });
   }
 
@@ -424,8 +483,16 @@ export class NoteStore {
     });
   }
 
+  /** Deletes a trashed note for good, including its versions. */
   deleteFromTrash(trashName: string): Promise<void> {
-    return this.serial(() => this.fs.deleteFromTrash(trashName));
+    return this.serial(() => this.deleteTrashEntry(trashName));
+  }
+
+  private async deleteTrashEntry(trashName: string): Promise<void> {
+    const { meta } = parseNote(await this.fs.readTrash(trashName));
+    await this.fs.deleteFromTrash(trashName);
+    // Only drop the history if no live note uses the same ID (e.g. a restored copy).
+    if (meta.id && isNoteId(meta.id) && !this.entries.has(meta.id)) await this.versions.deleteAll(meta.id);
   }
 
   /** Permanently deletes trash entries older than `maxAgeMs`. Returns how many. */
@@ -435,7 +502,7 @@ export class NoteStore {
       for (const trashName of await this.fs.listTrash()) {
         const info = parseTrashName(trashName);
         if (info && now.getTime() - info.trashedAt > maxAgeMs) {
-          await this.fs.deleteFromTrash(trashName);
+          await this.deleteTrashEntry(trashName);
           count++;
         }
       }
