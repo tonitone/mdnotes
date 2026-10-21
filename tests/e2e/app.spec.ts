@@ -49,6 +49,40 @@ test('new note: title from first line, file name follows after a pause', async (
   await expect(page.locator('#fileName')).toHaveText(/^einkauf-samstag--[0-9a-z]{6}\.md$/, { timeout: 8000 });
 });
 
+const editorDoc = (page: Page) =>
+  page.evaluate(() => (window as unknown as { __editorView: { state: { doc: { toString(): string } } } }).__editorView.state.doc.toString());
+
+test('Enter splits the line at the cursor and typing continues on the new line', async ({ page }) => {
+  await openApp(page);
+  await page.locator('#newNoteButton').click();
+  await expect(editor(page)).toBeFocused();
+
+  await page.keyboard.type('# Titel');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('abcdef');
+  for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('X');
+  await page.keyboard.press('End');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('Y');
+
+  expect(await editorDoc(page)).toBe('# Titel\nabc\nXdef\nY');
+  await expect(page.locator('.cm-line')).toHaveText(['Titel', 'abc', 'Xdef', 'Y']);
+});
+
+test('Enter in a list item continues the list', async ({ page }) => {
+  await openApp(page);
+  await page.locator('#notesList ui5-li', { hasText: 'Einkauf' }).click();
+  await editor(page).click();
+  await page.locator('.cm-line', { hasText: 'Milch' }).click();
+  await page.keyboard.press('End');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('Eier');
+
+  expect(await editorDoc(page)).toContain('- Milch\n- Eier\n- Brot');
+});
+
 test('live preview hides Markdown outside the cursor line', async ({ page }) => {
   await openApp(page);
   await listItems(page).first().click();
