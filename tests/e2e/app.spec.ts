@@ -49,6 +49,40 @@ test('new note: title from first line, file name follows after a pause', async (
   await expect(page.locator('#fileName')).toHaveText(/^einkauf-samstag--[0-9a-z]{6}\.md$/, { timeout: 8000 });
 });
 
+const editorDoc = (page: Page) =>
+  page.evaluate(() => (window as unknown as { __editorView: { state: { doc: { toString(): string } } } }).__editorView.state.doc.toString());
+
+test('Enter splits the line at the cursor and typing continues on the new line', async ({ page }) => {
+  await openApp(page);
+  await page.locator('#newNoteButton').click();
+  await expect(editor(page)).toBeFocused();
+
+  await page.keyboard.type('# Titel');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('abcdef');
+  for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('X');
+  await page.keyboard.press('End');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('Y');
+
+  expect(await editorDoc(page)).toBe('# Titel\nabc\nXdef\nY');
+  await expect(page.locator('.cm-line')).toHaveText(['Titel', 'abc', 'Xdef', 'Y']);
+});
+
+test('Enter in a list item continues the list', async ({ page }) => {
+  await openApp(page);
+  await page.locator('#notesList ui5-li', { hasText: 'Einkauf' }).click();
+  await editor(page).click();
+  await page.locator('.cm-line', { hasText: 'Milch' }).click();
+  await page.keyboard.press('End');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('Eier');
+
+  expect(await editorDoc(page)).toContain('- Milch\n- Eier\n- Brot');
+});
+
 test('live preview hides Markdown outside the cursor line', async ({ page }) => {
   await openApp(page);
   await listItems(page).first().click();
@@ -104,11 +138,34 @@ for (const [choice, theme] of [
   });
 }
 
+/**
+ * Violations inside UI5 components that the app cannot fix. Keep this list
+ * short, name the UI5 version and remove entries once UI5 fixes them.
+ */
+const KNOWN_UI5_ISSUES: Array<{ rule: string; target: string; reason: string }> = [
+  {
+    rule: 'nested-interactive',
+    target: '.ui5-fcl-separator',
+    reason: 'UI5 2.27.2: the FCL column separator (role=separator) contains its focusable resize grip.',
+  },
+];
+
+function isKnownUi5Issue(rule: string, target: string): boolean {
+  return KNOWN_UI5_ISSUES.some((issue) => issue.rule === rule && target.includes(issue.target));
+}
+
 test('no serious accessibility violations (axe, WCAG 2.2 AA)', async ({ page }) => {
   await openApp(page);
   await listItems(page).first().click();
   await expect(editor(page)).toBeVisible();
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
-  const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
-  expect(serious.map((v) => `${v.id}: ${v.help} (${v.nodes.length})`)).toEqual([]);
+  const serious = results.violations
+    .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+    .map((v) => ({ ...v, nodes: v.nodes.filter((n) => !isKnownUi5Issue(v.id, n.target.join(' > '))) }))
+    .filter((v) => v.nodes.length > 0);
+  // List every offending node so CI annotations alone are enough to fix them.
+  const report = serious.flatMap((v) =>
+    v.nodes.map((n) => `${v.id}: ${n.target.join(' > ')} | ${n.failureSummary?.replace(/\s+/g, ' ')} | ${n.html.slice(0, 160)}`),
+  );
+  expect(report).toEqual([]);
 });

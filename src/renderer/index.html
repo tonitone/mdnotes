@@ -26,8 +26,8 @@
         <header class="column-header">
           <ui5-title level="H2" size="H5">Bibliothek</ui5-title>
         </header>
-        <ui5-list id="libraryList" accessible-name="Bibliothek" selection-mode="Single">
-          <ui5-li id="allNotesItem" icon="documents" selected>Alle Notizen</ui5-li>
+        <ui5-list id="libraryList" accessible-name="Bibliothek">
+          <ui5-li id="allNotesItem" icon="documents" navigated>Alle Notizen</ui5-li>
         </ui5-list>
         <p class="workspace-path" id="workspacePath"></p>
       </section>
@@ -43,7 +43,7 @@
             <ui5-icon slot="icon" name="search"></ui5-icon>
           </ui5-input>
         </div>
-        <ui5-list id="notesList" accessible-name="Notizen" selection-mode="Single" no-data-text="Noch keine Notizen"></ui5-list>
+        <ui5-list id="notesList" accessible-name="Notizen" no-data-text="Noch keine Notizen"></ui5-list>
       </section>
 
       <!-- Spalte 3: Editor -->
