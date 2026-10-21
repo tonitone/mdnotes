@@ -1,10 +1,23 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { MenuCommand, NotesApi } from '../shared/api';
+import type { MenuCommand, NotesApi, NotesChangedEvent } from '../shared/api';
 
 /**
  * Bridge between renderer and main process. The renderer only gets these
  * functions, no access to Node or ipcRenderer itself.
  */
+
+/** Same rule as `assetNameFromPath` in shared/assets.ts (kept inline: preload must stay tiny). */
+function assetUrl(src: string): string | null {
+  const m = /^(?:\.\/)?assets\/([0-9a-f]{16}\.(?:png|jpg|jpeg|gif|webp|svg))$/.exec(src.trim());
+  return m ? `mdnotes-asset://local/${m[1]}` : null;
+}
+
+function subscribe<T>(channel: string, callback: (payload: T) => void): () => void {
+  const listener = (_event: unknown, payload: T) => callback(payload);
+  ipcRenderer.on(channel, listener);
+  return () => ipcRenderer.removeListener(channel, listener);
+}
+
 const api: NotesApi = {
   mode: 'electron',
   getWorkspace: () => ipcRenderer.invoke('workspace:get'),
@@ -14,12 +27,25 @@ const api: NotesApi = {
   createNote: () => ipcRenderer.invoke('notes:create'),
   saveNote: (id, body) => ipcRenderer.invoke('notes:save', id, body),
   finalizeNote: (id) => ipcRenderer.invoke('notes:finalize', id),
+  setLabels: (id, labels) => ipcRenderer.invoke('notes:setLabels', id, labels),
+  searchNotes: (query) => ipcRenderer.invoke('notes:search', query),
 
-  onMenuCommand(callback) {
-    const listener = (_event: unknown, command: MenuCommand) => callback(command);
-    ipcRenderer.on('menu:command', listener);
-    return () => ipcRenderer.removeListener('menu:command', listener);
-  },
+  trashNote: (id) => ipcRenderer.invoke('trash:move', id),
+  listTrash: () => ipcRenderer.invoke('trash:list'),
+  readTrash: (name) => ipcRenderer.invoke('trash:read', name),
+  restoreFromTrash: (name) => ipcRenderer.invoke('trash:restore', name),
+  deleteFromTrash: (name) => ipcRenderer.invoke('trash:delete', name),
+
+  saveAsset: (bytes, mime) => ipcRenderer.invoke('assets:save', bytes, mime),
+  assetUrl,
+
+  exportNote: (id, format) => ipcRenderer.invoke('transfer:exportNote', id, format),
+  exportAll: () => ipcRenderer.invoke('transfer:exportAll'),
+  importNotes: () => ipcRenderer.invoke('transfer:import'),
+  importTexts: (files) => ipcRenderer.invoke('transfer:importTexts', files),
+
+  onMenuCommand: (callback) => subscribe<MenuCommand>('menu:command', callback),
+  onNotesChanged: (callback) => subscribe<NotesChangedEvent>('notes:changed', callback),
 
   onFlushRequest(callback) {
     const listener = async () => {
