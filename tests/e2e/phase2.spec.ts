@@ -48,8 +48,11 @@ test.describe('labels', () => {
 
     await page.locator('#allNotesItem').click();
     await openNote(page, 'Sprint-Planung');
-    await input.press('Backspace');
-    await input.press('Backspace');
+    // First Backspace selects the last token, the second deletes it. Use the
+    // page keyboard: locator.press() would move focus back into the input.
+    await input.focus();
+    await page.keyboard.press('Backspace');
+    await page.keyboard.press('Backspace');
     await expect(page.locator('#labelInput ui5-token')).toHaveCount(1);
     await expect(page.locator('#labelList ui5-li', { hasText: 'projekt' })).toHaveCount(0);
   });
