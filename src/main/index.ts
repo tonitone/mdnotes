@@ -16,6 +16,8 @@ const ASSET_SCHEME = 'mdnotes-asset';
 
 let mainWindow: BrowserWindow | null = null;
 let workspace: Workspace | null = null;
+/** Set when the user quits; the window then closes after saving and the app exits. */
+let quitting = false;
 
 // Tests start the app with a separate profile (see tests/electron).
 if (process.env.MDNOTES_USER_DATA) app.setPath('userData', process.env.MDNOTES_USER_DATA);
@@ -314,6 +316,9 @@ function createWindow(): void {
   });
   mainWindow.on('closed', () => {
     mainWindow = null;
+    // Closing was delayed to save pending changes, which cancels a running
+    // quit. Resume it, otherwise Cmd+Q would only close the window on macOS.
+    if (quitting) app.quit();
   });
 
   if (devServerUrl) {
@@ -342,6 +347,10 @@ app.whenReady().then(async () => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+});
+
+app.on('before-quit', () => {
+  quitting = true;
 });
 
 app.on('window-all-closed', () => {

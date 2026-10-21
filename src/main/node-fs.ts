@@ -6,6 +6,26 @@ import { FileExistsError, type FsPort } from '../shared/fs-port';
 
 export const TRASH_DIR = '.trash';
 
+const RETRY_CODES = new Set(['EPERM', 'EACCES', 'EBUSY']);
+
+/**
+ * On Windows, virus scanners, search indexers and sync tools briefly lock
+ * freshly written files, so renames fail with EPERM/EACCES/EBUSY. Retry with
+ * a short backoff (the same approach as graceful-fs).
+ */
+async function renameWithRetry(from: string, to: string): Promise<void> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await fsp.rename(from, to);
+      return;
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code ?? '';
+      if (!RETRY_CODES.has(code) || attempt >= 10) throw err;
+      await new Promise((resolve) => setTimeout(resolve, 20 * 2 ** Math.min(attempt, 5)));
+    }
+  }
+}
+
 /**
  * `FsPort` on the real file system, restricted to one workspace folder.
  * Runs in the main process only, never in the renderer.
@@ -71,7 +91,7 @@ export class NodeFs implements FsPort {
       await handle.close();
     }
     try {
-      await fsp.rename(temp, target);
+      await renameWithRetry(temp, target);
     } catch (err) {
       await fsp.rm(temp, { force: true });
       throw err;
@@ -81,7 +101,7 @@ export class NodeFs implements FsPort {
   /** Renames without ever replacing another file. */
   private async move(source: string, target: string, sameFile: boolean, targetName: string): Promise<void> {
     if (!sameFile && (await this.pathExists(target))) throw new FileExistsError(targetName);
-    await fsp.rename(source, target);
+    await renameWithRetry(source, target);
   }
 
   async rename(from: string, to: string): Promise<void> {
