@@ -3,6 +3,8 @@
  * promise, and short announcements for screen readers.
  */
 
+import { t } from '../shared/i18n';
+
 /** UI5 elements are only accessed through the properties used here. */
 export type Ui5Element = HTMLElement & Record<string, any>;
 
@@ -78,21 +80,21 @@ export function confirmDialog(
     [el('p', {}, [text])],
     [
       { text: confirmText, value: true, design },
-      { text: 'Abbrechen', value: false, design: 'Transparent' },
+      { text: t('dialog.cancel'), value: false, design: 'Transparent' },
     ],
     false,
   );
 }
 
 /** Asks for a single line of text. Resolves with `null` when cancelled. */
-export async function promptDialog(headerText: string, label: string, hint: string, value = '', cancelText = 'Überspringen'): Promise<string | null> {
+export async function promptDialog(headerText: string, label: string, hint: string, value = '', cancelText = t('dialog.skip')): Promise<string | null> {
   const id = `prompt-${Date.now()}`;
   const input = el('ui5-input', { id, value, accessibleName: label, placeholder: label });
   const result = openDialog<'ok' | 'cancel'>(
     headerText,
     [el('ui5-label', { 'attr:for': id, showColon: true }, [label]), input, el('p', { className: 'dialog-hint' }, [hint])],
     [
-      { text: 'Übernehmen', value: 'ok', design: 'Emphasized' },
+      { text: t('dialog.apply'), value: 'ok', design: 'Emphasized' },
       { text: cancelText, value: 'cancel', design: 'Transparent' },
     ],
     'cancel',
@@ -108,5 +110,5 @@ export async function promptDialog(headerText: string, label: string, hint: stri
 
 export function infoDialog(headerText: string, lines: string[]): Promise<void> {
   const list = el('ul', { className: 'dialog-list' }, lines.map((line) => el('li', {}, [line])));
-  return openDialog(headerText, [list], [{ text: 'OK', value: undefined, design: 'Emphasized' }], undefined);
+  return openDialog(headerText, [list], [{ text: t('dialog.ok'), value: undefined, design: 'Emphasized' }], undefined);
 }

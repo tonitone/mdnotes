@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import type { BackupKind, BackupSettings, ExportFormat, MenuCommand, NotesChangedEvent } from '../shared/api';
 import { ASSET_DIR, MAX_ASSET_BYTES, MIME_BY_EXT, assetNameFor, isAssetName, isImageMime } from '../shared/assets';
 import { VERSION_NAME_RE } from '../shared/history';
+import { isLanguageChoice, resolveLocale, setLocale, t, type LanguageChoice } from '../shared/i18n';
 import { isNoteId } from '../shared/note';
 import {
   assertBackupFolder,
@@ -47,10 +48,11 @@ protocol.registerSchemesAsPrivileged([
 interface AppConfig {
   workspace?: string;
   backup: BackupSettings;
+  language: LanguageChoice;
 }
 
 const DEFAULT_BACKUP: BackupSettings = { folder: null, auto: 'off', includeHistory: false, keep: 10 };
-let config: AppConfig = { backup: { ...DEFAULT_BACKUP } };
+let config: AppConfig = { backup: { ...DEFAULT_BACKUP }, language: 'system' };
 let recovery: RecoveryStore | null = null;
 
 const configPath = () => path.join(app.getPath('userData'), 'config.json');
@@ -58,10 +60,26 @@ const configPath = () => path.join(app.getPath('userData'), 'config.json');
 async function loadConfig(): Promise<AppConfig> {
   try {
     const raw = JSON.parse(await readFile(configPath(), 'utf8')) as Partial<AppConfig>;
-    return { workspace: raw.workspace, backup: { ...DEFAULT_BACKUP, ...(raw.backup ?? {}) } };
+    return {
+      workspace: raw.workspace,
+      backup: { ...DEFAULT_BACKUP, ...(raw.backup ?? {}) },
+      language: isLanguageChoice(raw.language) ? raw.language : 'system',
+    };
   } catch {
-    return { backup: { ...DEFAULT_BACKUP } };
+    return { backup: { ...DEFAULT_BACKUP }, language: 'system' };
   }
+}
+
+/** The locale for the configured language; `system` follows the OS language list. */
+function currentLanguage() {
+  const preferred = app.getPreferredSystemLanguages?.() ?? [];
+  const locale = resolveLocale(config.language, [...preferred, app.getLocale()]);
+  return { choice: config.language, locale };
+}
+
+function applyLanguage(): void {
+  setLocale(currentLanguage().locale);
+  buildMenu();
 }
 
 async function saveConfig(): Promise<void> {
@@ -88,7 +106,7 @@ async function openWorkspace(dir: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 function backupFolder(): string {
-  if (!config.backup.folder) throw new Error('Kein Backup-Ordner gewählt.');
+  if (!config.backup.folder) throw new Error(t('main.noBackupFolder'));
   return config.backup.folder;
 }
 
@@ -268,7 +286,7 @@ function registerIpc(): void {
 
   handle('workspace:choose', async () => {
     const result = await dialog.showOpenDialog(requireWindow(), {
-      title: 'Workspace-Ordner wählen',
+      title: t('dialog.chooseWorkspace'),
       properties: ['openDirectory', 'createDirectory'],
     });
     if (result.canceled || result.filePaths.length === 0) return null;
@@ -330,7 +348,7 @@ function registerIpc(): void {
   });
   handle('backup:chooseFolder', async () => {
     const result = await dialog.showOpenDialog(requireWindow(), {
-      title: 'Backup-Ordner wählen',
+      title: t('dialog.chooseBackupFolder'),
       properties: ['openDirectory', 'createDirectory'],
     });
     if (result.canceled || result.filePaths.length === 0) return null;
@@ -354,7 +372,7 @@ function registerIpc(): void {
   handle('backup:restoreToFolder', async (file) => {
     const name = requireBackupName(file);
     const result = await dialog.showOpenDialog(requireWindow(), {
-      title: 'Leeren Ordner für die Wiederherstellung wählen',
+      title: t('dialog.chooseRestoreFolder'),
       properties: ['openDirectory', 'createDirectory'],
     });
     if (result.canceled || result.filePaths.length === 0) return null;
@@ -366,6 +384,15 @@ function registerIpc(): void {
 
   handle('recovery:write', (id, body) => recovery?.write(requireId(id), requireText(body)));
   handle('recovery:clear', (id) => recovery?.clear(requireId(id)));
+  handle('language:get', () => currentLanguage());
+  handle('language:set', async (choice) => {
+    if (!isLanguageChoice(choice)) throw new Error('Invalid language.');
+    config.language = choice;
+    await saveConfig();
+    applyLanguage();
+    return currentLanguage();
+  });
+
   handle('recovery:list', () => (recovery && workspace ? recovery.list(workspace.store) : []));
 }
 
@@ -382,38 +409,38 @@ function buildMenu(): void {
   const template: Electron.MenuItemConstructorOptions[] = [
     ...(isMac ? [{ role: 'appMenu' as const }] : []),
     {
-      label: 'Ablage',
+      label: t('menu.file'),
       submenu: [
-        { label: 'Neue Notiz', accelerator: 'CmdOrCtrl+N', click: () => sendMenu('new-note') },
-        { label: 'Workspace wählen …', accelerator: 'CmdOrCtrl+O', click: () => sendMenu('choose-workspace') },
+        { label: t('menu.newNote'), accelerator: 'CmdOrCtrl+N', click: () => sendMenu('new-note') },
+        { label: t('menu.chooseWorkspace'), accelerator: 'CmdOrCtrl+O', click: () => sendMenu('choose-workspace') },
         { type: 'separator' },
-        { label: 'Importieren …', click: () => sendMenu('import') },
-        { label: 'Alle Notizen exportieren …', click: () => sendMenu('export-all') },
+        { label: t('menu.import'), click: () => sendMenu('import') },
+        { label: t('menu.exportAll'), click: () => sendMenu('export-all') },
         { type: 'separator' },
         // No shortcut on purpose: Cmd+Backspace deletes text in the editor.
-        { label: 'Notiz in den Papierkorb', click: () => sendMenu('delete-note') },
-        { label: 'Versionen …', accelerator: 'CmdOrCtrl+Alt+V', click: () => sendMenu('versions') },
+        { label: t('menu.trashNote'), click: () => sendMenu('delete-note') },
+        { label: t('menu.versions'), accelerator: 'CmdOrCtrl+Alt+V', click: () => sendMenu('versions') },
         { type: 'separator' },
-        { label: 'Backup …', click: () => sendMenu('backup') },
+        { label: t('menu.backup'), click: () => sendMenu('backup') },
         { type: 'separator' },
-        isMac ? { role: 'close' } : { role: 'quit', label: 'Beenden' },
+        isMac ? { role: 'close' } : { role: 'quit', label: t('menu.quit') },
       ],
     },
-    { role: 'editMenu', label: 'Bearbeiten' },
+    { role: 'editMenu', label: t('menu.edit') },
     {
-      label: 'Darstellung',
+      label: t('menu.view'),
       submenu: [
-        { label: 'Suchen', accelerator: 'CmdOrCtrl+F', click: () => sendMenu('find') },
+        { label: t('menu.find'), accelerator: 'CmdOrCtrl+F', click: () => sendMenu('find') },
         { type: 'separator' },
-        { role: 'resetZoom', label: 'Originalgröße' },
-        { role: 'zoomIn', label: 'Vergrößern' },
-        { role: 'zoomOut', label: 'Verkleinern' },
+        { role: 'resetZoom', label: t('menu.resetZoom') },
+        { role: 'zoomIn', label: t('menu.zoomIn') },
+        { role: 'zoomOut', label: t('menu.zoomOut') },
         { type: 'separator' },
-        { role: 'togglefullscreen', label: 'Vollbild' },
+        { role: 'togglefullscreen', label: t('menu.fullscreen') },
         ...(app.isPackaged ? [] : [{ role: 'toggleDevTools' as const }]),
       ],
     },
-    { role: 'windowMenu', label: 'Fenster' },
+    { role: 'windowMenu', label: t('menu.window') },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
@@ -488,9 +515,9 @@ app.whenReady().then(async () => {
   hardenSession();
   registerAssetProtocol();
   registerIpc();
-  buildMenu();
 
   config = await loadConfig();
+  applyLanguage();
   recovery = new RecoveryStore(path.join(app.getPath('userData'), 'recovery'));
   if (config.workspace && existsSync(config.workspace)) {
     try {

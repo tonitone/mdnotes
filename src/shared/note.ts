@@ -6,7 +6,12 @@
  * tests.
  */
 
-export const UNTITLED = 'Neue Notiz';
+import { t } from './i18n';
+
+/** Title of a note without text, in the current language. */
+export function untitled(): string {
+  return t('note.untitled');
+}
 
 /** Front matter fields managed by the app itself. */
 export interface NoteMeta {
@@ -69,7 +74,7 @@ export function slugify(title: string): string {
     .replace(/^-+|-+$/g, '')
     .slice(0, SLUG_MAX)
     .replace(/-+$/g, '');
-  return slug || 'notiz';
+  return slug || t('note.slugFallback');
 }
 
 export function idSuffix(id: string): string {
@@ -104,7 +109,7 @@ export function titleFromBody(body: string): string {
     const plain = plainLine(line);
     if (plain) return plain.slice(0, TITLE_MAX);
   }
-  return UNTITLED;
+  return untitled();
 }
 
 export function previewFromBody(body: string, max = 140): string {

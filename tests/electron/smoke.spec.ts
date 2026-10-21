@@ -39,7 +39,8 @@ test.beforeAll(async () => {
   backups = path.join(root, 'backups');
   await writeFile(
     path.join(userData, 'config.json'),
-    JSON.stringify({ workspace, backup: { folder: backups, auto: 'off', includeHistory: true, keep: 10 } }),
+    // German UI regardless of the runner's OS language.
+    JSON.stringify({ workspace, language: 'de', backup: { folder: backups, auto: 'off', includeHistory: true, keep: 10 } }),
   );
 
   app = await electron.launch({

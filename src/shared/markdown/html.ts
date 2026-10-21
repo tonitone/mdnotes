@@ -1,4 +1,5 @@
 import { parseMarkdown, type Block, type Inline } from './parse';
+import { getLocale, textDirection } from '../i18n';
 
 /** Renders Markdown to an HTML fragment (used for PDF export). */
 
@@ -105,19 +106,19 @@ const PRINT_CSS = `
   code { background: #eff1f2; padding: 0 3px; border-radius: 3px; }
   pre { background: #f5f6f7; padding: 10px 12px; border-radius: 6px; white-space: pre-wrap; break-inside: avoid; }
   pre code { background: none; padding: 0; }
-  blockquote { margin: 0; padding-left: 12px; border-left: 3px solid #a9b4be; color: #556b82; }
+  blockquote { margin: 0; padding-inline-start: 12px; border-inline-start: 3px solid #a9b4be; color: #556b82; }
   table { border-collapse: collapse; margin: 8px 0; }
   th, td { border: 1px solid #a9b4be; padding: 4px 8px; }
   th { background: #eff1f2; }
   img { max-width: 100%; }
-  li.task { list-style: none; margin-left: -1.2em; }
+  li.task { list-style: none; margin-inline-start: -1.2em; }
   a { color: #0064d9; }
 `;
 
 /** A complete, self-contained HTML document for printing to PDF. */
 export function markdownToPrintDocument(markdown: string, title: string, opts: HtmlOptions = {}): string {
   return `<!doctype html>
-<html lang="de">
+<html lang="${getLocale()}" dir="${textDirection(getLocale())}">
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src file: data: mdnotes-asset:; style-src 'unsafe-inline'">

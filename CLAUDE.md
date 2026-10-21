@@ -28,13 +28,15 @@ Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand
   Barrierefreiheitstests im Browser-Modus (`tests/e2e`) und einen Smoke-Test der echten
   Electron-App auf macOS, Windows und Linux (`tests/electron`).
 - Neue npm-Pakete nur zusammen mit aktualisierter `package-lock.json` (CI nutzt `npm ci`).
-- Commits auf Englisch nach Conventional Commits, Code-Kommentare auf Englisch,
-  Oberfläche vorerst Deutsch.
+- Commits auf Englisch nach Conventional Commits, Code-Kommentare auf Englisch.
+- Oberfläche Deutsch und Englisch: neue Texte immer in `src/shared/i18n/de.ts` und `en.ts`,
+  nie fest im Code. Statische HTML-Texte über `data-i18n`/`data-i18n-attr`. Tests laufen auf Deutsch.
 - Versionen: `.history/<id>/<ms>-<hash8>.md`, Snapshot in `finalize()`, vor `restoreVersion()`
   und bevor eine Änderung von außen übernommen wird.
 - Backups: `src/main/backup.ts` (ZIP + Manifest), Einstellungen in `config.json` im App-Profil.
   Notfalldateien für Crash-Recovery liegen im App-Profil unter `recovery/`, nie im Workspace.
-- Phase 4: Barrierefreiheits-Audit, i18n/RTL, HTML/DOCX-Export, Signierung, Auto-Update, CSP verschärfen.
+- Phase 4: i18n/RTL (erledigt), Barrierefreiheits-Audit, HTML/DOCX-Export, CSP verschärfen.
+  Signierung und Auto-Update entfallen (kein App-Store).
 - Offen: Backups verschlüsseln (optional), blockweises Wiederherstellen aus einer Version.
 
 ## Bekannte Risiken
