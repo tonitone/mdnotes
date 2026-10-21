@@ -68,13 +68,15 @@ import { App } from './app';
 import { applyLocale } from './i18n';
 import { initAppearance } from './theme';
 
-initAppearance();
-
 async function start(): Promise<void> {
   const api = await getApi();
   // The language must be in place before the app renders any text.
   const { choice, locale } = await api.getLanguage();
   await applyLocale(locale);
+  // Only then the theme: switching both at once makes UI5 re-render
+  // components whose translations are still loading (seen with dark themes
+  // in the production build).
+  initAppearance();
   await new App(api, choice).start();
 }
 
