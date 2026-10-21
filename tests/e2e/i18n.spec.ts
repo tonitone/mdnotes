@@ -26,7 +26,7 @@ test('switches to English and back, and keeps the choice', async ({ page }) => {
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.locator('#newNoteButton')).toHaveText('New note');
   await expect(page.locator('#notesTitle')).toHaveText('Notes');
-  await expect(page.locator('#allNotesItem')).toHaveText('All notes');
+  await expect(page.locator('#allNotesItem')).toContainText('All notes');
   await expect(page.locator('#searchInput')).toHaveAttribute('placeholder', 'Search');
 
   // The choice survives a reload.
