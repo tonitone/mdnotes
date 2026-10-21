@@ -1,15 +1,30 @@
-import type { ExportFormat, MenuCommand, NoteSummary, NotesApi, NotesChangedEvent, SaveResult, SearchHit, TrashEntry } from '../shared/api';
+import type {
+  ExportFormat,
+  ImportReport,
+  MenuCommand,
+  NoteSummary,
+  NotesApi,
+  NotesChangedEvent,
+  RecoveryEntry,
+  SaveResult,
+  SearchHit,
+  TrashEntry,
+} from '../shared/api';
 import { MAX_ASSET_BYTES, isImageMime } from '../shared/assets';
 import { markdownToWiki } from '../shared/markdown/wiki';
+import { openBackupDialog } from './backup-dialog';
 import { createEditor, type NoteEditor } from './editor/editor';
 import { THEME_LABELS, getDensity, getThemeChoice, setDensity, setThemeChoice, type ThemeChoice } from './theme';
 import { announce, confirmDialog, el, infoDialog, promptDialog, type Ui5Element } from './ui';
+import { formatVersionTime, openVersionDialog } from './versions';
 
 /** Delay after the last keystroke before saving. */
 const SAVE_DELAY_MS = 700;
 /** Delay before renaming the file after its title. */
 const FINALIZE_DELAY_MS = 4000;
 const SEARCH_DELAY_MS = 150;
+/** Unsaved text is written to the crash recovery store at most this often. */
+const RECOVERY_DELAY_MS = 2000;
 
 type View = { kind: 'all' } | { kind: 'trash' } | { kind: 'label'; label: string };
 
@@ -44,6 +59,9 @@ export class App {
   private saveTimer: number | undefined;
   private finalizeTimer: number | undefined;
   private searchTimer: number | undefined;
+  private recoveryTimer: number | undefined;
+  /** Keeps recovery writes and clears in order. */
+  private recoveryQueue: Promise<unknown> = Promise.resolve();
   private saving: Promise<void> = Promise.resolve();
   private query = '';
   private searchHits: SearchHit[] | null = null;
@@ -52,6 +70,9 @@ export class App {
     fcl: $('fcl'),
     shell: $('shell'),
     themeItem: $('themeItem'),
+    backupItem: $('backupItem'),
+    renameLabelButton: $('renameLabelButton'),
+    versionsButton: $('versionsButton'),
     workspaceItem: $('workspaceItem'),
     themeMenu: $('themeMenu'),
     browserModeStrip: $('browserModeStrip'),
@@ -125,6 +146,9 @@ export class App {
     els.newNoteButton.addEventListener('click', () => void this.newNote());
     els.chooseWorkspaceButton.addEventListener('click', () => void this.chooseWorkspace());
     els.workspaceItem.addEventListener('click', () => void this.chooseWorkspace());
+    els.backupItem.addEventListener('click', () => void this.openBackup());
+    els.versionsButton.addEventListener('click', () => void this.openVersions());
+    els.renameLabelButton.addEventListener('click', () => void this.renameCurrentLabel());
 
     els.themeItem.addEventListener('click', (event: Event) => {
       const detail = (event as CustomEvent<{ targetRef: HTMLElement }>).detail;
@@ -223,6 +247,8 @@ export class App {
       if (command === 'delete-note') void this.trashCurrent();
       if (command === 'import') void this.importNotes();
       if (command === 'export-all') void this.exportAll();
+      if (command === 'versions') void this.openVersions();
+      if (command === 'backup') void this.openBackup();
     });
     this.api.onFlushRequest(() => this.flush());
     this.api.onNotesChanged((event) => void this.onNotesChanged(event));
@@ -265,6 +291,7 @@ export class App {
     this.view = { kind: 'all' };
     this.renderLibrary();
     this.renderList();
+    await this.checkRecovery();
   }
 
   private async setView(view: View): Promise<void> {
@@ -310,6 +337,7 @@ export class App {
     this.els.notesTitle.textContent =
       this.view.kind === 'trash' ? 'Papierkorb' : this.view.kind === 'label' ? `Label: ${this.view.label}` : 'Notizen';
     this.els.newNoteButton.hidden = this.view.kind === 'trash';
+    this.els.renameLabelButton.hidden = this.view.kind !== 'label';
   }
 
   private async runSearch(): Promise<void> {
@@ -454,6 +482,7 @@ export class App {
   private onEditorChange(): void {
     if (!this.currentId) return;
     this.dirty = true;
+    this.scheduleRecovery();
     if (this.conflict) return;
     this.setStatus('Nicht gespeichert');
     window.clearTimeout(this.saveTimer);
@@ -475,6 +504,7 @@ export class App {
       try {
         const result = await this.api.saveNote(id, body);
         this.applySaveResult(result);
+        if (!this.dirty || id !== this.currentId) this.clearRecovery(id);
         if (id === this.currentId && !this.dirty) {
           this.setStatus(`Gespeichert um ${timeFormat.format(new Date(result.modified))}`);
         }
@@ -818,6 +848,126 @@ export class App {
     this.renderLibrary();
     await this.openNote(doc.id);
     announce('Als neue Notiz gesichert.');
+  }
+
+  // -------------------------------------------------------------------------
+  // Versions, backup, labels
+  // -------------------------------------------------------------------------
+
+  private async openVersions(): Promise<void> {
+    const id = this.currentId;
+    if (!id || !this.editor) return;
+    await this.flush();
+    try {
+      // Make sure the current state is a version, so it can be compared and restored.
+      this.applySaveResult(await this.api.finalizeNote(id));
+      const title = this.notes.find((n) => n.id === id)?.title ?? 'Notiz';
+      const doc = await openVersionDialog(this.api, id, title, this.editor.getDoc());
+      if (doc && id === this.currentId) {
+        this.editor.setDoc(doc.body);
+        this.dirty = false;
+        this.applySaveResult(doc);
+        this.setStatus(`Gespeichert um ${timeFormat.format(new Date(doc.modified))}`);
+        announce('Version wiederhergestellt. Der vorherige Stand bleibt als Version erhalten.');
+      }
+    } catch (err) {
+      this.showError('Die Versionen konnten nicht geladen werden.', err);
+    }
+  }
+
+  private async openBackup(): Promise<void> {
+    await this.flush();
+    try {
+      await openBackupDialog(this.api, {
+        onRestored: (report: ImportReport) => this.showImportReport(report),
+        onWorkspaceChanged: (folder: string) => this.showWorkspace(folder),
+      });
+    } catch (err) {
+      this.showError('Der Backup-Dialog konnte nicht geöffnet werden.', err);
+    }
+  }
+
+  private async renameCurrentLabel(): Promise<void> {
+    if (this.view.kind !== 'label') return;
+    const from = this.view.label;
+    const to = await promptDialog(
+      'Label umbenennen',
+      'Neuer Name',
+      'Gibt es schon ein Label mit diesem Namen, werden beide zusammengeführt.',
+      from,
+      'Abbrechen',
+    );
+    if (!to || !to.trim() || to.trim() === from) return;
+    try {
+      const changed = await this.api.renameLabel(from, to);
+      this.notes = await this.api.listNotes();
+      const renamed = changed[0]?.labels.find((l) => sameLabel(l, to.trim())) ?? to.trim();
+      this.view = { kind: 'label', label: renamed };
+      const current = this.notes.find((n) => n.id === this.currentId);
+      if (current) this.renderTokens(current.labels);
+      this.renderLibrary();
+      await this.runSearch();
+      announce(`Label „${from}“ in ${changed.length} ${changed.length === 1 ? 'Notiz' : 'Notizen'} umbenannt.`);
+    } catch (err) {
+      this.showError('Das Label konnte nicht umbenannt werden.', err);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Crash recovery
+  // -------------------------------------------------------------------------
+
+  private scheduleRecovery(): void {
+    if (this.recoveryTimer !== undefined) return;
+    this.recoveryTimer = window.setTimeout(() => {
+      this.recoveryTimer = undefined;
+      const id = this.currentId;
+      if (!id || !this.dirty || !this.editor) return;
+      const body = this.editor.getDoc();
+      this.recoveryQueue = this.recoveryQueue.then(() => this.api.writeRecovery(id, body)).catch((err) => console.error(err));
+    }, RECOVERY_DELAY_MS);
+  }
+
+  private clearRecovery(id: string): void {
+    this.recoveryQueue = this.recoveryQueue.then(() => this.api.clearRecovery(id)).catch((err) => console.error(err));
+  }
+
+  /** Offers unsaved text left over from a crash, one note at a time. */
+  private async checkRecovery(): Promise<void> {
+    let entries: RecoveryEntry[];
+    try {
+      entries = await this.api.listRecovery();
+    } catch (err) {
+      console.error(err);
+      return;
+    }
+    const entry = entries[0];
+    if (!entry) return;
+    this.showNotice(
+      'Critical',
+      `Ungespeicherte Änderungen an „${entry.title}“ gefunden (${formatVersionTime(entry.savedAt)}), vermutlich nach einem Absturz.`,
+      [
+        { text: 'Wiederherstellen', action: () => void this.recoverEntry(entry) },
+        {
+          text: 'Verwerfen',
+          action: () => {
+            this.els.noticeRegion.replaceChildren();
+            this.clearRecovery(entry.id);
+            void this.recoveryQueue.then(() => this.checkRecovery());
+          },
+        },
+      ],
+    );
+  }
+
+  private async recoverEntry(entry: RecoveryEntry): Promise<void> {
+    await this.openNote(entry.id);
+    const view = this.editor?.view;
+    if (this.currentId !== entry.id || !view) return;
+    // As a normal edit, so Undo brings back the saved version.
+    view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: entry.body } });
+    announce('Ungespeicherte Änderungen wiederhergestellt.');
+    await this.checkRecovery();
   }
 
   // -------------------------------------------------------------------------

@@ -61,7 +61,40 @@ export interface NotesChangedEvent {
 
 export type ExportFormat = 'markdown' | 'wiki' | 'pdf';
 
-export type MenuCommand = 'new-note' | 'choose-workspace' | 'find' | 'delete-note' | 'import' | 'export-all';
+export interface VersionSummary {
+  name: string;
+  /** When the version was taken, milliseconds since the epoch. */
+  time: number;
+}
+
+export type BackupKind = 'manual' | 'auto' | 'safety';
+
+export interface BackupInfo {
+  /** File name inside the backup folder. */
+  file: string;
+  created: number;
+  kind: BackupKind;
+  size: number;
+}
+
+export interface BackupSettings {
+  folder: string | null;
+  /** Automatic backups: never, when quitting, or once a day. */
+  auto: 'off' | 'quit' | 'daily';
+  includeHistory: boolean;
+  /** How many backups to keep. */
+  keep: number;
+}
+
+export interface RecoveryEntry {
+  id: string;
+  title: string;
+  body: string;
+  /** When the unsaved text was written, milliseconds since the epoch. */
+  savedAt: number;
+}
+
+export type MenuCommand = 'new-note' | 'choose-workspace' | 'find' | 'delete-note' | 'import' | 'export-all' | 'versions' | 'backup';
 
 export interface NotesApi {
   readonly mode: 'electron' | 'browser';
@@ -100,6 +133,31 @@ export interface NotesApi {
   importNotes(): Promise<ImportReport | null>;
   /** Imports dropped Markdown files (text only, no image lookup). */
   importTexts(files: Array<{ name: string; text: string }>): Promise<ImportReport>;
+
+  /** Versions of a note, newest first. */
+  listVersions(id: string): Promise<VersionSummary[]>;
+  readVersion(id: string, name: string): Promise<string>;
+  /** Makes a version current; the previous content stays available as a version. */
+  restoreVersion(id: string, name: string): Promise<NoteDoc>;
+  /** Renames (or merges) a label in all notes. Returns the changed notes. */
+  renameLabel(from: string, to: string): Promise<NoteSummary[]>;
+
+  getBackupSettings(): Promise<BackupSettings>;
+  updateBackupSettings(patch: Partial<Omit<BackupSettings, 'folder'>>): Promise<BackupSettings>;
+  /** Opens a folder dialog for the backup location. `null` if cancelled. */
+  chooseBackupFolder(): Promise<BackupSettings | null>;
+  createBackup(): Promise<BackupInfo>;
+  listBackups(): Promise<BackupInfo[]>;
+  verifyBackup(file: string): Promise<{ ok: boolean; files: number; problems: string[] }>;
+  listBackupNotes(file: string): Promise<Array<{ path: string; title: string }>>;
+  restoreBackupNotes(file: string, paths: string[]): Promise<ImportReport>;
+  /** Restores a whole backup into an empty folder chosen in a dialog and opens it. Returns the folder. */
+  restoreBackupToFolder(file: string): Promise<string | null>;
+
+  /** Crash recovery: keeps unsaved editor content outside the workspace. */
+  writeRecovery(id: string, body: string): Promise<void>;
+  clearRecovery(id: string): Promise<void>;
+  listRecovery(): Promise<RecoveryEntry[]>;
 
   /** Commands from the native menu. Returns an unsubscribe function. */
   onMenuCommand(callback: (command: MenuCommand) => void): () => void;
