@@ -30,6 +30,9 @@ const RECOVERY_DELAY_MS = 2000;
 
 type View = { kind: 'all' } | { kind: 'trash' } | { kind: 'label'; label: string };
 
+/** Below this width the column layout shows a single column (UI5 FCL breakpoint). */
+const narrowQuery = window.matchMedia('(max-width: 599px)');
+
 const $ = <T extends HTMLElement = Ui5Element>(id: string) => {
   const node = document.getElementById(id);
   if (!node) throw new Error(`Missing element: #${id}`);
@@ -66,6 +69,7 @@ export class App {
     themeItem: $('themeItem'),
     backupItem: $('backupItem'),
     renameLabelButton: $('renameLabelButton'),
+    libraryButton: $('libraryButton'),
     versionsButton: $('versionsButton'),
     workspaceItem: $('workspaceItem'),
     themeMenu: $('themeMenu'),
@@ -221,9 +225,14 @@ export class App {
       els.fcl.layout = 'TwoColumnsMidExpanded';
       (els.notesList.querySelector('[navigated]') as HTMLElement | null)?.focus();
     });
+    els.libraryButton.addEventListener('click', () => {
+      els.fcl.layout = 'OneColumn';
+      (els.libraryList.querySelector('[navigated]') ?? els.labelList.querySelector('[navigated]') ?? els.allNotesItem as HTMLElement | null)?.focus();
+    });
     els.fcl.addEventListener('layout-change', (event: Event) => {
-      const detail = (event as CustomEvent<{ midColumnVisible: boolean }>).detail;
+      const detail = (event as CustomEvent<{ startColumnVisible: boolean; midColumnVisible: boolean }>).detail;
       els.backButton.hidden = detail.midColumnVisible;
+      els.libraryButton.hidden = detail.startColumnVisible || !detail.midColumnVisible;
     });
 
     // The skip link jumps to the editor, or to the note list when no note is open.
@@ -472,6 +481,8 @@ export class App {
     this.conflict = false;
     this.els.noticeRegion.replaceChildren();
     this.showView('noSelection');
+    // In a single column the empty editor would hide the list; show the list instead.
+    this.els.fcl.layout = narrowQuery.matches ? 'TwoColumnsMidExpanded' : 'ThreeColumnsEndExpanded';
   }
 
   // -------------------------------------------------------------------------

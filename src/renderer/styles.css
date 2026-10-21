@@ -38,6 +38,13 @@ ui5-flexible-column-layout {
   border-bottom: 1px solid var(--sapGroup_TitleBorderColor);
 }
 
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
 .search-row {
   padding: 0.5rem 1rem;
 }

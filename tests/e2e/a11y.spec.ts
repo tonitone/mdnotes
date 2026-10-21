@@ -172,8 +172,8 @@ test('the first Tab reaches the skip link, which moves focus into the content', 
 
 test('F6 moves between library, note list and editor', async ({ page }) => {
   await openApp(page);
+  // Clicking the note leaves focus in the note list.
   await openNote(page, 'Willkommen');
-  await page.locator('#allNotesItem').focus();
   const area = () =>
     page.evaluate(() => {
       let node: Element | null = document.activeElement;
@@ -182,13 +182,13 @@ test('F6 moves between library, note list and editor', async ({ page }) => {
       const host = (n: Element | null): Element | null => (n ? n.closest('section[slot]') ?? host((n.getRootNode() as ShadowRoot).host ?? null) : null);
       return host(node)?.getAttribute('slot') ?? document.activeElement?.tagName;
     });
-  expect(await area()).toBe('startColumn');
-  await page.keyboard.press('F6');
-  await expect.poll(area).toBe('midColumn');
+  expect(await area()).toBe('midColumn');
   await page.keyboard.press('F6');
   await expect.poll(area).toBe('endColumn');
   await page.keyboard.press('Shift+F6');
   await expect.poll(area).toBe('midColumn');
+  await page.keyboard.press('Shift+F6');
+  await expect.poll(area).toBe('startColumn');
 });
 
 test('focus returns to the opener after closing a dialog', async ({ page }) => {
@@ -207,6 +207,15 @@ test('reflow: no horizontal scrolling at 320 CSS pixels (WCAG 1.4.10)', async ({
   expect(await overflow()).toBeLessThanOrEqual(0);
   await openNote(page, 'Willkommen');
   expect(await overflow()).toBeLessThanOrEqual(0);
+
+  // Back to the list, then to the library, which is otherwise hidden in one column.
+  await page.locator('#backButton').click();
+  await expect(listItems(page).first()).toBeVisible();
+  await page.locator('#libraryButton').click();
+  await expect(page.locator('#allNotesItem')).toBeVisible();
+  await page.locator('#labelList ui5-li').first().click();
+  await expect(listItems(page).first()).toBeVisible();
+  await expectNoSeriousViolations(page, 'narrow');
 });
 
 test('text spacing overrides do not cut off content (WCAG 1.4.12)', async ({ page }) => {
