@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { expectNoSeriousViolations } from './axe';
 
 const editor = (page: Page) => page.locator('.cm-content');
