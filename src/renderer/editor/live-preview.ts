@@ -1,5 +1,5 @@
 import { syntaxTree } from '@codemirror/language';
-import type { EditorState, Range } from '@codemirror/state';
+import { Facet, type EditorState, type Range } from '@codemirror/state';
 import {
   Decoration,
   EditorView,
@@ -15,6 +15,114 @@ import {
  * they can be edited (and read by screen readers). The file itself stays
  * plain Markdown.
  */
+
+/** Maps an image `src` to a URL the editor may load, or null. */
+export const assetResolver = Facet.define<(src: string) => string | null, (src: string) => string | null>({
+  combine: (values) => values[0] ?? (() => null),
+});
+
+/** Lets the app announce short messages (e.g. "Code copied") to screen readers. */
+function announce(from: HTMLElement, message: string): void {
+  from.dispatchEvent(new CustomEvent('mdnotes-announce', { bubbles: true, detail: message }));
+}
+
+class ImageWidget extends WidgetType {
+  constructor(
+    readonly url: string | null,
+    readonly alt: string,
+  ) {
+    super();
+  }
+  eq(other: ImageWidget): boolean {
+    return other.url === this.url && other.alt === this.alt;
+  }
+  toDOM(view: EditorView): HTMLElement {
+    if (!this.url) {
+      const span = document.createElement('span');
+      span.className = 'cm-md-image-missing';
+      span.textContent = this.alt ? `Bild: ${this.alt}` : 'Bild nicht verfügbar';
+      return span;
+    }
+    const img = document.createElement('img');
+    img.className = 'cm-md-image';
+    img.src = this.url;
+    img.alt = this.alt;
+    img.draggable = false;
+    // Image height is only known after loading; let CodeMirror re-measure.
+    img.addEventListener('load', () => view.requestMeasure());
+    return img;
+  }
+}
+
+const CODE_LANGUAGES: Array<[string, string]> = [
+  ['', 'Keine Sprache'],
+  ['bash', 'Bash'],
+  ['css', 'CSS'],
+  ['html', 'HTML'],
+  ['java', 'Java'],
+  ['javascript', 'JavaScript'],
+  ['json', 'JSON'],
+  ['markdown', 'Markdown'],
+  ['python', 'Python'],
+  ['sql', 'SQL'],
+  ['typescript', 'TypeScript'],
+  ['xml', 'XML'],
+  ['yaml', 'YAML'],
+];
+
+/** Language picker and copy button at the end of a code block's opening fence. */
+class CodeToolsWidget extends WidgetType {
+  constructor(
+    readonly lang: string,
+    /** Where the language (info string) is, or an empty range right after the fence. */
+    readonly infoFrom: number,
+    readonly infoTo: number,
+    readonly code: string,
+  ) {
+    super();
+  }
+  eq(other: CodeToolsWidget): boolean {
+    return other.lang === this.lang && other.infoFrom === this.infoFrom && other.infoTo === this.infoTo && other.code === this.code;
+  }
+  toDOM(view: EditorView): HTMLElement {
+    const wrap = document.createElement('span');
+    wrap.className = 'cm-md-codetools';
+
+    const select = document.createElement('select');
+    select.setAttribute('aria-label', 'Sprache des Code-Blocks');
+    const options = CODE_LANGUAGES.some(([v]) => v === this.lang) ? CODE_LANGUAGES : [...CODE_LANGUAGES, [this.lang, this.lang]];
+    for (const [value, label] of options) {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = label;
+      option.selected = value === this.lang;
+      select.append(option);
+    }
+    select.addEventListener('change', () => {
+      view.dispatch({ changes: { from: this.infoFrom, to: this.infoTo, insert: select.value } });
+    });
+
+    const copy = document.createElement('button');
+    copy.type = 'button';
+    copy.className = 'cm-md-copy';
+    copy.textContent = 'Kopieren';
+    copy.setAttribute('aria-label', 'Code kopieren');
+    copy.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(this.code);
+        announce(copy, 'Code kopiert');
+      } catch {
+        announce(copy, 'Kopieren nicht möglich');
+      }
+    });
+
+    wrap.append(select, copy);
+    return wrap;
+  }
+  ignoreEvent(): boolean {
+    return true;
+  }
+}
 
 const hidden = Decoration.replace({});
 const mark = (cls: string) => Decoration.mark({ class: cls });
@@ -149,7 +257,20 @@ function buildDecorations(view: EditorView): DecorationSet {
             }
             break;
           }
-          case 'FencedCode':
+          case 'FencedCode': {
+            const first = state.doc.lineAt(node.from);
+            const last = state.doc.lineAt(node.to);
+            if (!isActive(node.from) && !state.readOnly) {
+              const info = node.node.getChild('CodeInfo');
+              const fence = node.node.getChild('CodeMark');
+              const closed = last.number > first.number && /^\s*(`{3,}|~{3,})\s*$/.test(last.text);
+              const codeFrom = Math.min(first.to + 1, node.to);
+              const codeTo = closed ? Math.max(codeFrom, last.from - 1) : node.to;
+              const lang = info ? state.doc.sliceString(info.from, info.to) : '';
+              const infoFrom = info?.from ?? fence?.to ?? first.from + 3;
+              const widget = new CodeToolsWidget(lang, infoFrom, info?.to ?? infoFrom, state.doc.sliceString(codeFrom, codeTo));
+              ranges.push(Decoration.widget({ widget, side: 1 }).range(first.to));
+            }
             eachLine(state, node.from, node.to, (lineFrom, first, last) => {
               const cls = ['cm-md-codeblock', first ? 'cm-md-codeblock-first' : '', last ? 'cm-md-codeblock-last' : '']
                 .filter(Boolean)
@@ -157,6 +278,7 @@ function buildDecorations(view: EditorView): DecorationSet {
               ranges.push(line(cls).range(lineFrom));
             });
             break;
+          }
           case 'Blockquote':
             eachLine(state, node.from, node.to, (lineFrom) => ranges.push(line('cm-md-quote').range(lineFrom)));
             break;
@@ -188,6 +310,17 @@ function buildDecorations(view: EditorView): DecorationSet {
               if (end > node.to) ranges.push(mark('cm-md-done').range(node.to, end));
             }
             break;
+          }
+          case 'Image': {
+            if (isActive(node.from)) break;
+            const marks = node.node.getChildren('LinkMark');
+            const urlNode = node.node.getChild('URL');
+            if (marks.length < 2 || !urlNode) break;
+            const alt = state.doc.sliceString(marks[0].to, marks[1].from);
+            const src = state.doc.sliceString(urlNode.from, urlNode.to);
+            const url = state.facet(assetResolver)(src);
+            ranges.push(Decoration.replace({ widget: new ImageWidget(url, alt) }).range(node.from, node.to));
+            return false;
           }
           case 'HorizontalRule':
             if (!isActive(node.from)) {

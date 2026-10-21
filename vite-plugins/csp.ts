@@ -21,7 +21,7 @@ export function cspPlugin(): Plugin {
         "default-src 'none'",
         "script-src 'self'",
         "style-src 'self' 'unsafe-inline'",
-        "img-src 'self' data: blob:",
+        "img-src 'self' data: blob: mdnotes-asset:",
         "font-src 'self' data:",
         isDev ? "connect-src 'self' ws://localhost:* ws://127.0.0.1:*" : "connect-src 'self'",
         "base-uri 'none'",
