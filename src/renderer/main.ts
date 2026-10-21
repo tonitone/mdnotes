@@ -1,4 +1,6 @@
-// Must come first: fonts are served locally instead of from the SAP CDN.
+// Must come first: reports CSP violations, also those caused while loading.
+import './csp-report';
+// Fonts are served locally instead of from the SAP CDN; must load before UI5.
 import './ui5-config';
 
 // Bundle themes, translations and locale data.

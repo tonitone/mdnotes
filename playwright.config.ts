@@ -13,9 +13,12 @@ export default defineConfig({
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1400, height: 900 } } }],
   webServer: {
-    command: 'npm run dev:browser',
+    // The production build, so the strict Content Security Policy applies
+    // (the dev server needs inline styles). Set E2E_DEV=1 to test against
+    // the running dev server instead.
+    command: process.env.E2E_DEV ? 'npm run dev:browser' : 'npm run build:browser && npx vite preview --config vite.browser.config.ts',
     url: 'http://127.0.0.1:5173',
     reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
+    timeout: 180_000,
   },
 });

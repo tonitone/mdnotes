@@ -31,7 +31,8 @@ test.beforeAll(async () => {
 
   const asset = `${createHash('sha256').update(PIXEL_PNG).digest('hex').slice(0, 16)}.png`;
   await writeFile(path.join(workspace, 'assets', asset), PIXEL_PNG);
-  await writeFile(path.join(workspace, 'hallo.md'), `# Hallo\n\n![Pixel](assets/${asset})\n`);
+  // Image, code block and task, so the editor's widgets render under the app's CSP.
+  await writeFile(path.join(workspace, 'hallo.md'), `# Hallo\n\n![Pixel](assets/${asset})\n\n- [ ] Aufgabe\n\n\`\`\`js\nconst a = 1;\n\`\`\`\n`);
   // A note with unsaved text left over from a "crash".
   await writeFile(path.join(workspace, 'crash.md'), `---\nid: ${CRASH_ID}\nlabels: []\ncreated: 2026-10-01T10:00:00.000Z\n---\n# Crash\n`);
   await mkdir(path.join(userData, 'recovery'));
@@ -152,4 +153,13 @@ test('moves notes to the trash folder', async () => {
   await page.locator('#deleteButton').click();
   await expect.poll(async () => (await readdir(path.join(workspace, '.trash'))).length).toBe(1);
   expect((await readdir(workspace)).includes('extern.md')).toBe(false);
+});
+
+test('reports no Content Security Policy violations', async () => {
+  // Open the appearance menu as well, so its styles are applied once.
+  await page.locator('#themeItem').click();
+  await expect(page.locator('#themeMenu')).toHaveJSProperty('open', true);
+  await page.keyboard.press('Escape');
+  const violations = await page.evaluate(() => window.__cspViolations ?? []);
+  expect(violations).toEqual([]);
 });
