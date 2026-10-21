@@ -30,6 +30,7 @@ export const de = {
   'notes.title': 'Notizen',
   'notes.labelTitle': 'Label: {label}',
   'notes.renameLabel': 'Label umbenennen',
+  'notes.toLibrary': 'Zur Bibliothek',
   'notes.new': 'Neue Notiz',
   'notes.more': 'Weitere Aktionen',
   'notes.import': 'Importieren …',

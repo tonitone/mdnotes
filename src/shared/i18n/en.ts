@@ -23,6 +23,7 @@ export const en: Messages = {
   'notes.title': 'Notes',
   'notes.labelTitle': 'Label: {label}',
   'notes.renameLabel': 'Rename label',
+  'notes.toLibrary': 'Back to library',
   'notes.new': 'New note',
   'notes.more': 'More actions',
   'notes.import': 'Import …',

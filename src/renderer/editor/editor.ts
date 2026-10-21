@@ -48,7 +48,8 @@ const codeHighlight = HighlightStyle.define([
   { tag: [tags.string, tags.special(tags.string)], color: 'var(--sapPositiveTextColor)' },
   { tag: [tags.number, tags.bool, tags.null], color: 'var(--sapCriticalTextColor)' },
   { tag: [tags.comment, tags.meta], color: 'var(--sapContent_LabelColor)', fontStyle: 'italic' },
-  { tag: [tags.function(tags.variableName), tags.function(tags.propertyName)], color: 'var(--sapLinkColor)' },
+  // Link color is too light on the code block background in dark themes (axe); weight marks functions instead.
+  { tag: [tags.function(tags.variableName), tags.function(tags.propertyName)], color: 'var(--sapTextColor)', fontWeight: 'bold' },
   { tag: [tags.typeName, tags.className], color: 'var(--sapNegativeTextColor)' },
   { tag: tags.processingInstruction, color: 'var(--sapContent_LabelColor)' },
   { tag: tags.url, color: 'var(--sapLinkColor)' },

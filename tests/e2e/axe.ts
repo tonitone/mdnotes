@@ -26,6 +26,12 @@ function isKnownUi5Issue(rule: string, target: string): boolean {
  * enough to fix them.
  */
 export async function expectNoSeriousViolations(page: Page, context = ''): Promise<void> {
+  // Toasts fade in and out; axe would measure contrast mid-animation. Their
+  // text is also announced through the #announcer live region.
+  await page.evaluate(() => {
+    const toast = document.getElementById('toast') as (HTMLElement & { open: boolean }) | null;
+    if (toast) toast.open = false;
+  });
   // Let UI5 finish opening animations and re-rendering before scanning.
   await page.waitForTimeout(300);
   const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
