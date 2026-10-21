@@ -76,24 +76,8 @@ test.describe('backup', () => {
     const picker = page.locator('ui5-dialog', { has: page.locator('.backup-note-list') });
     const box = picker.locator('ui5-checkbox[data-path^="einkauf--"]');
     await expect(box).toHaveCount(1);
-    // DIAGNOSTICS (temporary)
-    const events = await page.evaluate(() => {
-      const log: string[] = [];
-      const cb = document.querySelector('ui5-checkbox[data-path^="einkauf--"]') as HTMLElement & { checked: boolean };
-      cb.addEventListener('change', () => log.push(`change->${cb.checked}`));
-      cb.addEventListener('click', (e) => log.push(`click target=${(e.composedPath()[0] as HTMLElement).tagName}.${(e.composedPath()[0] as HTMLElement).className}`), true);
-      (window as unknown as { __cbLog: string[] }).__cbLog = log;
-      const rect = cb.getBoundingClientRect();
-      const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2) as HTMLElement | null;
-      return `rect=${Math.round(rect.width)}x${Math.round(rect.height)} hit=${hit?.tagName}#${hit?.id}.${hit?.className} inert=${!!cb.closest('[inert]')}`;
-    });
     await box.click();
-    const afterClick = await box.evaluate((b: HTMLElement & { checked: boolean }) => b.checked);
-    await box.focus();
-    await page.keyboard.press('Space');
-    const afterSpace = await box.evaluate((b: HTMLElement & { checked: boolean }) => b.checked);
-    const log = await page.evaluate(() => (window as unknown as { __cbLog: string[] }).__cbLog.join(' | '));
-    expect(`${events} afterClick=${afterClick} afterSpace=${afterSpace} log=${log}`).toBe('DEBUG');
+    await expect(box).toHaveJSProperty('checked', true);
     await picker.locator('ui5-button', { hasText: 'Wiederherstellen' }).click();
     await expect(picker).toHaveCount(0);
     await expect(page.locator('#announcer')).toContainText('1 importiert');

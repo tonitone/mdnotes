@@ -448,3 +448,9 @@ ui5-illustrated-message {
   max-height: 20rem;
   overflow: auto;
 }
+
+/* Only as wide as box and text, so a click next to the text does not miss. */
+.backup-note-list ui5-checkbox {
+  align-self: flex-start;
+  max-width: 100%;
+}
