@@ -74,8 +74,12 @@ test.describe('backup', () => {
     await page.locator('ui5-dialog ui5-list ui5-li').first().click();
     await page.locator('ui5-menu-item[text="Einzelne Notizen wiederherstellen …"]').click();
     const picker = page.locator('ui5-dialog', { has: page.locator('.backup-note-list') });
-    await picker.locator('ui5-checkbox[data-path^="einkauf--"]').click();
+    const box = picker.locator('ui5-checkbox[data-path^="einkauf--"]');
+    await expect(box).toHaveCount(1);
+    await box.click();
+    await expect(box).toHaveJSProperty('checked', true);
     await picker.locator('ui5-button', { hasText: 'Wiederherstellen' }).click();
+    await expect(picker).toHaveCount(0);
     await expect(page.locator('#announcer')).toContainText('1 importiert');
     await page.locator('ui5-dialog ui5-button', { hasText: 'Schließen' }).click();
     await expect(listItems(page)).toHaveCount(3);
