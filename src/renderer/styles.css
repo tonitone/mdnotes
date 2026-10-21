@@ -338,3 +338,113 @@ ui5-illustrated-message {
 .cm-md-codetools select:hover {
   background: var(--sapButton_Hover_Background);
 }
+
+/* Versions dialog */
+
+.versions-layout {
+  display: grid;
+  grid-template-columns: minmax(12rem, 18rem) 1fr;
+  gap: 1rem;
+  height: 100%;
+  min-height: 0;
+}
+
+.versions-timeline {
+  overflow: auto;
+  border-right: 1px solid var(--sapGroup_TitleBorderColor);
+}
+
+.versions-detail {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.versions-summary {
+  margin: 0 0 0.5rem;
+}
+
+.versions-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  color: var(--sapContent_LabelColor);
+  font-size: var(--sapFontSmallSize);
+  padding-bottom: 0.25rem;
+}
+
+.versions-diff {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--sapGroup_TitleBorderColor);
+  border-radius: 0.25rem;
+  background: var(--sapBaseColor);
+  color: var(--sapTextColor);
+}
+
+.versions-diff .cm-mergeView {
+  min-height: 100%;
+}
+
+/* Diff colors from the SAP semantic palette, so high-contrast themes work. */
+.versions-diff .cm-merge-a .cm-changedLine,
+.versions-diff .cm-deletedChunk {
+  background: var(--sapErrorBackground);
+}
+
+.versions-diff .cm-merge-b .cm-changedLine,
+.versions-diff .cm-insertedLine {
+  background: var(--sapSuccessBackground);
+}
+
+.versions-diff .cm-merge-a .cm-changedText {
+  background: transparent;
+  text-decoration: line-through;
+  outline: 1px solid var(--sapNegativeColor);
+}
+
+.versions-diff .cm-merge-b .cm-changedText {
+  background: transparent;
+  text-decoration: underline;
+  outline: 1px solid var(--sapPositiveColor);
+}
+
+.versions-diff .cm-collapsedLines {
+  background: var(--sapList_AlternatingBackground);
+  color: var(--sapContent_LabelColor);
+}
+
+.versions-empty {
+  max-width: 32rem;
+}
+
+@media (max-width: 700px) {
+  .versions-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Backup dialog */
+
+.backup-dialog {
+  max-width: 34rem;
+}
+
+.backup-folder {
+  overflow-wrap: anywhere;
+  color: var(--sapContent_LabelColor);
+}
+
+.backup-dialog ui5-list {
+  margin-top: 0.5rem;
+  max-height: 16rem;
+  overflow: auto;
+}
+
+.backup-note-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 20rem;
+  overflow: auto;
+}
