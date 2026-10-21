@@ -17,6 +17,9 @@ const ASSET_SCHEME = 'mdnotes-asset';
 let mainWindow: BrowserWindow | null = null;
 let workspace: Workspace | null = null;
 
+// Tests start the app with a separate profile (see tests/electron).
+if (process.env.MDNOTES_USER_DATA) app.setPath('userData', process.env.MDNOTES_USER_DATA);
+
 // Must happen before the app is ready.
 protocol.registerSchemesAsPrivileged([
   { scheme: ASSET_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true } },
