@@ -3,6 +3,8 @@ import { constants, promises as fsp } from 'node:fs';
 import path from 'node:path';
 import { ASSET_DIR, isAssetName } from '../shared/assets';
 import { FileExistsError, type FsPort } from '../shared/fs-port';
+import { HISTORY_DIR, VERSION_NAME_RE } from '../shared/history';
+import { isNoteId } from '../shared/note';
 
 export const TRASH_DIR = '.trash';
 
@@ -151,5 +153,47 @@ export class NodeFs implements FsPort {
   async readAsset(name: string): Promise<Uint8Array> {
     if (!isAssetName(name)) throw new Error(`Invalid asset name: ${name}`);
     return new Uint8Array(await fsp.readFile(this.resolve(name, ASSET_DIR)));
+  }
+
+  private historyDir(id: string): string {
+    if (!isNoteId(id)) throw new Error(`Invalid note ID: ${id}`);
+    return path.join(this.root, HISTORY_DIR, id);
+  }
+
+  private historyFile(id: string, name: string): string {
+    if (!VERSION_NAME_RE.test(name)) throw new Error(`Invalid version name: ${name}`);
+    return path.join(this.historyDir(id), name);
+  }
+
+  async listHistory(id: string): Promise<string[]> {
+    try {
+      const entries = await fsp.readdir(this.historyDir(id), { withFileTypes: true });
+      return entries.filter((e) => e.isFile()).map((e) => e.name);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') return [];
+      throw err;
+    }
+  }
+
+  async readHistory(id: string, name: string): Promise<string> {
+    return fsp.readFile(this.historyFile(id, name), 'utf8');
+  }
+
+  async writeHistory(id: string, name: string, text: string): Promise<void> {
+    const file = this.historyFile(id, name);
+    await fsp.mkdir(path.dirname(file), { recursive: true });
+    try {
+      await fsp.writeFile(file, text, { encoding: 'utf8', flag: 'wx' });
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err;
+    }
+  }
+
+  async deleteHistory(id: string, name: string): Promise<void> {
+    await fsp.rm(this.historyFile(id, name), { force: true });
+  }
+
+  async deleteAllHistory(id: string): Promise<void> {
+    await fsp.rm(this.historyDir(id), { recursive: true, force: true });
   }
 }

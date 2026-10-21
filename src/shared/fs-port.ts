@@ -1,8 +1,9 @@
 /**
  * Minimal file system interface for a workspace folder.
  *
- * Notes are files directly inside the workspace. Two subfolders are managed
- * by the app: `.trash/` for deleted notes and `assets/` for images. All names
+ * Notes are files directly inside the workspace. Three subfolders are
+ * managed by the app: `.trash/` for deleted notes, `assets/` for images and
+ * `.history/<id>/` for versions. All names
  * passed in are plain file names, never paths.
  */
 export interface FsPort {
@@ -31,6 +32,15 @@ export interface FsPort {
   /** Writes an image into `assets/`. Returns false if it already existed (same name = same content). */
   writeAsset(name: string, bytes: Uint8Array): Promise<boolean>;
   readAsset(name: string): Promise<Uint8Array>;
+
+  /** Version file names of a note in `.history/<id>/`. Empty if there are none. */
+  listHistory(id: string): Promise<string[]>;
+  readHistory(id: string, name: string): Promise<string>;
+  /** Creates a version file. Does nothing if it already exists (same name = same content). */
+  writeHistory(id: string, name: string, text: string): Promise<void>;
+  deleteHistory(id: string, name: string): Promise<void>;
+  /** Removes all versions of a note. */
+  deleteAllHistory(id: string): Promise<void>;
 }
 
 export class FileExistsError extends Error {
@@ -54,6 +64,7 @@ export class MemoryFs implements FsPort {
   private files = new Map<string, MemoryFile>();
   private trash = new Map<string, MemoryFile>();
   private assets = new Map<string, Uint8Array>();
+  private history = new Map<string, Map<string, string>>();
   private clock = 0;
 
   constructor(private readonly caseInsensitive = false) {}
@@ -144,6 +155,30 @@ export class MemoryFs implements FsPort {
     const bytes = this.assets.get(this.key(name));
     if (!bytes) throw new Error(`File not found: assets/${name}`);
     return bytes;
+  }
+
+  async listHistory(id: string): Promise<string[]> {
+    return [...(this.history.get(id)?.keys() ?? [])];
+  }
+
+  async readHistory(id: string, name: string): Promise<string> {
+    const text = this.history.get(id)?.get(name);
+    if (text === undefined) throw new Error(`File not found: .history/${id}/${name}`);
+    return text;
+  }
+
+  async writeHistory(id: string, name: string, text: string): Promise<void> {
+    const versions = this.history.get(id) ?? new Map<string, string>();
+    if (!versions.has(name)) versions.set(name, text);
+    this.history.set(id, versions);
+  }
+
+  async deleteHistory(id: string, name: string): Promise<void> {
+    this.history.get(id)?.delete(name);
+  }
+
+  async deleteAllHistory(id: string): Promise<void> {
+    this.history.delete(id);
   }
 
   /** Tests and demo data only: store a file as if it came from outside the app. */

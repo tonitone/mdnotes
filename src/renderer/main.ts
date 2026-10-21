@@ -8,6 +8,9 @@ import '@ui5/webcomponents-fiori/dist/Assets.js';
 import '@ui5/webcomponents-base/dist/features/F6Navigation.js';
 
 import '@ui5/webcomponents/dist/Button.js';
+import '@ui5/webcomponents/dist/CheckBox.js';
+import '@ui5/webcomponents/dist/Option.js';
+import '@ui5/webcomponents/dist/Select.js';
 import '@ui5/webcomponents/dist/Dialog.js';
 import '@ui5/webcomponents/dist/Label.js';
 import '@ui5/webcomponents/dist/MultiInput.js';
@@ -32,6 +35,10 @@ import '@ui5/webcomponents-fiori/dist/illustrations/NoData.js';
 import '@ui5/webcomponents-fiori/dist/illustrations/NoEntries.js';
 
 import '@ui5/webcomponents-icons/dist/accept.js';
+import '@ui5/webcomponents-icons/dist/edit.js';
+import '@ui5/webcomponents-icons/dist/history.js';
+import '@ui5/webcomponents-icons/dist/save.js';
+import '@ui5/webcomponents-icons/dist/shield.js';
 import '@ui5/webcomponents-icons/dist/action.js';
 import '@ui5/webcomponents-icons/dist/copy.js';
 import '@ui5/webcomponents-icons/dist/delete.js';

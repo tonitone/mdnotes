@@ -3,9 +3,22 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { ExportFormat, MenuCommand, NotesChangedEvent } from '../shared/api';
+import type { BackupKind, BackupSettings, ExportFormat, MenuCommand, NotesChangedEvent } from '../shared/api';
 import { ASSET_DIR, MAX_ASSET_BYTES, MIME_BY_EXT, assetNameFor, isAssetName, isImageMime } from '../shared/assets';
+import { VERSION_NAME_RE } from '../shared/history';
 import { isNoteId } from '../shared/note';
+import {
+  assertBackupFolder,
+  backupNotes,
+  createBackup,
+  isBackupName,
+  isDailyBackupDue,
+  listBackups,
+  restoreNotes,
+  restoreToFolder,
+  verifyBackup,
+} from './backup';
+import { RecoveryStore } from './recovery';
 import { exportAll, exportNote, importFromDialog, importTexts } from './transfer';
 import { Workspace } from './workspace';
 
@@ -28,20 +41,30 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 // ---------------------------------------------------------------------------
-// Config (only the workspace path), stored in the app's user data folder.
+// Config (workspace path and backup settings), stored in the app's user data folder.
 // ---------------------------------------------------------------------------
+
+interface AppConfig {
+  workspace?: string;
+  backup: BackupSettings;
+}
+
+const DEFAULT_BACKUP: BackupSettings = { folder: null, auto: 'off', includeHistory: false, keep: 10 };
+let config: AppConfig = { backup: { ...DEFAULT_BACKUP } };
+let recovery: RecoveryStore | null = null;
 
 const configPath = () => path.join(app.getPath('userData'), 'config.json');
 
-async function loadConfig(): Promise<{ workspace?: string }> {
+async function loadConfig(): Promise<AppConfig> {
   try {
-    return JSON.parse(await readFile(configPath(), 'utf8'));
+    const raw = JSON.parse(await readFile(configPath(), 'utf8')) as Partial<AppConfig>;
+    return { workspace: raw.workspace, backup: { ...DEFAULT_BACKUP, ...(raw.backup ?? {}) } };
   } catch {
-    return {};
+    return { backup: { ...DEFAULT_BACKUP } };
   }
 }
 
-async function saveConfig(config: { workspace?: string }): Promise<void> {
+async function saveConfig(): Promise<void> {
   await mkdir(path.dirname(configPath()), { recursive: true });
   await writeFile(configPath(), JSON.stringify(config, null, 2), 'utf8');
 }
@@ -55,6 +78,42 @@ async function openWorkspace(dir: string): Promise<void> {
   await next.open();
   workspace?.close();
   workspace = next;
+  config.workspace = dir;
+  await saveConfig();
+  void runDailyBackupIfDue();
+}
+
+// ---------------------------------------------------------------------------
+// Backups
+// ---------------------------------------------------------------------------
+
+function backupFolder(): string {
+  if (!config.backup.folder) throw new Error('Kein Backup-Ordner gewählt.');
+  return config.backup.folder;
+}
+
+function runBackup(kind: BackupKind) {
+  const ws = requireWorkspace();
+  return createBackup(ws.root, backupFolder(), { kind, includeHistory: config.backup.includeHistory, keep: config.backup.keep });
+}
+
+/** Backup before risky actions (import, permanent delete). Never blocks the action. */
+async function safetyBackup(): Promise<void> {
+  if (!config.backup.folder || !workspace) return;
+  try {
+    await runBackup('safety');
+  } catch (err) {
+    console.error('Safety backup failed:', err);
+  }
+}
+
+async function runDailyBackupIfDue(): Promise<void> {
+  if (config.backup.auto !== 'daily' || !config.backup.folder || !workspace) return;
+  try {
+    if (isDailyBackupDue(await listBackups(config.backup.folder))) await runBackup('auto');
+  } catch (err) {
+    console.error('Daily backup failed:', err);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -162,6 +221,38 @@ function requireFiles(files: unknown): Array<{ name: string; text: string }> {
   });
 }
 
+function requireVersionName(name: unknown): string {
+  if (typeof name !== 'string' || !VERSION_NAME_RE.test(name)) throw new Error('Invalid version.');
+  return name;
+}
+
+function requireBackupName(name: unknown): string {
+  if (typeof name !== 'string' || !isBackupName(name)) throw new Error('Invalid backup.');
+  return name;
+}
+
+function requireNotePaths(paths: unknown): string[] {
+  if (!Array.isArray(paths) || paths.length > 10_000 || !paths.every((p) => typeof p === 'string' && /^[^/\\]+\.md$/i.test(p))) {
+    throw new Error('Invalid note paths.');
+  }
+  return paths;
+}
+
+function requireBackupPatch(patch: unknown): Partial<Omit<BackupSettings, 'folder'>> {
+  const p = (patch ?? {}) as Record<string, unknown>;
+  const result: Partial<Omit<BackupSettings, 'folder'>> = {};
+  if (p.auto !== undefined) {
+    if (p.auto !== 'off' && p.auto !== 'quit' && p.auto !== 'daily') throw new Error('Invalid setting.');
+    result.auto = p.auto;
+  }
+  if (p.includeHistory !== undefined) result.includeHistory = p.includeHistory === true;
+  if (p.keep !== undefined) {
+    if (!Number.isInteger(p.keep) || (p.keep as number) < 1 || (p.keep as number) > 1000) throw new Error('Invalid setting.');
+    result.keep = p.keep as number;
+  }
+  return result;
+}
+
 // ---------------------------------------------------------------------------
 // IPC handlers. Each channel maps to exactly one NotesApi method.
 // ---------------------------------------------------------------------------
@@ -182,7 +273,6 @@ function registerIpc(): void {
     });
     if (result.canceled || result.filePaths.length === 0) return null;
     await openWorkspace(result.filePaths[0]);
-    await saveConfig({ workspace: workspace?.root });
     return workspace?.root ?? null;
   });
 
@@ -198,7 +288,11 @@ function registerIpc(): void {
   handle('trash:list', () => requireWorkspace().store.listTrash());
   handle('trash:read', (name) => requireWorkspace().store.readTrash(requireTrashName(name)));
   handle('trash:restore', (name) => requireWorkspace().store.restore(requireTrashName(name)));
-  handle('trash:delete', (name) => requireWorkspace().store.deleteFromTrash(requireTrashName(name)));
+  handle('trash:delete', async (name) => {
+    const trashName = requireTrashName(name);
+    await safetyBackup();
+    return requireWorkspace().store.deleteFromTrash(trashName);
+  });
 
   handle('assets:save', async (bytes, mime) => {
     if (!(bytes instanceof Uint8Array) || bytes.byteLength === 0 || bytes.byteLength > MAX_ASSET_BYTES) {
@@ -212,8 +306,67 @@ function registerIpc(): void {
 
   handle('transfer:exportNote', (id, format) => exportNote(requireWorkspace(), requireWindow(), requireId(id), requireFormat(format)));
   handle('transfer:exportAll', () => exportAll(requireWorkspace(), requireWindow()));
-  handle('transfer:import', () => importFromDialog(requireWorkspace(), requireWindow()));
-  handle('transfer:importTexts', (files) => importTexts(requireWorkspace(), requireFiles(files)));
+  handle('transfer:import', async () => {
+    await safetyBackup();
+    return importFromDialog(requireWorkspace(), requireWindow());
+  });
+  handle('transfer:importTexts', async (files) => {
+    const valid = requireFiles(files);
+    await safetyBackup();
+    return importTexts(requireWorkspace(), valid);
+  });
+
+  handle('versions:list', (id) => requireWorkspace().store.listVersions(requireId(id)));
+  handle('versions:read', (id, name) => requireWorkspace().store.readVersion(requireId(id), requireVersionName(name)));
+  handle('versions:restore', (id, name) => requireWorkspace().store.restoreVersion(requireId(id), requireVersionName(name)));
+  handle('labels:rename', (from, to) => requireWorkspace().store.renameLabel(requireText(from, 200), requireText(to, 200)));
+
+  handle('backup:getSettings', () => config.backup);
+  handle('backup:updateSettings', async (patch) => {
+    config.backup = { ...config.backup, ...requireBackupPatch(patch) };
+    await saveConfig();
+    void runDailyBackupIfDue();
+    return config.backup;
+  });
+  handle('backup:chooseFolder', async () => {
+    const result = await dialog.showOpenDialog(requireWindow(), {
+      title: 'Backup-Ordner wählen',
+      properties: ['openDirectory', 'createDirectory'],
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    const folder = result.filePaths[0];
+    if (workspace) assertBackupFolder(workspace.root, folder);
+    config.backup = { ...config.backup, folder };
+    await saveConfig();
+    return config.backup;
+  });
+  handle('backup:create', () => runBackup('manual'));
+  handle('backup:list', () => (config.backup.folder ? listBackups(config.backup.folder) : []));
+  handle('backup:verify', (file) => verifyBackup(backupFolder(), requireBackupName(file)));
+  handle('backup:notes', (file) => backupNotes(backupFolder(), requireBackupName(file)));
+  handle('backup:restoreNotes', async (file, paths) => {
+    const name = requireBackupName(file);
+    const valid = requireNotePaths(paths);
+    await safetyBackup();
+    const ws = requireWorkspace();
+    return restoreNotes(ws.store, ws.fs, backupFolder(), name, valid);
+  });
+  handle('backup:restoreToFolder', async (file) => {
+    const name = requireBackupName(file);
+    const result = await dialog.showOpenDialog(requireWindow(), {
+      title: 'Leeren Ordner für die Wiederherstellung wählen',
+      properties: ['openDirectory', 'createDirectory'],
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    const target = result.filePaths[0];
+    await restoreToFolder(backupFolder(), name, target);
+    await openWorkspace(target);
+    return target;
+  });
+
+  handle('recovery:write', (id, body) => recovery?.write(requireId(id), requireText(body)));
+  handle('recovery:clear', (id) => recovery?.clear(requireId(id)));
+  handle('recovery:list', () => (recovery && workspace ? recovery.list(workspace.store) : []));
 }
 
 // ---------------------------------------------------------------------------
@@ -239,6 +392,9 @@ function buildMenu(): void {
         { type: 'separator' },
         // No shortcut on purpose: Cmd+Backspace deletes text in the editor.
         { label: 'Notiz in den Papierkorb', click: () => sendMenu('delete-note') },
+        { label: 'Versionen …', accelerator: 'CmdOrCtrl+Alt+V', click: () => sendMenu('versions') },
+        { type: 'separator' },
+        { label: 'Backup …', click: () => sendMenu('backup') },
         { type: 'separator' },
         isMac ? { role: 'close' } : { role: 'quit', label: 'Beenden' },
       ],
@@ -334,7 +490,8 @@ app.whenReady().then(async () => {
   registerIpc();
   buildMenu();
 
-  const config = await loadConfig();
+  config = await loadConfig();
+  recovery = new RecoveryStore(path.join(app.getPath('userData'), 'recovery'));
   if (config.workspace && existsSync(config.workspace)) {
     try {
       await openWorkspace(config.workspace);
@@ -352,6 +509,20 @@ app.whenReady().then(async () => {
 app.on('before-quit', () => {
   quitting = true;
 });
+
+// Backup on quit runs after the window saved and closed.
+let quitBackupDone = false;
+app.on('will-quit', (event) => {
+  if (quitBackupDone || config.backup.auto !== 'quit' || !config.backup.folder || !workspace) return;
+  event.preventDefault();
+  quitBackupDone = true;
+  runBackup('auto')
+    .catch((err) => console.error('Backup on quit failed:', err))
+    .finally(() => app.quit());
+});
+
+// Long-running sessions still get their daily backup.
+setInterval(() => void runDailyBackupIfDue(), 60 * 60 * 1000).unref();
 
 app.on('window-all-closed', () => {
   workspace?.close();

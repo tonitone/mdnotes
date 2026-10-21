@@ -10,6 +10,7 @@
     <a class="skip-link" href="#editor-host">Zum Editor springen</a>
 
     <ui5-shellbar id="shell" primary-title="mdnotes" data-sap-ui-fastnavgroup="true">
+      <ui5-shellbar-item id="backupItem" icon="save" text="Backup"></ui5-shellbar-item>
       <ui5-shellbar-item id="themeItem" icon="palette" text="Darstellung"></ui5-shellbar-item>
       <ui5-shellbar-item id="workspaceItem" icon="open-folder" text="Workspace wählen"></ui5-shellbar-item>
     </ui5-shellbar>
@@ -39,6 +40,7 @@
         <header class="column-header">
           <ui5-title level="H2" size="H5" id="notesTitle">Notizen</ui5-title>
           <div class="header-actions">
+            <ui5-button id="renameLabelButton" design="Transparent" icon="edit" tooltip="Label umbenennen" accessible-name="Label umbenennen" hidden></ui5-button>
             <ui5-button id="newNoteButton" design="Emphasized" icon="add" disabled>Neue Notiz</ui5-button>
             <ui5-button id="moreButton" design="Transparent" icon="overflow" tooltip="Weitere Aktionen" accessible-name="Weitere Aktionen" disabled></ui5-button>
           </div>
@@ -64,6 +66,7 @@
             <span id="saveStatus" class="save-status" role="status" aria-live="polite"></span>
           </div>
           <div class="header-actions" id="noteActions" hidden>
+            <ui5-button id="versionsButton" design="Transparent" icon="history" tooltip="Versionen" accessible-name="Versionen"></ui5-button>
             <ui5-button id="exportButton" design="Transparent" icon="action" tooltip="Exportieren" accessible-name="Exportieren"></ui5-button>
             <ui5-button id="deleteButton" design="Transparent" icon="delete" tooltip="In den Papierkorb" accessible-name="In den Papierkorb"></ui5-button>
           </div>
