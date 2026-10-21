@@ -140,7 +140,6 @@ dadurch nicht mit ausgeliefert.
   Update, sobald 2.28.0 erscheint.
 - **Schrift 72:** `copy-fonts.mjs` sucht die Dateien in den UI5-Theming-Paketen. Findet es
   keine, nutzt die App Arial oder Helvetica. Die Konsole meldet das beim Installieren.
-
 - **Backups** sind nicht verschlüsselt. Liegt der Backup-Ordner in einer Cloud, sind die
   Notizen dort im Klartext.
 - **Wiki-Markup:** Aufgaben werden zu ☐/☑, weil Wiki-Markup keine Checkboxen kennt. Bilder
