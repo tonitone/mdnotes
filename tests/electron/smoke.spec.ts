@@ -84,6 +84,27 @@ test('shows images through the asset protocol', async () => {
   await expect.poll(() => img.evaluate((i: HTMLImageElement) => i.naturalWidth)).toBe(1);
 });
 
+test('exports a note with its image as HTML and Word document', async () => {
+  await listItems().filter({ hasText: 'Hallo' }).click();
+  for (const format of ['html', 'docx'] as const) {
+    const target = path.join(root, `export.${format}`);
+    // Replace the save dialog, which tests cannot operate.
+    await app.evaluate(({ dialog }, file) => {
+      dialog.showSaveDialog = (async () => ({ canceled: false, filePath: file })) as typeof dialog.showSaveDialog;
+    }, target);
+    await page.locator('#exportButton').click();
+    await page.locator(`#exportMenu ui5-menu-item[data-format="${format}"]`).click();
+    await expect.poll(async () => (await readFile(target).catch(() => Buffer.alloc(0))).length, { timeout: 10_000 }).toBeGreaterThan(0);
+    const data = await readFile(target);
+    if (format === 'html') {
+      expect(data.toString('utf8')).toContain('<img src="data:image/png;base64,');
+    } else {
+      expect(data.subarray(0, 2).toString()).toBe('PK');
+      expect(data.includes(Buffer.from('word/media/image1.png'))).toBe(true);
+    }
+  }
+});
+
 test('creates a note on disk, saves it and renames it after its title', async () => {
   await page.locator('#newNoteButton').click();
   await expect(page.locator('.cm-content')).toBeFocused();

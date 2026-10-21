@@ -1,7 +1,7 @@
 import { parseMarkdown, type Block, type Inline } from './parse';
 import { getLocale, textDirection } from '../i18n';
 
-/** Renders Markdown to an HTML fragment (used for PDF export). */
+/** Renders Markdown to HTML (used for HTML and PDF export). */
 
 export interface HtmlOptions {
   /** Maps an image `src` from the note to the URL used in the HTML. */
@@ -115,19 +115,42 @@ const PRINT_CSS = `
   a { color: #0064d9; }
 `;
 
-/** A complete, self-contained HTML document for printing to PDF. */
-export function markdownToPrintDocument(markdown: string, title: string, opts: HtmlOptions = {}): string {
+/** On screen: a centered, readable column. Printing uses the print styles only. */
+const SCREEN_CSS = `
+  @media screen {
+    body { max-width: 46em; margin: 2em auto; padding: 0 1.25em; font-size: 16px; }
+    code, pre { font-size: 14px; }
+  }
+`;
+
+function htmlDocument(markdown: string, title: string, csp: string, css: string, opts: HtmlOptions): string {
+  const locale = getLocale();
   return `<!doctype html>
-<html lang="${getLocale()}" dir="${textDirection(getLocale())}">
+<html lang="${locale}" dir="${textDirection(locale)}">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src file: data: mdnotes-asset:; style-src 'unsafe-inline'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="${csp}">
+<meta name="generator" content="mdnotes">
 <title>${escapeHtml(title)}</title>
-<style>${PRINT_CSS}</style>
+<style>${css}</style>
 </head>
 <body>
 ${markdownToHtml(markdown, opts)}
 </body>
 </html>
 `;
+}
+
+/** A complete, self-contained HTML document for printing to PDF. */
+export function markdownToPrintDocument(markdown: string, title: string, opts: HtmlOptions = {}): string {
+  return htmlDocument(markdown, title, "default-src 'none'; img-src file: data: mdnotes-asset:; style-src 'unsafe-inline'", PRINT_CSS, opts);
+}
+
+/**
+ * A standalone HTML file for sharing. Local images should be embedded as
+ * data URLs (see `resolveImage`); scripts are blocked by the CSP.
+ */
+export function markdownToHtmlDocument(markdown: string, title: string, opts: HtmlOptions = {}): string {
+  return htmlDocument(markdown, title, "default-src 'none'; img-src data: https:; style-src 'unsafe-inline'", PRINT_CSS + SCREEN_CSS, opts);
 }

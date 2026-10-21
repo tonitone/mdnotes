@@ -61,7 +61,7 @@ export interface NotesChangedEvent {
   added: string[];
 }
 
-export type ExportFormat = 'markdown' | 'wiki' | 'pdf';
+export type ExportFormat = 'markdown' | 'wiki' | 'pdf' | 'html' | 'docx';
 
 export interface VersionSummary {
   name: string;

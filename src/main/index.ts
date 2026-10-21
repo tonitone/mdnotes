@@ -226,9 +226,11 @@ function requireTrashName(name: unknown): string {
   return name;
 }
 
+const EXPORT_FORMATS: readonly ExportFormat[] = ['markdown', 'wiki', 'pdf', 'html', 'docx'];
+
 function requireFormat(format: unknown): ExportFormat {
-  if (format !== 'markdown' && format !== 'wiki' && format !== 'pdf') throw new Error('Invalid export format.');
-  return format;
+  if (!EXPORT_FORMATS.includes(format as ExportFormat)) throw new Error('Invalid export format.');
+  return format as ExportFormat;
 }
 
 function requireFiles(files: unknown): Array<{ name: string; text: string }> {

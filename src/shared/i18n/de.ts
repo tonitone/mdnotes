@@ -57,6 +57,8 @@ export const de = {
   'export.saveWiki': 'Als Wiki-Markup speichern …',
   'export.saveMarkdown': 'Als Markdown speichern …',
   'export.savePdf': 'Als PDF speichern …',
+  'export.saveHtml': 'Als HTML speichern …',
+  'export.saveDocx': 'Als Word-Dokument speichern …',
   'labels.add': 'Label hinzufügen',
   'labels.ofNote': 'Labels der Notiz',
   'empty.noSelectionTitle': 'Keine Notiz ausgewählt',
@@ -251,9 +253,13 @@ export const de = {
   'dialog.exportMarkdown': 'Als Markdown exportieren',
   'dialog.exportWiki': 'Als Wiki-Markup exportieren',
   'dialog.exportPdf': 'Als PDF exportieren',
+  'dialog.exportHtml': 'Als HTML exportieren',
+  'dialog.exportDocx': 'Als Word-Dokument exportieren',
   'filter.markdown': 'Markdown',
   'filter.wiki': 'Wiki-Markup (Jira, Confluence)',
   'filter.pdf': 'PDF',
+  'filter.html': 'HTML-Seite',
+  'filter.docx': 'Word-Dokument',
 
   // Main process: backup and transfer messages
   'main.noBackupFolder': 'Kein Backup-Ordner gewählt.',
