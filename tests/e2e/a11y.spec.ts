@@ -226,13 +226,18 @@ test('reflow: no horizontal scrolling at 320 CSS pixels (WCAG 1.4.10)', async ({
   await expectNoSeriousViolations(page, 'narrow');
 });
 
-test('text spacing overrides do not cut off content (WCAG 1.4.12)', async ({ page }) => {
-  await openApp(page);
-  await openNote(page, 'Willkommen');
-  await page.addStyleTag({
-    content: '* { line-height: 1.5 !important; letter-spacing: 0.12em !important; word-spacing: 0.16em !important; } p { margin-bottom: 2em !important; }',
+test.describe('text spacing', () => {
+  // The test injects a user style sheet, as a browser extension would; the app's CSP would block it.
+  test.use({ bypassCSP: true });
+
+  test('overrides do not cut off content (WCAG 1.4.12)', async ({ page }) => {
+    await openApp(page);
+    await openNote(page, 'Willkommen');
+    await page.addStyleTag({
+      content: '* { line-height: 1.5 !important; letter-spacing: 0.12em !important; word-spacing: 0.16em !important; } p { margin-bottom: 2em !important; }',
+    });
+    await expect(editor(page)).toBeVisible();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
   });
-  await expect(editor(page)).toBeVisible();
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-  expect(overflow).toBeLessThanOrEqual(0);
 });
