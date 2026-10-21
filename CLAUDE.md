@@ -1,6 +1,6 @@
 # Projektkontext für Claude
 
-Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand: Phase 3 abgeschlossen.
+Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand: Phase 4 abgeschlossen.
 
 ## Feste Entscheidungen
 
@@ -24,7 +24,7 @@ Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand
 
 ## Stand und nächste Schritte
 
-- Phase 1, 2 und 3 sind fertig. CI prüft Typen, Unit-Tests (`tests/unit`), UI- und
+- Phase 1 bis 4 sind fertig. CI prüft Typen, Unit-Tests (`tests/unit`), UI- und
   Barrierefreiheitstests im Browser-Modus (`tests/e2e`) und einen Smoke-Test der echten
   Electron-App auf macOS, Windows und Linux (`tests/electron`).
 - Neue npm-Pakete nur zusammen mit aktualisierter `package-lock.json` (CI nutzt `npm ci`).
@@ -35,12 +35,15 @@ Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand
   und bevor eine Änderung von außen übernommen wird.
 - Backups: `src/main/backup.ts` (ZIP + Manifest), Einstellungen in `config.json` im App-Profil.
   Notfalldateien für Crash-Recovery liegen im App-Profil unter `recovery/`, nie im Workspace.
-- Phase 4: i18n/RTL (erledigt), Barrierefreiheits-Audit, HTML/DOCX-Export, CSP verschärfen.
-  Signierung und Auto-Update entfallen (kein App-Store).
+- Phase 4 ist fertig: i18n/RTL, Barrierefreiheits-Audit (`docs/accessibility.md`), HTML/DOCX-Export,
+  strenge CSP. Signierung und Auto-Update entfallen (kein App-Store).
+- UI-Tests (`tests/e2e`) laufen gegen den Produktions-Build (`E2E_DEV=1` für den Dev-Server)
+  und importieren `test`/`expect` aus `tests/e2e/fixtures.ts` (prüft CSP-Verstöße).
 - Offen: Backups verschlüsseln (optional), blockweises Wiederherstellen aus einer Version.
 
 ## Bekannte Risiken
 
 - UI5 2.27.2 hat einen Render-Loop-Fehler im `ui5-tokenizer` (behoben ab 2.28.0). Betrifft das Label-Feld bei sehr vielen Labels.
 - Die Schrift 72 kopiert `scripts/copy-fonts.mjs` aus node_modules. Pfade prüfen, falls die Konsole warnt.
-- CSP erlaubt vorerst Inline-Styles.
+- CSP ohne `unsafe-inline`: Neuer Code darf keine `style`-Attribute oder `<style>`-Elemente
+  setzen, nur Klassen oder `element.style` (CSSOM). CodeMirror bekommt die Nonce über `cspNonce()`.

@@ -130,8 +130,12 @@ dadurch nicht mit ausgeliefert.
 - Renderer ohne Node-Zugriff (`contextIsolation`, `sandbox`), IPC nur vom eigenen Fenster,
   Argumente werden im Main-Prozess geprüft.
 - Alle Netzwerkanfragen werden blockiert. Links öffnen im Standardbrowser.
-- Content-Security-Policy ohne Inline-Skripte. Inline-Styles sind vorerst erlaubt
-  (UI5, CodeMirror). Das wird in Phase 4 geprüft und verschärft.
+- Content-Security-Policy ohne Inline-Skripte, ohne Inline-Styles und ohne
+  `style`-Attribute. CodeMirrors `<style>`-Elemente tragen eine Nonce, die beim Build
+  entsteht. Die UI-Tests laufen gegen den Produktions-Build und schlagen bei jedem
+  CSP-Verstoß fehl (`src/renderer/csp-report.ts`).
+- Exportierte HTML-Dateien enthalten keine Skripte und laden nur eingebettete Bilder
+  oder Bilder über https.
 
 ## Bekannte offene Punkte
 
