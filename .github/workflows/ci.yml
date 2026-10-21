@@ -23,6 +23,12 @@ jobs:
       - run: npm run typecheck
       - run: npm run test:unit
       - run: npm run build
+      - name: Electron smoke test
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test:electron
+      - name: Electron smoke test
+        if: runner.os != 'Linux'
+        run: npm run test:electron
 
   e2e:
     name: UI and accessibility tests (browser mode)
