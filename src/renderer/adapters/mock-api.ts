@@ -1,8 +1,8 @@
-import type { ExportFormat, ImportReport, NotesApi, NotesChangedEvent } from '../../shared/api';
+import type { BackupInfo, BackupSettings, ExportFormat, ImportReport, NotesApi, NotesChangedEvent } from '../../shared/api';
 import { assetNameFor, assetNameFromPath } from '../../shared/assets';
 import { MemoryFs } from '../../shared/fs-port';
 import { markdownToWiki } from '../../shared/markdown/wiki';
-import { newId, serializeNote, slugify } from '../../shared/note';
+import { newId, parseNote, serializeNote, slugify, titleFromBody } from '../../shared/note';
 import { NoteStore } from '../../shared/note-store';
 
 /**
@@ -115,6 +115,15 @@ export async function createMockApi(): Promise<NotesApi> {
   const assetUrls = new Map<string, string>();
   const changeListeners = new Set<(event: NotesChangedEvent) => void>();
   const exports: MockExport[] = (window.__mdnotesExports = []);
+  // Browser mode keeps backups and recovery data in memory only.
+  let backupSettings: BackupSettings = { folder: 'Arbeitsspeicher (Browser-Modus)', auto: 'off', includeHistory: false, keep: 10 };
+  const backups: Array<{ info: BackupInfo; files: Map<string, string> }> = [];
+  const recovery = new Map<string, { body: string; savedAt: number }>();
+  const findBackup = (file: string) => {
+    const backup = backups.find((b) => b.info.file === file);
+    if (!backup) throw new Error(`Unknown backup: ${file}`);
+    return backup;
+  };
 
   window.__mdnotesExternalEdit = async (id, body) => {
     const fileName = store.read(id).fileName;
@@ -188,6 +197,53 @@ export async function createMockApi(): Promise<NotesApi> {
       return importTexts(await Promise.all(files.map(async (f) => ({ name: f.name, text: await f.text() }))));
     },
     importTexts,
+
+    listVersions: async (id) => (await store.listVersions(id)).map(({ name, time }) => ({ name, time })),
+    readVersion: (id, name) => store.readVersion(id, name),
+    restoreVersion: (id, name) => store.restoreVersion(id, name),
+    renameLabel: (from, to) => store.renameLabel(from, to),
+
+    getBackupSettings: async () => backupSettings,
+    async updateBackupSettings(patch) {
+      backupSettings = { ...backupSettings, ...patch };
+      return backupSettings;
+    },
+    chooseBackupFolder: async () => backupSettings,
+    async createBackup() {
+      const now = Date.now();
+      const stamp = new Date(now).toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 15);
+      const info: BackupInfo = { file: `mdnotes-backup-${stamp}-${backups.length + 1}.zip`, created: now, kind: 'manual', size: 0 };
+      const files = new Map(store.summaries().map((n) => [n.fileName, store.fileText(n.id)]));
+      info.size = [...files.values()].reduce((sum, text) => sum + text.length, 0);
+      backups.unshift({ info, files });
+      backups.splice(backupSettings.keep);
+      return info;
+    },
+    listBackups: async () => backups.map((b) => b.info),
+    verifyBackup: async (file) => ({ ok: true, files: findBackup(file).files.size, problems: [] }),
+    listBackupNotes: async (file) =>
+      [...findBackup(file).files.entries()].map(([path, text]) => ({ path, title: titleFromBody(parseNote(text).body) })),
+    async restoreBackupNotes(file, paths) {
+      const { files } = findBackup(file);
+      return importTexts(paths.map((path) => ({ name: file, text: files.get(path) ?? '' })).filter((f) => f.text));
+    },
+    // Needs a real folder; not available in browser mode.
+    restoreBackupToFolder: async () => null,
+
+    async writeRecovery(id, body) {
+      recovery.set(id, { body, savedAt: Date.now() });
+    },
+    async clearRecovery(id) {
+      recovery.delete(id);
+    },
+    async listRecovery() {
+      const entries = [];
+      for (const [id, { body, savedAt }] of recovery) {
+        if (!store.has(id) || store.read(id).body === body) recovery.delete(id);
+        else entries.push({ id, title: titleFromBody(body), body, savedAt });
+      }
+      return entries;
+    },
 
     onMenuCommand: noop,
     onFlushRequest: noop,

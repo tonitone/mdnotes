@@ -44,6 +44,25 @@ const api: NotesApi = {
   importNotes: () => ipcRenderer.invoke('transfer:import'),
   importTexts: (files) => ipcRenderer.invoke('transfer:importTexts', files),
 
+  listVersions: (id) => ipcRenderer.invoke('versions:list', id),
+  readVersion: (id, name) => ipcRenderer.invoke('versions:read', id, name),
+  restoreVersion: (id, name) => ipcRenderer.invoke('versions:restore', id, name),
+  renameLabel: (from, to) => ipcRenderer.invoke('labels:rename', from, to),
+
+  getBackupSettings: () => ipcRenderer.invoke('backup:getSettings'),
+  updateBackupSettings: (patch) => ipcRenderer.invoke('backup:updateSettings', patch),
+  chooseBackupFolder: () => ipcRenderer.invoke('backup:chooseFolder'),
+  createBackup: () => ipcRenderer.invoke('backup:create'),
+  listBackups: () => ipcRenderer.invoke('backup:list'),
+  verifyBackup: (file) => ipcRenderer.invoke('backup:verify', file),
+  listBackupNotes: (file) => ipcRenderer.invoke('backup:notes', file),
+  restoreBackupNotes: (file, paths) => ipcRenderer.invoke('backup:restoreNotes', file, paths),
+  restoreBackupToFolder: (file) => ipcRenderer.invoke('backup:restoreToFolder', file),
+
+  writeRecovery: (id, body) => ipcRenderer.invoke('recovery:write', id, body),
+  clearRecovery: (id) => ipcRenderer.invoke('recovery:clear', id),
+  listRecovery: () => ipcRenderer.invoke('recovery:list'),
+
   onMenuCommand: (callback) => subscribe<MenuCommand>('menu:command', callback),
   onNotesChanged: (callback) => subscribe<NotesChangedEvent>('notes:changed', callback),
 
