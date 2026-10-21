@@ -67,12 +67,17 @@ function openDialog<T>(headerText: string, content: Node[], buttons: Array<Dialo
   });
 }
 
-export function confirmDialog(headerText: string, text: string, confirmText: string): Promise<boolean> {
+export function confirmDialog(
+  headerText: string,
+  text: string,
+  confirmText: string,
+  design: 'Negative' | 'Emphasized' = 'Negative',
+): Promise<boolean> {
   return openDialog(
     headerText,
     [el('p', {}, [text])],
     [
-      { text: confirmText, value: true, design: 'Negative' },
+      { text: confirmText, value: true, design },
       { text: 'Abbrechen', value: false, design: 'Transparent' },
     ],
     false,
@@ -80,7 +85,7 @@ export function confirmDialog(headerText: string, text: string, confirmText: str
 }
 
 /** Asks for a single line of text. Resolves with `null` when cancelled. */
-export async function promptDialog(headerText: string, label: string, hint: string, value = ''): Promise<string | null> {
+export async function promptDialog(headerText: string, label: string, hint: string, value = '', cancelText = 'Überspringen'): Promise<string | null> {
   const id = `prompt-${Date.now()}`;
   const input = el('ui5-input', { id, value, accessibleName: label, placeholder: label });
   const result = openDialog<'ok' | 'cancel'>(
@@ -88,7 +93,7 @@ export async function promptDialog(headerText: string, label: string, hint: stri
     [el('ui5-label', { 'attr:for': id, showColon: true }, [label]), input, el('p', { className: 'dialog-hint' }, [hint])],
     [
       { text: 'Übernehmen', value: 'ok', design: 'Emphasized' },
-      { text: 'Überspringen', value: 'cancel', design: 'Transparent' },
+      { text: cancelText, value: 'cancel', design: 'Transparent' },
     ],
     'cancel',
     id,
