@@ -120,6 +120,10 @@ dadurch nicht mit ausgeliefert.
 - Themes: Hell, Dunkel, Hoher Kontrast schwarz und weiß. "System folgen" erkennt
   auch Kontrastdesigns des Betriebssystems.
 - Speicherstatus und Fehler werden über Live-Regionen angesagt.
+- In schmalen Fenstern (eine Spalte) führen Zurück-Knöpfe vom Editor zur Liste und von
+  der Liste zur Bibliothek.
+- Automatische Prüfung (axe, Tastatur, Reflow) und Checkliste für Screenreader:
+  [docs/accessibility.md](docs/accessibility.md).
 
 ## Sicherheit
 
@@ -136,8 +140,7 @@ dadurch nicht mit ausgeliefert.
   Update, sobald 2.28.0 erscheint.
 - **Schrift 72:** `copy-fonts.mjs` sucht die Dateien in den UI5-Theming-Paketen. Findet es
   keine, nutzt die App Arial oder Helvetica. Die Konsole meldet das beim Installieren.
-- **Kleine Fenster:** Unter etwa 600 px zeigt das Flexible Column Layout nur eine Spalte.
-  Der Zurück-Knopf im Editor führt zur Liste. Die Bibliothek ist dort noch nicht erreichbar.
+
 - **Backups** sind nicht verschlüsselt. Liegt der Backup-Ordner in einer Cloud, sind die
   Notizen dort im Klartext.
 - **Wiki-Markup:** Aufgaben werden zu ☐/☑, weil Wiki-Markup keine Checkboxen kennt. Bilder
