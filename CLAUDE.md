@@ -1,6 +1,6 @@
 # Projektkontext für Claude
 
-Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand: MVP-Gerüst (Phase 1).
+Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand: Phase 3 abgeschlossen.
 
 ## Feste Entscheidungen
 
@@ -24,16 +24,18 @@ Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand
 
 ## Stand und nächste Schritte
 
-- Phase 1 und 2 sind fertig. CI prüft Typen, Unit-Tests (`tests/unit`), UI- und
+- Phase 1, 2 und 3 sind fertig. CI prüft Typen, Unit-Tests (`tests/unit`), UI- und
   Barrierefreiheitstests im Browser-Modus (`tests/e2e`) und einen Smoke-Test der echten
   Electron-App auf macOS, Windows und Linux (`tests/electron`).
 - Neue npm-Pakete nur zusammen mit aktualisierter `package-lock.json` (CI nutzt `npm ci`).
 - Commits auf Englisch nach Conventional Commits, Code-Kommentare auf Englisch,
   Oberfläche vorerst Deutsch.
-- Phase 3: Versionierung (Snapshots pro ID unter `.history/<id>/`, Diff, Wiederherstellen),
-  Backup/Restore inkl. einzelner Notizen, Crash-Recovery.
+- Versionen: `.history/<id>/<ms>-<hash8>.md`, Snapshot in `finalize()`, vor `restoreVersion()`
+  und bevor eine Änderung von außen übernommen wird.
+- Backups: `src/main/backup.ts` (ZIP + Manifest), Einstellungen in `config.json` im App-Profil.
+  Notfalldateien für Crash-Recovery liegen im App-Profil unter `recovery/`, nie im Workspace.
 - Phase 4: Barrierefreiheits-Audit, i18n/RTL, HTML/DOCX-Export, Signierung, Auto-Update, CSP verschärfen.
-- Offen aus Phase 2: Labels über alle Notizen umbenennen/zusammenführen.
+- Offen: Backups verschlüsseln (optional), blockweises Wiederherstellen aus einer Version.
 
 ## Bekannte Risiken
 

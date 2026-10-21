@@ -3,7 +3,7 @@
 Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori (Horizon).
 Läuft auf macOS, Windows und Linux. Notizen sind normale `.md`-Dateien in einem Ordner deiner Wahl.
 
-Stand: Phase 2 des Plans abgeschlossen.
+Stand: Phase 3 des Plans abgeschlossen.
 
 ## Funktionen
 
@@ -21,6 +21,14 @@ Stand: Phase 2 des Plans abgeschlossen.
 - Änderungen von außen (anderer Editor, Sync-Tool) werden erkannt; bei gleichzeitiger
   Bearbeitung fragt die App, welche Version gilt
 - Themes Hell, Dunkel und zwei Hochkontrast-Varianten, Dichte Kompakt oder Komfortabel
+- Versionen: automatisch nach einer Bearbeitungspause, Vergleich alt gegen aktuell,
+  Wiederherstellen ohne Datenverlust (Aufbewahrung: 24 Stunden alles, dann täglich
+  für 30 Tage, dann wöchentlich)
+- Backups als ZIP mit SHA-256-Prüfsummen in einem eigenen Ordner, manuell, beim Beenden
+  oder täglich; Sicherheitskopie vor Import und endgültigem Löschen; einzelne Notizen
+  oder ein ganzes Backup wiederherstellen
+- Crash-Recovery: ungespeicherter Text wird nach einem Absturz beim Start angeboten
+- Labels über alle Notizen umbenennen oder zusammenführen
 
 ## Schnellstart
 
@@ -53,6 +61,7 @@ src/
   shared/         Kernlogik ohne Abhängigkeiten, läuft überall
     note.ts         ULID, Dateiname, Titel, Front Matter
     note-store.ts   Speichern, Umbenennen, Labels, Suche, Papierkorb, Import, Änderungserkennung
+    history.ts      Versionen in .history/<id>/ mit Aufbewahrungsregeln
     fs-port.ts      Dateisystem-Schnittstelle + MemoryFs
     assets.ts       Bilder in assets/ (Name aus dem Inhalts-Hash)
     markdown/       Parser und Export nach Wiki-Markup und HTML
@@ -61,6 +70,9 @@ src/
     workspace.ts    Workspace mit File-Watcher
     transfer.ts     Export (Markdown, Wiki, PDF) und Import
     node-fs.ts      Dateisystem-Zugriff, auf den Workspace beschränkt
+    backup.ts       Backups mit Manifest, Prüfen, Wiederherstellen
+    zip.ts          ZIP lesen und schreiben (ohne Abhängigkeiten, mit Zip-Slip-Schutz)
+    recovery.ts     Notfalldateien für ungespeicherten Text (im App-Profil)
   preload/        Stellt die Schnittstelle als window.notesApi bereit
   renderer/       Oberfläche: UI5 Web Components, CodeMirror mit Live Preview
     adapters/       Mock-Adapter für den Browser-Modus
@@ -111,7 +123,8 @@ dadurch nicht mit ausgeliefert.
   keine, nutzt die App Arial oder Helvetica. Die Konsole meldet das beim Installieren.
 - **Kleine Fenster:** Unter etwa 600 px zeigt das Flexible Column Layout nur eine Spalte.
   Der Zurück-Knopf im Editor führt zur Liste. Die Bibliothek ist dort noch nicht erreichbar.
-- **Labels umbenennen oder zusammenführen** über alle Notizen fehlt noch.
+- **Backups** sind nicht verschlüsselt. Liegt der Backup-Ordner in einer Cloud, sind die
+  Notizen dort im Klartext.
 - **Wiki-Markup:** Aufgaben werden zu ☐/☑, weil Wiki-Markup keine Checkboxen kennt. Bilder
   müssen in Jira oder Confluence separat als Anhang hochgeladen werden.
 - **PDF-Export** gibt es nur in der App, nicht im Browser-Modus.
