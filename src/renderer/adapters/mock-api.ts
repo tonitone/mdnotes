@@ -1,6 +1,8 @@
-import type { NotesApi } from '../../shared/api';
+import type { ExportFormat, ImportReport, NotesApi, NotesChangedEvent } from '../../shared/api';
+import { assetNameFor, assetNameFromPath } from '../../shared/assets';
 import { MemoryFs } from '../../shared/fs-port';
-import { newId, serializeNote } from '../../shared/note';
+import { markdownToWiki } from '../../shared/markdown/wiki';
+import { newId, serializeNote, slugify } from '../../shared/note';
 import { NoteStore } from '../../shared/note-store';
 
 /**
@@ -58,6 +60,43 @@ Offene Frage: Brauchen wir den Export nach Confluence schon im ersten Release?
   },
 ];
 
+/** Exports made in browser mode, for e2e tests. */
+export interface MockExport {
+  format: ExportFormat | 'all';
+  fileName: string;
+  content: string;
+}
+
+declare global {
+  interface Window {
+    __mdnotesExports?: MockExport[];
+    /** e2e tests: change a note's file as if another program did it. */
+    __mdnotesExternalEdit?: (id: string, body: string) => Promise<void>;
+  }
+}
+
+function download(fileName: string, content: string): void {
+  const url = URL.createObjectURL(new Blob([content], { type: 'text/plain;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** Lets the user pick Markdown files with a regular file input. */
+function pickFiles(): Promise<File[] | null> {
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.accept = '.md,.markdown,.txt,text/markdown,text/plain';
+    input.addEventListener('change', () => resolve(input.files ? [...input.files] : null));
+    input.addEventListener('cancel', () => resolve(null));
+    input.click();
+  });
+}
+
 export async function createMockApi(): Promise<NotesApi> {
   const fs = new MemoryFs(true);
   // Store in reverse so the welcome note is the newest.
@@ -73,6 +112,25 @@ export async function createMockApi(): Promise<NotesApi> {
 
   const workspaceName = 'Demo-Workspace (Browser-Modus)';
   const noop = () => () => undefined;
+  const assetUrls = new Map<string, string>();
+  const changeListeners = new Set<(event: NotesChangedEvent) => void>();
+  const exports: MockExport[] = (window.__mdnotesExports = []);
+
+  window.__mdnotesExternalEdit = async (id, body) => {
+    const fileName = store.read(id).fileName;
+    fs.putExternal(fileName, store.fileText(id).replace(/\n---\n[\s\S]*$/, `\n---\n${body}`));
+    const event = await store.refresh();
+    changeListeners.forEach((listener) => listener(event));
+  };
+
+  const importTexts = async (files: Array<{ name: string; text: string }>): Promise<ImportReport> => {
+    const report: ImportReport = { imported: 0, skipped: 0, warnings: [] };
+    for (const { name, text } of files) {
+      if (await store.importNote(text, name)) report.imported++;
+      else report.skipped++;
+    }
+    return report;
+  };
 
   return {
     mode: 'browser',
@@ -83,7 +141,59 @@ export async function createMockApi(): Promise<NotesApi> {
     createNote: () => store.create(),
     saveNote: (id, body) => store.save(id, body),
     finalizeNote: (id) => store.finalize(id),
+    setLabels: (id, labels) => store.setLabels(id, labels),
+    searchNotes: async (query) => store.search(query),
+
+    trashNote: (id) => store.trash(id),
+    listTrash: () => store.listTrash(),
+    readTrash: (name) => store.readTrash(name),
+    restoreFromTrash: (name) => store.restore(name),
+    deleteFromTrash: (name) => store.deleteFromTrash(name),
+
+    async saveAsset(bytes, mime) {
+      const name = await assetNameFor(bytes, mime);
+      if (await fs.writeAsset(name, bytes)) {
+        assetUrls.set(name, URL.createObjectURL(new Blob([bytes.slice().buffer as ArrayBuffer], { type: mime })));
+      }
+      return `assets/${name}`;
+    },
+    assetUrl(src) {
+      const name = assetNameFromPath(src);
+      return name ? (assetUrls.get(name) ?? null) : null;
+    },
+
+    async exportNote(id, format) {
+      const doc = store.read(id);
+      const base = slugify(doc.title);
+      if (format === 'pdf') {
+        // Printing to PDF needs Electron; browser mode only records the request.
+        exports.push({ format, fileName: `${base}.pdf`, content: doc.body });
+        return `${base}.pdf`;
+      }
+      const fileName = `${base}.${format === 'wiki' ? 'txt' : 'md'}`;
+      const content = format === 'wiki' ? markdownToWiki(doc.body) : doc.body;
+      exports.push({ format, fileName, content });
+      download(fileName, content);
+      return fileName;
+    },
+    async exportAll() {
+      for (const note of store.summaries()) {
+        exports.push({ format: 'all', fileName: note.fileName, content: store.fileText(note.id) });
+      }
+      return 'Downloads (Browser-Modus)';
+    },
+    async importNotes() {
+      const files = await pickFiles();
+      if (!files) return null;
+      return importTexts(await Promise.all(files.map(async (f) => ({ name: f.name, text: await f.text() }))));
+    },
+    importTexts,
+
     onMenuCommand: noop,
     onFlushRequest: noop,
+    onNotesChanged(callback) {
+      changeListeners.add(callback);
+      return () => changeListeners.delete(callback);
+    },
   };
 }
