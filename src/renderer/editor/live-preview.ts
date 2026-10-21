@@ -8,6 +8,7 @@ import {
   type DecorationSet,
   type ViewUpdate,
 } from '@codemirror/view';
+import { t } from '../../shared/i18n';
 
 /**
  * Live preview: Markdown is rendered directly in the editor. On lines that
@@ -40,7 +41,7 @@ class ImageWidget extends WidgetType {
     if (!this.url) {
       const span = document.createElement('span');
       span.className = 'cm-md-image-missing';
-      span.textContent = this.alt ? `Bild: ${this.alt}` : 'Bild nicht verfügbar';
+      span.textContent = this.alt ? t('image.label', { alt: this.alt }) : t('image.missing');
       return span;
     }
     const img = document.createElement('img');
@@ -55,7 +56,6 @@ class ImageWidget extends WidgetType {
 }
 
 const CODE_LANGUAGES: Array<[string, string]> = [
-  ['', 'Keine Sprache'],
   ['bash', 'Bash'],
   ['css', 'CSS'],
   ['html', 'HTML'],
@@ -89,8 +89,9 @@ class CodeToolsWidget extends WidgetType {
     wrap.className = 'cm-md-codetools';
 
     const select = document.createElement('select');
-    select.setAttribute('aria-label', 'Sprache des Code-Blocks');
-    const options = CODE_LANGUAGES.some(([v]) => v === this.lang) ? CODE_LANGUAGES : [...CODE_LANGUAGES, [this.lang, this.lang]];
+    select.setAttribute('aria-label', t('code.language'));
+    const known: Array<[string, string]> = [['', t('code.noLanguage')], ...CODE_LANGUAGES];
+    const options = known.some(([v]) => v === this.lang) ? known : [...known, [this.lang, this.lang]];
     for (const [value, label] of options) {
       const option = document.createElement('option');
       option.value = value;
@@ -105,14 +106,14 @@ class CodeToolsWidget extends WidgetType {
     const copy = document.createElement('button');
     copy.type = 'button';
     copy.className = 'cm-md-copy';
-    copy.textContent = 'Kopieren';
-    copy.setAttribute('aria-label', 'Code kopieren');
+    copy.textContent = t('code.copy');
+    copy.setAttribute('aria-label', t('code.copyLabel'));
     copy.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(this.code);
-        announce(copy, 'Code kopiert');
+        announce(copy, t('code.copied'));
       } catch {
-        announce(copy, 'Kopieren nicht möglich');
+        announce(copy, t('code.copyFailed'));
       }
     });
 
@@ -156,7 +157,7 @@ class TaskWidget extends WidgetType {
     box.type = 'checkbox';
     box.className = 'cm-md-task';
     box.checked = this.checked;
-    box.setAttribute('aria-label', this.checked ? 'Aufgabe erledigt' : 'Aufgabe offen');
+    box.setAttribute('aria-label', this.checked ? t('task.done') : t('task.open'));
     box.addEventListener('mousedown', (e) => e.preventDefault());
     box.addEventListener('click', (e) => {
       e.preventDefault();

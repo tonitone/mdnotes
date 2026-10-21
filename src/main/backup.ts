@@ -8,6 +8,7 @@ import { isNoteId, parseNote, titleFromBody } from '../shared/note';
 import type { NoteStore } from '../shared/note-store';
 import type { NodeFs } from './node-fs';
 import { createZip, readZip, type ZipEntry } from './zip';
+import { t } from '../shared/i18n';
 
 /**
  * Backups of a workspace as ZIP files with a manifest of SHA-256 checksums.
@@ -47,7 +48,7 @@ function isInside(parent: string, child: string): boolean {
 }
 
 export function assertBackupFolder(workspace: string, folder: string): void {
-  if (isInside(workspace, folder)) throw new Error('Der Backup-Ordner darf nicht im Workspace liegen.');
+  if (isInside(workspace, folder)) throw new Error(t('main.backupInWorkspace'));
 }
 
 async function readDirSafe(dir: string): Promise<import('node:fs').Dirent[]> {
@@ -96,9 +97,9 @@ export async function readBackup(folder: string, name: string): Promise<{ manife
   const entries = readZip(await fsp.readFile(path.join(folder, name)));
   const files = new Map(entries.map((e) => [e.path, e.data]));
   const raw = files.get(MANIFEST);
-  if (!raw) throw new Error('Manifest fehlt.');
+  if (!raw) throw new Error(t('main.manifestMissing'));
   const manifest = JSON.parse(Buffer.from(raw).toString('utf8')) as BackupManifest;
-  if (manifest.app !== 'mdnotes' || manifest.schema !== 1 || !Array.isArray(manifest.files)) throw new Error('Unbekanntes Backup-Format.');
+  if (manifest.app !== 'mdnotes' || manifest.schema !== 1 || !Array.isArray(manifest.files)) throw new Error(t('main.unknownBackupFormat'));
   files.delete(MANIFEST);
   return { manifest, files };
 }
@@ -109,11 +110,11 @@ export async function verifyBackup(folder: string, name: string): Promise<{ ok: 
     const { manifest, files } = await readBackup(folder, name);
     for (const f of manifest.files) {
       const data = files.get(f.path);
-      if (!data) problems.push(`Fehlt: ${f.path}`);
-      else if (data.byteLength !== f.size || sha256(data) !== f.sha256) problems.push(`Beschädigt: ${f.path}`);
+      if (!data) problems.push(t('main.fileMissing', { path: f.path }));
+      else if (data.byteLength !== f.size || sha256(data) !== f.sha256) problems.push(t('main.fileDamaged', { path: f.path }));
     }
     for (const p of files.keys()) {
-      if (!manifest.files.some((f) => f.path === p)) problems.push(`Nicht im Manifest: ${p}`);
+      if (!manifest.files.some((f) => f.path === p)) problems.push(t('main.notInManifest', { path: p }));
     }
     return { ok: problems.length === 0, files: manifest.files.length, problems };
   } catch (err) {
@@ -166,7 +167,7 @@ export async function createBackup(
   await fsp.rename(temp, path.join(folder, name));
 
   const check = await verifyBackup(folder, name);
-  if (!check.ok) throw new Error(`Backup ist fehlerhaft: ${check.problems.join(', ')}`);
+  if (!check.ok) throw new Error(t('main.backupBroken', { problems: check.problems.join(', ') }));
   await pruneBackups(folder, options.keep);
   return { file: name, created: now.getTime(), kind: options.kind, size: zip.length };
 }
@@ -190,14 +191,14 @@ export async function restoreNotes(store: NoteStore, fs: NodeFs, folder: string,
   for (const p of paths) {
     const data = files.get(p);
     if (!data || p.includes('/')) {
-      report.warnings.push(`${p}: nicht im Backup gefunden.`);
+      report.warnings.push(t('main.notInBackup', { path: p }));
       continue;
     }
     const text = Buffer.from(data).toString('utf8');
     for (const asset of referencedAssets(text)) {
       const bytes = files.get(`${ASSET_DIR}/${asset}`);
       if (bytes) await fs.writeAsset(asset, bytes);
-      else report.warnings.push(`${p}: Bild ${asset} fehlt im Backup.`);
+      else report.warnings.push(t('main.imageNotInBackup', { path: p, asset }));
     }
     if (await store.importNote(text, name)) report.imported++;
     else report.skipped++;
@@ -208,7 +209,7 @@ export async function restoreNotes(store: NoteStore, fs: NodeFs, folder: string,
 /** Extracts a whole backup into an empty (or new) folder. */
 export async function restoreToFolder(folder: string, name: string, target: string): Promise<void> {
   const { files } = await readBackup(folder, name);
-  if ((await readDirSafe(target)).length > 0) throw new Error('Der Zielordner ist nicht leer.');
+  if ((await readDirSafe(target)).length > 0) throw new Error(t('main.targetNotEmpty'));
   await fsp.mkdir(target, { recursive: true });
   for (const [p, data] of files) {
     const file = path.resolve(target, ...p.split('/'));

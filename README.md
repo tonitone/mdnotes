@@ -29,6 +29,8 @@ Stand: Phase 3 des Plans abgeschlossen.
   oder ein ganzes Backup wiederherstellen
 - Crash-Recovery: ungespeicherter Text wird nach einem Absturz beim Start angeboten
 - Labels über alle Notizen umbenennen oder zusammenführen
+- Oberfläche auf Deutsch oder Englisch (folgt dem System oder fest eingestellt unter
+  Darstellung → Sprache), Layout für Rechts-nach-links-Sprachen vorbereitet
 
 ## Schnellstart
 
@@ -66,6 +68,7 @@ src/
     assets.ts       Bilder in assets/ (Name aus dem Inhalts-Hash)
     markdown/       Parser und Export nach Wiki-Markup und HTML
     api.ts          Schnittstelle zwischen Oberfläche und Dateisystem
+    i18n/           Sprachdateien (de.ts legt die Schlüssel fest, en.ts muss sie alle haben)
   main/           Electron-Hauptprozess: Fenster, Menü, IPC, Sicherheit
     workspace.ts    Workspace mit File-Watcher
     transfer.ts     Export (Markdown, Wiki, PDF) und Import
@@ -86,6 +89,18 @@ Der Browser-Modus und Electron verwenden dieselbe `NoteStore`-Logik. Nur das Dat
 darunter ist verschieden (`MemoryFs` bzw. `NodeFs`). So laufen beide Varianten nicht
 auseinander. Im Electron-Build ist `__BROWSER_MODE__` gleich `false`, der Mock-Adapter wird
 dadurch nicht mit ausgeliefert.
+
+## Sprachen
+
+- Texte stehen in `src/shared/i18n/de.ts` und `en.ts`. Code ruft `t('schlüssel', { platzhalter })`
+  auf, Mehrzahl über `tp('schlüssel', anzahl)` mit den Varianten `.one` und `.other`.
+- Statische Texte in `index.html` tragen `data-i18n` (Textinhalt) oder
+  `data-i18n-attr="attribut:schlüssel; …"`.
+- Ein Unit-Test prüft, dass jede Sprache genau dieselben Schlüssel und Platzhalter hat.
+- Die Einstellung liegt in `config.json` (Browser-Modus: `localStorage`, Test-Override `?lang=en`).
+  Ein Wechsel lädt das Fenster neu; das native Menü wird sofort neu aufgebaut.
+- Rechts-nach-links: `dir` am `<html>` folgt der Sprache, das CSS nutzt logische Eigenschaften
+  (`margin-inline-start` usw.). Eine neue Sprache braucht nur eine weitere Datei in `i18n/`.
 
 ## Wie Dateien benannt werden
 

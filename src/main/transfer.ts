@@ -8,15 +8,16 @@ import type { ExportFormat, ImportReport } from '../shared/api';
 import { ASSET_DIR, MAX_ASSET_BYTES, MIME_BY_EXT, assetNameFor, assetNameFromPath, referencedAssets } from '../shared/assets';
 import { markdownToPrintDocument } from '../shared/markdown/html';
 import { markdownToWiki } from '../shared/markdown/wiki';
+import { t, type MessageKey } from '../shared/i18n';
 import { slugify } from '../shared/note';
 import type { Workspace } from './workspace';
 
 /** Export and import of notes. Runs in the main process. */
 
-const FORMATS: Record<ExportFormat, { ext: string; filter: string; title: string }> = {
-  markdown: { ext: 'md', filter: 'Markdown', title: 'Als Markdown exportieren' },
-  wiki: { ext: 'txt', filter: 'Wiki-Markup (Jira, Confluence)', title: 'Als Wiki-Markup exportieren' },
-  pdf: { ext: 'pdf', filter: 'PDF', title: 'Als PDF exportieren' },
+const FORMATS: Record<ExportFormat, { ext: string; filter: MessageKey; title: MessageKey }> = {
+  markdown: { ext: 'md', filter: 'filter.markdown', title: 'dialog.exportMarkdown' },
+  wiki: { ext: 'txt', filter: 'filter.wiki', title: 'dialog.exportWiki' },
+  pdf: { ext: 'pdf', filter: 'filter.pdf', title: 'dialog.exportPdf' },
 };
 
 const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
@@ -63,9 +64,9 @@ export async function exportNote(ws: Workspace, parent: BrowserWindow, id: strin
   const doc = ws.store.read(id);
   const spec = FORMATS[format];
   const result = await dialog.showSaveDialog(parent, {
-    title: spec.title,
+    title: t(spec.title),
     defaultPath: path.join(app.getPath('documents'), `${slugify(doc.title)}.${spec.ext}`),
-    filters: [{ name: spec.filter, extensions: [spec.ext] }],
+    filters: [{ name: t(spec.filter), extensions: [spec.ext] }],
   });
   if (result.canceled || !result.filePath) return null;
   const target = result.filePath;
@@ -90,7 +91,7 @@ export async function exportNote(ws: Workspace, parent: BrowserWindow, id: strin
 /** Writes every note (with front matter) and its images into a new folder. */
 export async function exportAll(ws: Workspace, parent: BrowserWindow): Promise<string | null> {
   const result = await dialog.showOpenDialog(parent, {
-    title: 'Zielordner für den Export wählen',
+    title: t('dialog.chooseExportFolder'),
     properties: ['openDirectory', 'createDirectory'],
   });
   if (result.canceled || result.filePaths.length === 0) return null;
@@ -122,7 +123,7 @@ async function importImages(ws: Workspace, text: string, sourceDir: string, sour
       await ws.fs.writeAsset(name, bytes);
       replacements.set(src, `${ASSET_DIR}/${name}`);
     } catch {
-      warnings.push(`${source}: Bild nicht übernommen (${src})`);
+      warnings.push(t('main.imageNotImported', { source, src }));
     }
   }
   return text.replace(pattern, (whole, open: string, src: string, close: string) => {
@@ -133,9 +134,9 @@ async function importImages(ws: Workspace, text: string, sourceDir: string, sour
 
 export async function importFromDialog(ws: Workspace, parent: BrowserWindow): Promise<ImportReport | null> {
   const result = await dialog.showOpenDialog(parent, {
-    title: 'Markdown-Dateien importieren',
+    title: t('dialog.importMarkdown'),
     properties: ['openFile', 'multiSelections'],
-    filters: [{ name: 'Markdown', extensions: ['md', 'markdown', 'txt'] }],
+    filters: [{ name: t('filter.markdown'), extensions: ['md', 'markdown', 'txt'] }],
   });
   if (result.canceled || result.filePaths.length === 0) return null;
   const report: ImportReport = { imported: 0, skipped: 0, warnings: [] };
@@ -147,7 +148,7 @@ export async function importFromDialog(ws: Workspace, parent: BrowserWindow): Pr
       if (await ws.store.importNote(text, name)) report.imported++;
       else report.skipped++;
     } catch {
-      report.warnings.push(`${name}: Datei konnte nicht gelesen werden.`);
+      report.warnings.push(t('main.fileUnreadable', { name }));
     }
   }
   return report;
@@ -159,7 +160,7 @@ export async function importTexts(ws: Workspace, files: Array<{ name: string; te
     if (await ws.store.importNote(text, name)) report.imported++;
     else report.skipped++;
     if (/!\[[^\]]*\]\((?![a-z][a-z0-9+.-]*:)(?!assets\/[0-9a-f]{16}\.)/i.test(text)) {
-      report.warnings.push(`${name}: Bilder werden beim Ziehen nicht übernommen. Nutze dafür „Importieren …“.`);
+      report.warnings.push(t('main.dropNoImages', { name }));
     }
   }
   return report;

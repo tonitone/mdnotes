@@ -14,9 +14,11 @@ import { MAX_ASSET_BYTES, isImageMime } from '../shared/assets';
 import { markdownToWiki } from '../shared/markdown/wiki';
 import { openBackupDialog } from './backup-dialog';
 import { createEditor, type NoteEditor } from './editor/editor';
-import { THEME_LABELS, getDensity, getThemeChoice, setDensity, setThemeChoice, type ThemeChoice } from './theme';
+import { THEME_CHOICES, getDensity, getThemeChoice, setDensity, setThemeChoice, themeLabel, type ThemeChoice } from './theme';
 import { announce, confirmDialog, el, infoDialog, promptDialog, type Ui5Element } from './ui';
-import { formatVersionTime, openVersionDialog } from './versions';
+import { openVersionDialog } from './versions';
+import { formatModified, formatTime, formatVersionTime } from './format';
+import { LANGUAGE_CHOICES, isLanguageChoice, t, tp, type LanguageChoice } from '../shared/i18n';
 
 /** Delay after the last keystroke before saving. */
 const SAVE_DELAY_MS = 700;
@@ -33,14 +35,6 @@ const $ = <T extends HTMLElement = Ui5Element>(id: string) => {
   if (!node) throw new Error(`Missing element: #${id}`);
   return node as T;
 };
-
-const timeFormat = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' });
-const dateFormat = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-
-function formatModified(ms: number): string {
-  const date = new Date(ms);
-  return date.toDateString() === new Date().toDateString() ? timeFormat.format(date) : dateFormat.format(date);
-}
 
 function sameLabel(a: string, b: string): boolean {
   return a.toLocaleLowerCase() === b.toLocaleLowerCase();
@@ -107,13 +101,16 @@ export class App {
     chooseWorkspaceButton: $('chooseWorkspaceButton'),
   };
 
-  constructor(private readonly api: NotesApi) {}
+  constructor(
+    private readonly api: NotesApi,
+    private language: LanguageChoice = 'system',
+  ) {}
 
   async start(): Promise<void> {
     this.els.fcl.accessibilityAttributes = {
-      startColumn: { role: 'navigation', name: 'Bibliothek' },
-      midColumn: { role: 'region', name: 'Notizen' },
-      endColumn: { role: 'main', name: 'Editor' },
+      startColumn: { role: 'navigation', name: t('library.title') },
+      midColumn: { role: 'region', name: t('notes.title') },
+      endColumn: { role: 'main', name: t('editor.region') },
     };
     // The title area is a link; its accessible name must contain the visible text.
     this.els.shell.accessibilityAttributes = { logo: { name: 'mdnotes' } };
@@ -158,9 +155,10 @@ export class App {
     });
     els.themeMenu.addEventListener('item-click', (event: Event) => {
       const item = (event as CustomEvent<{ item: HTMLElement }>).detail.item;
-      const { theme, density } = item.dataset;
+      const { theme, density, language } = item.dataset;
       if (theme) setThemeChoice(theme as ThemeChoice);
       if (density) setDensity(density as 'compact' | 'cozy');
+      if (isLanguageChoice(language)) void this.changeLanguage(language);
       this.buildThemeMenu();
     });
 
@@ -258,13 +256,40 @@ export class App {
     const menu = this.els.themeMenu;
     menu.replaceChildren();
     const current = getThemeChoice();
-    for (const [value, label] of Object.entries(THEME_LABELS)) {
-      menu.append(el('ui5-menu-item', { 'attr:text': label, 'data-theme': value, icon: value === current ? 'accept' : '' }));
+    for (const value of THEME_CHOICES) {
+      menu.append(el('ui5-menu-item', { 'attr:text': themeLabel(value), 'data-theme': value, icon: value === current ? 'accept' : '' }));
     }
     menu.append(el('ui5-menu-separator'));
     const density = getDensity();
-    for (const [value, label] of [['compact', 'Kompakt'], ['cozy', 'Komfortabel']] as const) {
-      menu.append(el('ui5-menu-item', { 'attr:text': label, 'data-density': value, icon: value === density ? 'accept' : '' }));
+    for (const value of ['compact', 'cozy'] as const) {
+      menu.append(el('ui5-menu-item', { 'attr:text': t(`density.${value}`), 'data-density': value, icon: value === density ? 'accept' : '' }));
+    }
+    menu.append(el('ui5-menu-separator'));
+    menu.append(
+      el(
+        'ui5-menu-item',
+        { 'attr:text': t('language.title'), icon: 'globe', id: 'languageMenuItem' },
+        LANGUAGE_CHOICES.map((value) =>
+          el('ui5-menu-item', {
+            'attr:text': t(`language.${value}`),
+            'data-language': value,
+            icon: value === this.language ? 'accept' : '',
+          }),
+        ),
+      ),
+    );
+  }
+
+  /** Saves the language and reloads the window, which applies it everywhere. */
+  private async changeLanguage(choice: LanguageChoice): Promise<void> {
+    if (choice === this.language) return;
+    await this.flush();
+    try {
+      await this.api.setLanguage(choice);
+      this.language = choice;
+      window.location.reload();
+    } catch (err) {
+      this.showError(t('language.reloadFailed'), err);
     }
   }
 
@@ -278,7 +303,7 @@ export class App {
       const workspace = await this.api.chooseWorkspace();
       if (workspace) await this.showWorkspace(workspace);
     } catch (err) {
-      this.showError('Der Ordner konnte nicht geöffnet werden.', err);
+      this.showError(t('error.openFolder'), err);
     }
   }
 
@@ -335,7 +360,11 @@ export class App {
     }
 
     this.els.notesTitle.textContent =
-      this.view.kind === 'trash' ? 'Papierkorb' : this.view.kind === 'label' ? `Label: ${this.view.label}` : 'Notizen';
+      this.view.kind === 'trash'
+        ? t('library.trash')
+        : this.view.kind === 'label'
+          ? t('notes.labelTitle', { label: this.view.label })
+          : t('notes.title');
     this.els.newNoteButton.hidden = this.view.kind === 'trash';
     this.els.renameLabelButton.hidden = this.view.kind !== 'label';
   }
@@ -360,27 +389,27 @@ export class App {
     const list = this.els.notesList;
     if (this.view.kind === 'trash') {
       const q = this.query.toLocaleLowerCase();
-      const entries = this.trash.filter((t) => !q || `${t.title} ${t.preview}`.toLocaleLowerCase().includes(q));
-      list.noDataText = q ? 'Keine Treffer' : 'Der Papierkorb ist leer';
+      const entries = this.trash.filter((e) => !q || `${e.title} ${e.preview}`.toLocaleLowerCase().includes(q));
+      list.noDataText = q ? t('notes.noHits') : t('trash.empty');
       list.replaceChildren(
-        ...entries.map((t) =>
+        ...entries.map((e) =>
           el('ui5-li', {
             icon: 'document-text',
-            description: t.preview || 'Kein weiterer Text',
-            additionalText: `Gelöscht ${formatModified(t.trashedAt)}`,
-            navigated: t.trashName === this.currentTrash,
-            'data-trash': t.trashName,
-          }, [t.title]),
+            description: e.preview || t('notes.noText'),
+            additionalText: t('trash.deletedAt', { time: formatModified(e.trashedAt) }),
+            navigated: e.trashName === this.currentTrash,
+            'data-trash': e.trashName,
+          }, [e.title]),
         ),
       );
       return;
     }
-    list.noDataText = this.query ? 'Keine Treffer' : 'Noch keine Notizen';
+    list.noDataText = this.query ? t('notes.noHits') : t('notes.empty');
     list.replaceChildren(
       ...this.visibleNotes().map((note) =>
         el('ui5-li', {
           icon: 'document-text',
-          description: note.snippet ?? (note.preview || 'Kein weiterer Text'),
+          description: note.snippet ?? (note.preview || t('notes.noText')),
           additionalText: formatModified(note.modified),
           tooltip: note.fileName,
           navigated: note.id === this.currentId,
@@ -442,13 +471,13 @@ export class App {
       this.currentId = id;
       this.editor?.setDoc(doc.body);
       this.els.fileName.textContent = doc.fileName;
-      this.setStatus(`Zuletzt geändert ${formatModified(doc.modified)}`);
+      this.setStatus(t('status.modifiedAt', { time: formatModified(doc.modified) }));
       this.renderTokens(doc.labels);
       this.showView('editor');
       this.els.fcl.layout = 'ThreeColumnsEndExpanded';
       this.updateSelection();
     } catch (err) {
-      this.showError('Die Notiz konnte nicht geöffnet werden.', err);
+      this.showError(t('error.openNote'), err);
     }
   }
 
@@ -469,13 +498,13 @@ export class App {
       this.renderList();
       this.editor?.setDoc(doc.body);
       this.els.fileName.textContent = doc.fileName;
-      this.setStatus('Neu angelegt');
+      this.setStatus(t('status.created'));
       this.renderTokens([]);
       this.showView('editor');
       this.els.fcl.layout = 'ThreeColumnsEndExpanded';
       this.editor?.focus();
     } catch (err) {
-      this.showError('Die Notiz konnte nicht angelegt werden.', err);
+      this.showError(t('error.createNote'), err);
     }
   }
 
@@ -484,7 +513,7 @@ export class App {
     this.dirty = true;
     this.scheduleRecovery();
     if (this.conflict) return;
-    this.setStatus('Nicht gespeichert');
+    this.setStatus(t('status.unsaved'));
     window.clearTimeout(this.saveTimer);
     window.clearTimeout(this.finalizeTimer);
     this.saveTimer = window.setTimeout(() => void this.save(), SAVE_DELAY_MS);
@@ -499,18 +528,18 @@ export class App {
     if (!id || !this.dirty || !this.editor || this.conflict) return this.saving;
     const body = this.editor.getDoc();
     this.dirty = false;
-    this.setStatus('Speichert …');
+    this.setStatus(t('status.saving'));
     this.saving = this.saving.then(async () => {
       try {
         const result = await this.api.saveNote(id, body);
         this.applySaveResult(result);
         if (!this.dirty || id !== this.currentId) this.clearRecovery(id);
         if (id === this.currentId && !this.dirty) {
-          this.setStatus(`Gespeichert um ${timeFormat.format(new Date(result.modified))}`);
+          this.setStatus(t('status.savedAt', { time: formatTime(result.modified) }));
         }
       } catch (err) {
         this.dirty = true;
-        this.showError('Speichern fehlgeschlagen. Deine Änderungen sind noch im Editor.', err);
+        this.showError(t('error.save'), err);
       }
     });
     return this.saving;
@@ -522,7 +551,7 @@ export class App {
     try {
       this.applySaveResult(await this.api.finalizeNote(id));
     } catch (err) {
-      this.showError('Die Datei konnte nicht umbenannt werden. Der Inhalt ist gespeichert.', err);
+      this.showError(t('error.rename'), err);
     }
   }
 
@@ -580,7 +609,7 @@ export class App {
       this.renderLibrary();
       this.renderList();
     } catch (err) {
-      this.showError('Die Labels konnten nicht gespeichert werden.', err);
+      this.showError(t('error.labels'), err);
     }
   }
 
@@ -592,17 +621,17 @@ export class App {
     const paths: string[] = [];
     for (const file of files) {
       if (!isImageMime(file.type)) {
-        this.showError(`„${file.name}“ ist kein unterstütztes Bildformat (PNG, JPEG, GIF, WebP, SVG).`, file.type);
+        this.showError(t('error.imageType', { name: file.name }), file.type);
         continue;
       }
       if (file.size > MAX_ASSET_BYTES) {
-        this.showError(`„${file.name}“ ist größer als 20 MB und wurde nicht eingefügt.`, file.size);
+        this.showError(t('error.imageSize', { name: file.name }), file.size);
         continue;
       }
       try {
         paths.push(await this.api.saveAsset(new Uint8Array(await file.arrayBuffer()), file.type));
       } catch (err) {
-        this.showError('Das Bild konnte nicht gespeichert werden.', err);
+        this.showError(t('error.imageSave'), err);
       }
     }
     return paths;
@@ -614,11 +643,7 @@ export class App {
     if (!view) return;
     // Work from the last image backwards so earlier positions stay valid.
     for (const { from, path } of [...inserted].reverse()) {
-      const alt = await promptDialog(
-        'Bildbeschreibung',
-        'Beschreibung',
-        'Kurz beschreiben, was das Bild zeigt. Screenreader lesen diesen Text vor.',
-      );
+      const alt = await promptDialog(t('image.altTitle'), t('image.altLabel'), t('image.altHint'));
       const markup = `![](${path})`;
       if (alt && view.state.doc.sliceString(from, from + markup.length) === markup) {
         view.dispatch({ changes: { from: from + 2, insert: alt.replace(/[[\]\n]/g, ' ').trim() } });
@@ -635,16 +660,16 @@ export class App {
     const id = this.currentId;
     if (!id) return;
     await this.flush();
-    const title = this.notes.find((n) => n.id === id)?.title ?? 'Notiz';
+    const title = this.notes.find((n) => n.id === id)?.title ?? '';
     try {
       await this.api.trashNote(id);
       this.notes = this.notes.filter((n) => n.id !== id);
       this.closeEditor();
       this.renderLibrary();
       this.renderList();
-      announce(`„${title}“ in den Papierkorb verschoben.`);
+      announce(t('announce.trashed', { title }));
     } catch (err) {
-      this.showError('Die Notiz konnte nicht in den Papierkorb verschoben werden.', err);
+      this.showError(t('error.trash'), err);
     }
   }
 
@@ -656,12 +681,12 @@ export class App {
       this.currentTrash = trashName;
       this.editor?.setDoc(body, { readOnly: true });
       this.els.fileName.textContent = entry?.title ?? '';
-      this.setStatus(entry ? `Gelöscht ${formatModified(entry.trashedAt)}` : '');
+      this.setStatus(entry ? t('trash.deletedAt', { time: formatModified(entry.trashedAt) }) : '');
       this.showView('trashEntry');
       this.els.fcl.layout = 'ThreeColumnsEndExpanded';
       this.updateSelection();
     } catch (err) {
-      this.showError('Die Notiz im Papierkorb konnte nicht geöffnet werden.', err);
+      this.showError(t('error.openTrash'), err);
     }
   }
 
@@ -675,30 +700,26 @@ export class App {
       this.closeEditor();
       this.renderLibrary();
       this.renderList();
-      announce(`„${summary.title}“ wiederhergestellt.`);
+      announce(t('announce.restored', { title: summary.title }));
     } catch (err) {
-      this.showError('Die Notiz konnte nicht wiederhergestellt werden.', err);
+      this.showError(t('error.restore'), err);
     }
   }
 
   private async deleteCurrentTrashForever(): Promise<void> {
     const name = this.currentTrash;
     if (!name) return;
-    const title = this.trash.find((t) => t.trashName === name)?.title ?? 'Notiz';
-    const ok = await confirmDialog(
-      'Endgültig löschen?',
-      `„${title}“ wird dauerhaft gelöscht. Das lässt sich nicht rückgängig machen.`,
-      'Endgültig löschen',
-    );
+    const title = this.trash.find((e) => e.trashName === name)?.title ?? '';
+    const ok = await confirmDialog(t('confirm.deleteTitle'), t('confirm.deleteText', { title }), t('trash.deleteForever'));
     if (!ok) return;
     try {
       await this.api.deleteFromTrash(name);
-      this.trash = this.trash.filter((t) => t.trashName !== name);
+      this.trash = this.trash.filter((e) => e.trashName !== name);
       this.closeEditor();
       this.renderList();
-      announce(`„${title}“ endgültig gelöscht.`);
+      announce(t('announce.deleted', { title }));
     } catch (err) {
-      this.showError('Die Notiz konnte nicht gelöscht werden.', err);
+      this.showError(t('error.delete'), err);
     }
   }
 
@@ -712,9 +733,9 @@ export class App {
     const body = this.editor.getDoc();
     try {
       await navigator.clipboard.writeText(format === 'wiki' ? markdownToWiki(body) : body);
-      announce(format === 'wiki' ? 'Wiki-Markup kopiert.' : 'Markdown kopiert.');
+      announce(format === 'wiki' ? t('announce.wikiCopied') : t('announce.markdownCopied'));
     } catch (err) {
-      this.showError('Kopieren in die Zwischenablage ist fehlgeschlagen.', err);
+      this.showError(t('error.copy'), err);
     }
   }
 
@@ -724,9 +745,9 @@ export class App {
     await this.flush();
     try {
       const target = await this.api.exportNote(id, format);
-      if (target) announce(`Exportiert: ${target}`);
+      if (target) announce(t('announce.exported', { target }));
     } catch (err) {
-      this.showError('Der Export ist fehlgeschlagen.', err);
+      this.showError(t('error.export'), err);
     }
   }
 
@@ -734,9 +755,9 @@ export class App {
     await this.flush();
     try {
       const folder = await this.api.exportAll();
-      if (folder) announce(`Alle Notizen exportiert nach ${folder}`);
+      if (folder) announce(t('announce.exportedAll', { folder }));
     } catch (err) {
-      this.showError('Der Export ist fehlgeschlagen.', err);
+      this.showError(t('error.export'), err);
     }
   }
 
@@ -746,7 +767,7 @@ export class App {
       const report = await this.api.importNotes();
       if (report) await this.showImportReport(report);
     } catch (err) {
-      this.showError('Der Import ist fehlgeschlagen.', err);
+      this.showError(t('error.import'), err);
     }
   }
 
@@ -756,7 +777,7 @@ export class App {
       const report = await this.api.importTexts(await Promise.all(files.map(async (f) => ({ name: f.name, text: await f.text() }))));
       await this.showImportReport(report);
     } catch (err) {
-      this.showError('Der Import ist fehlgeschlagen.', err);
+      this.showError(t('error.import'), err);
     }
   }
 
@@ -764,11 +785,11 @@ export class App {
     this.notes = await this.api.listNotes();
     this.renderLibrary();
     await this.runSearch();
-    const summary = `${report.imported} importiert, ${report.skipped} übersprungen (bereits vorhanden).`;
+    const summary = t('import.summary', { imported: report.imported, skipped: report.skipped });
     if (report.warnings.length === 0) {
       announce(summary);
     } else {
-      await infoDialog('Import abgeschlossen', [summary, ...report.warnings]);
+      await infoDialog(t('import.done'), [summary, ...report.warnings]);
     }
   }
 
@@ -785,13 +806,13 @@ export class App {
 
     if (event.removed.includes(id)) {
       if (this.dirty) {
-        this.showNotice('Critical', 'Die Datei dieser Notiz wurde außerhalb der App gelöscht. Deine Änderungen sind nur noch im Editor.', [
-          { text: 'Als neue Notiz sichern', action: () => void this.saveAsNewNote() },
+        this.showNotice('Critical', t('notice.deletedOutside'), [
+          { text: t('notice.saveAsNew'), action: () => void this.saveAsNewNote() },
         ]);
         this.conflict = true;
       } else {
         this.closeEditor();
-        announce('Die geöffnete Notiz wurde außerhalb der App gelöscht.');
+        announce(t('announce.openDeleted'));
       }
       return;
     }
@@ -799,13 +820,13 @@ export class App {
     if (event.changed.includes(id)) {
       if (!this.dirty) {
         await this.reloadCurrent();
-        this.showNotice('Information', 'Die Notiz wurde außerhalb der App geändert und neu geladen.');
+        this.showNotice('Information', t('notice.reloaded'));
       } else {
         this.conflict = true;
         window.clearTimeout(this.saveTimer);
-        this.showNotice('Critical', 'Die Notiz wurde außerhalb der App geändert, während du sie bearbeitet hast.', [
-          { text: 'Externe Version laden', action: () => void this.resolveConflict('theirs') },
-          { text: 'Meine Version behalten', action: () => void this.resolveConflict('mine') },
+        this.showNotice('Critical', t('notice.conflict'), [
+          { text: t('notice.loadTheirs'), action: () => void this.resolveConflict('theirs') },
+          { text: t('notice.keepMine'), action: () => void this.resolveConflict('mine') },
         ]);
       }
     }
@@ -829,11 +850,11 @@ export class App {
     this.els.noticeRegion.replaceChildren();
     if (choice === 'theirs') {
       await this.reloadCurrent();
-      announce('Externe Version geladen.');
+      announce(t('announce.theirsLoaded'));
     } else {
       this.dirty = true;
       await this.save();
-      announce('Deine Version wurde gespeichert.');
+      announce(t('announce.mineSaved'));
     }
   }
 
@@ -847,7 +868,7 @@ export class App {
     this.notes = await this.api.listNotes();
     this.renderLibrary();
     await this.openNote(doc.id);
-    announce('Als neue Notiz gesichert.');
+    announce(t('announce.savedAsNew'));
   }
 
   // -------------------------------------------------------------------------
@@ -861,17 +882,17 @@ export class App {
     try {
       // Make sure the current state is a version, so it can be compared and restored.
       this.applySaveResult(await this.api.finalizeNote(id));
-      const title = this.notes.find((n) => n.id === id)?.title ?? 'Notiz';
+      const title = this.notes.find((n) => n.id === id)?.title ?? '';
       const doc = await openVersionDialog(this.api, id, title, this.editor.getDoc());
       if (doc && id === this.currentId) {
         this.editor.setDoc(doc.body);
         this.dirty = false;
         this.applySaveResult(doc);
-        this.setStatus(`Gespeichert um ${timeFormat.format(new Date(doc.modified))}`);
-        announce('Version wiederhergestellt. Der vorherige Stand bleibt als Version erhalten.');
+        this.setStatus(t('status.savedAt', { time: formatTime(doc.modified) }));
+        announce(t('announce.versionRestored'));
       }
     } catch (err) {
-      this.showError('Die Versionen konnten nicht geladen werden.', err);
+      this.showError(t('error.versions'), err);
     }
   }
 
@@ -883,20 +904,14 @@ export class App {
         onWorkspaceChanged: (folder: string) => this.showWorkspace(folder),
       });
     } catch (err) {
-      this.showError('Der Backup-Dialog konnte nicht geöffnet werden.', err);
+      this.showError(t('error.backupDialog'), err);
     }
   }
 
   private async renameCurrentLabel(): Promise<void> {
     if (this.view.kind !== 'label') return;
     const from = this.view.label;
-    const to = await promptDialog(
-      'Label umbenennen',
-      'Neuer Name',
-      'Gibt es schon ein Label mit diesem Namen, werden beide zusammengeführt.',
-      from,
-      'Abbrechen',
-    );
+    const to = await promptDialog(t('label.renameTitle'), t('label.newName'), t('label.renameHint'), from, t('dialog.cancel'));
     if (!to || !to.trim() || to.trim() === from) return;
     try {
       const changed = await this.api.renameLabel(from, to);
@@ -907,9 +922,9 @@ export class App {
       if (current) this.renderTokens(current.labels);
       this.renderLibrary();
       await this.runSearch();
-      announce(`Label „${from}“ in ${changed.length} ${changed.length === 1 ? 'Notiz' : 'Notizen'} umbenannt.`);
+      announce(tp('announce.labelRenamed', changed.length, { from }));
     } catch (err) {
-      this.showError('Das Label konnte nicht umbenannt werden.', err);
+      this.showError(t('error.renameLabel'), err);
     }
   }
 
@@ -945,11 +960,11 @@ export class App {
     if (!entry) return;
     this.showNotice(
       'Critical',
-      `Ungespeicherte Änderungen an „${entry.title}“ gefunden (${formatVersionTime(entry.savedAt)}), vermutlich nach einem Absturz.`,
+      t('notice.recovery', { title: entry.title, time: formatVersionTime(entry.savedAt) }),
       [
-        { text: 'Wiederherstellen', action: () => void this.recoverEntry(entry) },
+        { text: t('notice.recover'), action: () => void this.recoverEntry(entry) },
         {
-          text: 'Verwerfen',
+          text: t('notice.discard'),
           action: () => {
             this.els.noticeRegion.replaceChildren();
             this.clearRecovery(entry.id);
@@ -966,7 +981,7 @@ export class App {
     if (this.currentId !== entry.id || !view) return;
     // As a normal edit, so Undo brings back the saved version.
     view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: entry.body } });
-    announce('Ungespeicherte Änderungen wiederhergestellt.');
+    announce(t('announce.recovered'));
     await this.checkRecovery();
   }
 

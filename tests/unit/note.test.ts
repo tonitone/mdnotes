@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
-  UNTITLED,
+  untitled,
   fileNameFor,
   isNoteId,
   newId,
@@ -63,8 +63,8 @@ describe('titleFromBody', () => {
   });
 
   it('returns the untitled title for empty content or code only', () => {
-    assert.equal(titleFromBody(''), UNTITLED);
-    assert.equal(titleFromBody('```js\nconst a = 1;\n```'), UNTITLED);
+    assert.equal(titleFromBody(''), untitled());
+    assert.equal(titleFromBody('```js\nconst a = 1;\n```'), untitled());
   });
 });
 

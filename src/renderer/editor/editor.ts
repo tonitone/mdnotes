@@ -7,6 +7,7 @@ import { EditorState, type Extension } from '@codemirror/state';
 import { drawSelection, EditorView, keymap, placeholder } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
 import { assetResolver, livePreview } from './live-preview';
+import { t } from '../../shared/i18n';
 
 /**
  * CodeMirror editor with live preview. All colors and fonts come from the
@@ -111,7 +112,7 @@ export function createEditor(parent: HTMLElement, options: EditorOptions): NoteE
     syntaxHighlighting(codeHighlight),
     assetResolver.of(options.resolveAsset),
     livePreview,
-    placeholder('Die erste Zeile wird der Titel …'),
+    placeholder(t('editor.placeholder')),
     fioriTheme,
     readOnlyExtension(isReadOnly),
     keymap.of([
@@ -129,7 +130,7 @@ export function createEditor(parent: HTMLElement, options: EditorOptions): NoteE
       indentWithTab,
     ]),
     EditorView.contentAttributes.of({
-      'aria-label': 'Notizinhalt',
+      'aria-label': t('editor.contentLabel'),
       'aria-describedby': 'editor-help',
       spellcheck: 'true',
       lang: 'de',

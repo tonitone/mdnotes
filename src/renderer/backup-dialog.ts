@@ -1,6 +1,7 @@
 import type { BackupInfo, BackupSettings, ImportReport, NotesApi } from '../shared/api';
 import { announce, confirmDialog, el, infoDialog, type Ui5Element } from './ui';
-import { formatVersionTime } from './versions';
+import { formatSize, formatVersionTime } from './format';
+import { t } from '../shared/i18n';
 
 /**
  * Backup dialog: where backups go, when they are made automatically, and
@@ -14,31 +15,21 @@ export interface BackupDialogHooks {
   onWorkspaceChanged: (folder: string) => Promise<void>;
 }
 
-const KIND_LABELS: Record<BackupInfo['kind'], string> = {
-  manual: 'Manuell',
-  auto: 'Automatisch',
-  safety: 'Sicherheitskopie vor Import oder Löschen',
-};
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} MB`;
-}
+const kindLabel = (kind: BackupInfo['kind']) => t(`backup.kind.${kind}`);
 
 /** Lets the user pick notes from a backup. Resolves with the chosen paths or null. */
 function pickNotes(notes: Array<{ path: string; title: string }>): Promise<string[] | null> {
   return new Promise((resolve) => {
     let result: string[] | null = null;
     const boxes = notes.map((n) => el('ui5-checkbox', { text: n.title, 'data-path': n.path }));
-    const restore = el('ui5-button', { design: 'Emphasized' }, ['Wiederherstellen']);
-    const cancel = el('ui5-button', { design: 'Transparent' }, ['Abbrechen']);
-    const dialog = el('ui5-dialog', { headerText: 'Notizen wiederherstellen', accessibleName: 'Notizen wiederherstellen' }, [
+    const restore = el('ui5-button', { design: 'Emphasized' }, [t('trash.restore')]);
+    const cancel = el('ui5-button', { design: 'Transparent' }, [t('dialog.cancel')]);
+    const dialog = el('ui5-dialog', { headerText: t('backup.pickTitle'), accessibleName: t('backup.pickTitle') }, [
       el('div', { className: 'dialog-content' }, [
         el('p', { className: 'dialog-hint' }, [
-          'Gewählte Notizen kommen zusätzlich in den Workspace. Vorhandene Notizen werden nicht überschrieben; unveränderte werden übersprungen.',
+          t('backup.pickHint'),
         ]),
-        el('div', { className: 'backup-note-list', 'attr:role': 'group', 'attr:aria-label': 'Notizen im Backup' }, boxes),
+        el('div', { className: 'backup-note-list', 'attr:role': 'group', 'attr:aria-label': t('backup.pickGroup') }, boxes),
       ]),
       el('div', { className: 'dialog-footer', 'attr:slot': 'footer' }, [restore, cancel]),
     ]);
@@ -60,25 +51,25 @@ export async function openBackupDialog(api: NotesApi, hooks: BackupDialogHooks):
   let settings: BackupSettings = await api.getBackupSettings();
 
   const folderText = el('p', { className: 'backup-folder' });
-  const chooseFolder = el('ui5-button', { icon: 'open-folder' }, ['Ordner wählen …']);
-  const autoSelect = el('ui5-select', { id: 'backupAuto', accessibleName: 'Automatisch sichern' }, [
-    el('ui5-option', { value: 'off' }, ['Aus']),
-    el('ui5-option', { value: 'quit' }, ['Beim Beenden']),
-    el('ui5-option', { value: 'daily' }, ['Täglich']),
+  const chooseFolder = el('ui5-button', { icon: 'open-folder' }, [t('backup.chooseFolder')]);
+  const autoSelect = el('ui5-select', { id: 'backupAuto', accessibleName: t('backup.auto') }, [
+    el('ui5-option', { value: 'off' }, [t('backup.auto.off')]),
+    el('ui5-option', { value: 'quit' }, [t('backup.auto.quit')]),
+    el('ui5-option', { value: 'daily' }, [t('backup.auto.daily')]),
   ]);
-  const history = el('ui5-checkbox', { text: 'Versionshistorie mitsichern' });
-  const backupNow = el('ui5-button', { design: 'Emphasized', icon: 'save' }, ['Jetzt sichern']);
-  const list = el('ui5-list', { headerText: 'Vorhandene Backups', accessibleName: 'Vorhandene Backups', noDataText: 'Noch keine Backups' });
+  const history = el('ui5-checkbox', { text: t('backup.includeHistory') });
+  const backupNow = el('ui5-button', { design: 'Emphasized', icon: 'save' }, [t('backup.now')]);
+  const list = el('ui5-list', { headerText: t('backup.list'), accessibleName: t('backup.list'), noDataText: t('backup.none') });
   const actions = el('ui5-menu', {}, [
-    el('ui5-menu-item', { 'attr:text': 'Prüfen', icon: 'accept', 'data-action': 'verify' }),
-    el('ui5-menu-item', { 'attr:text': 'Einzelne Notizen wiederherstellen …', icon: 'documents', 'data-action': 'notes' }),
-    el('ui5-menu-item', { 'attr:text': 'Alles in neuen Ordner wiederherstellen …', icon: 'open-folder', 'data-action': 'all' }),
+    el('ui5-menu-item', { 'attr:text': t('backup.verify'), icon: 'accept', 'data-action': 'verify' }),
+    el('ui5-menu-item', { 'attr:text': t('backup.restoreNotes'), icon: 'documents', 'data-action': 'notes' }),
+    el('ui5-menu-item', { 'attr:text': t('backup.restoreAll'), icon: 'open-folder', 'data-action': 'all' }),
   ]);
-  const close = el('ui5-button', { design: 'Transparent' }, ['Schließen']);
+  const close = el('ui5-button', { design: 'Transparent' }, [t('dialog.close')]);
   let selectedFile: string | null = null;
 
   const render = async () => {
-    folderText.textContent = settings.folder ?? 'Noch kein Ordner gewählt. Wähle einen Ordner außerhalb des Workspace, am besten auf einem anderen Laufwerk.';
+    folderText.textContent = settings.folder ?? t('backup.noFolder');
     for (const option of autoSelect.children as HTMLCollectionOf<Ui5Element>) option.selected = option.value === settings.auto;
     history.checked = settings.includeHistory;
     backupNow.disabled = !settings.folder;
@@ -88,23 +79,23 @@ export async function openBackupDialog(api: NotesApi, hooks: BackupDialogHooks):
       ...backups.map((b) =>
         el('ui5-li', {
           icon: b.kind === 'safety' ? 'shield' : 'save',
-          description: `${KIND_LABELS[b.kind]} · ${formatSize(b.size)}`,
+          description: `${kindLabel(b.kind)} · ${formatSize(b.size)}`,
           'data-file': b.file,
         }, [formatVersionTime(b.created)]),
       ),
     );
   };
 
-  const dialog = el('ui5-dialog', { headerText: 'Backup', accessibleName: 'Backup' }, [
+  const dialog = el('ui5-dialog', { headerText: t('backup.title'), accessibleName: t('backup.title') }, [
     el('div', { className: 'dialog-content backup-dialog' }, [
-      el('ui5-title', { level: 'H3', size: 'H6' }, ['Speicherort']),
+      el('ui5-title', { level: 'H3', size: 'H6' }, [t('backup.location')]),
       folderText,
       chooseFolder,
-      el('ui5-label', { 'attr:for': 'backupAuto', showColon: true }, ['Automatisch sichern']),
+      el('ui5-label', { 'attr:for': 'backupAuto', showColon: true }, [t('backup.auto')]),
       autoSelect,
       history,
       el('p', { className: 'dialog-hint' }, [
-        `Es werden die letzten ${settings.keep} Backups behalten. Vor einem Import und vor dem endgültigen Löschen legt die App zusätzlich eine Sicherheitskopie an.`,
+        t('backup.keepHint', { keep: settings.keep }),
       ]),
       backupNow,
       list,
@@ -118,12 +109,12 @@ export async function openBackupDialog(api: NotesApi, hooks: BackupDialogHooks):
       await task();
     } catch (err) {
       console.error(err);
-      await infoDialog('Fehler', [message, String((err as Error).message ?? err).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')]);
+      await infoDialog(t('dialog.error'), [message, String((err as Error).message ?? err).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')]);
     }
   };
 
   chooseFolder.addEventListener('click', () =>
-    guard('Der Ordner konnte nicht gesetzt werden.', async () => {
+    guard(t('backup.error.folder'), async () => {
       const next = await api.chooseBackupFolder();
       if (next) settings = next;
       await render();
@@ -131,21 +122,21 @@ export async function openBackupDialog(api: NotesApi, hooks: BackupDialogHooks):
   );
   autoSelect.addEventListener('change', (event: Event) => {
     const value = (event as CustomEvent<{ selectedOption: Ui5Element }>).detail.selectedOption.value as BackupSettings['auto'];
-    void guard('Die Einstellung konnte nicht gespeichert werden.', async () => {
+    void guard(t('backup.error.setting'), async () => {
       settings = await api.updateBackupSettings({ auto: value });
     });
   });
   history.addEventListener('change', () =>
-    guard('Die Einstellung konnte nicht gespeichert werden.', async () => {
+    guard(t('backup.error.setting'), async () => {
       settings = await api.updateBackupSettings({ includeHistory: Boolean(history.checked) });
     }),
   );
   backupNow.addEventListener('click', () =>
-    guard('Das Backup ist fehlgeschlagen.', async () => {
+    guard(t('backup.error.create'), async () => {
       backupNow.disabled = true;
       try {
         const info = await api.createBackup();
-        announce(`Backup gespeichert: ${info.file}`);
+        announce(t('backup.saved', { file: info.file }));
         await render();
       } finally {
         backupNow.disabled = !settings.folder;
@@ -164,28 +155,28 @@ export async function openBackupDialog(api: NotesApi, hooks: BackupDialogHooks):
     const file = selectedFile;
     if (!file) return;
     if (action === 'verify') {
-      void guard('Das Backup konnte nicht geprüft werden.', async () => {
+      void guard(t('backup.error.verify'), async () => {
         const check = await api.verifyBackup(file);
-        if (check.ok) announce(`Backup in Ordnung: ${check.files} Dateien geprüft.`);
-        else await infoDialog('Backup beschädigt', check.problems);
+        if (check.ok) announce(t('backup.ok', { count: check.files }));
+        else await infoDialog(t('backup.damaged'), check.problems);
       });
     }
     if (action === 'notes') {
-      void guard('Die Notizen konnten nicht wiederhergestellt werden.', async () => {
+      void guard(t('backup.error.restoreNotes'), async () => {
         const paths = await pickNotes(await api.listBackupNotes(file));
         if (paths) await hooks.onRestored(await api.restoreBackupNotes(file, paths));
       });
     }
     if (action === 'all') {
-      void guard('Das Backup konnte nicht wiederhergestellt werden.', async () => {
+      void guard(t('backup.error.restoreAll'), async () => {
         if (api.mode === 'browser') {
-          announce('Das Wiederherstellen in einen Ordner gibt es nur in der App.');
+          announce(t('backup.appOnly'));
           return;
         }
         const ok = await confirmDialog(
-          'Backup in neuen Ordner wiederherstellen?',
-          'Das Backup wird in einen leeren Ordner entpackt und dann als Workspace geöffnet. Dein bisheriger Workspace bleibt unverändert.',
-          'Ordner wählen …',
+          t('backup.restoreAllTitle'),
+          t('backup.restoreAllText'),
+          t('backup.chooseFolder'),
           'Emphasized',
         );
         if (!ok) return;
@@ -193,7 +184,7 @@ export async function openBackupDialog(api: NotesApi, hooks: BackupDialogHooks):
         if (folder) {
           dialog.open = false;
           await hooks.onWorkspaceChanged(folder);
-          announce(`Backup wiederhergestellt nach ${folder}`);
+          announce(t('backup.restoredTo', { folder }));
         }
       });
     }

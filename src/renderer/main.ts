@@ -53,20 +53,29 @@ import '@ui5/webcomponents-icons/dist/document-text.js';
 import '@ui5/webcomponents-icons/dist/documents.js';
 import '@ui5/webcomponents-icons/dist/nav-back.js';
 import '@ui5/webcomponents-icons/dist/open-folder.js';
+import '@ui5/webcomponents-icons/dist/globe.js';
 import '@ui5/webcomponents-icons/dist/palette.js';
 import '@ui5/webcomponents-icons/dist/search.js';
 
 import './styles.css';
+import { t } from '../shared/i18n';
 import { getApi } from './api';
 import { App } from './app';
+import { applyLocale } from './i18n';
 import { initAppearance } from './theme';
 
 initAppearance();
 
-getApi()
-  .then((api) => new App(api).start())
-  .catch((err: unknown) => {
-    const region = document.getElementById('errorRegion');
-    if (region) region.textContent = `Die App konnte nicht starten: ${String(err)}`;
-    console.error(err);
-  });
+async function start(): Promise<void> {
+  const api = await getApi();
+  // The language must be in place before the app renders any text.
+  const { choice, locale } = await api.getLanguage();
+  await applyLocale(locale);
+  await new App(api, choice).start();
+}
+
+start().catch((err: unknown) => {
+  const region = document.getElementById('errorRegion');
+  if (region) region.textContent = t('app.startFailed', { error: String(err) });
+  console.error(err);
+});

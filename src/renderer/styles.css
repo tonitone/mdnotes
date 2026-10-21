@@ -60,7 +60,7 @@ ui5-flexible-column-layout {
   overflow-wrap: anywhere;
 }
 
-/* Editor-Spalte */
+/* Editor column */
 
 .editor-column {
   background: var(--sapBaseColor);
@@ -116,7 +116,7 @@ ui5-illustrated-message {
   margin: 0.5rem 1rem 0;
 }
 
-/* Barrierefreiheit */
+/* Accessibility */
 
 .visually-hidden {
   position: absolute;
@@ -130,7 +130,7 @@ ui5-illustrated-message {
 .skip-link {
   position: absolute;
   top: -100px;
-  left: 0.5rem;
+  inset-inline-start: 0.5rem;
   z-index: 100;
   padding: 0.5rem 1rem;
   background: var(--sapButton_Emphasized_Background);
@@ -183,15 +183,15 @@ ui5-illustrated-message {
   font-family: var(--sapContent_MonospaceFontFamily, monospace);
   font-size: 0.9em;
   background: var(--sapNeutralBackground, var(--sapList_AlternatingBackground));
-  padding-left: 1rem !important;
+  padding-inline-start: 1rem !important;
 }
 
-.cm-md-codeblock-first { border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; padding-top: 0.25rem; }
-.cm-md-codeblock-last { border-bottom-left-radius: 0.5rem; border-bottom-right-radius: 0.5rem; padding-bottom: 0.25rem; }
+.cm-md-codeblock-first { border-start-start-radius: 0.5rem; border-start-end-radius: 0.5rem; padding-top: 0.25rem; }
+.cm-md-codeblock-last { border-end-start-radius: 0.5rem; border-end-end-radius: 0.5rem; padding-bottom: 0.25rem; }
 
 .cm-md-quote {
-  border-left: 0.25rem solid var(--sapGroup_TitleBorderColor);
-  padding-left: 1rem !important;
+  border-inline-start: 0.25rem solid var(--sapGroup_TitleBorderColor);
+  padding-inline-start: 1rem !important;
   color: var(--sapContent_LabelColor);
 }
 
@@ -204,7 +204,8 @@ ui5-illustrated-message {
 .cm-md-task {
   width: 1rem;
   height: 1rem;
-  margin: 0 0.4rem 0 0;
+  margin: 0;
+  margin-inline-end: 0.4rem;
   vertical-align: -0.15rem;
   accent-color: var(--sapSelectedColor);
   cursor: pointer;
@@ -278,7 +279,7 @@ ui5-illustrated-message {
 
 .dialog-list {
   margin: 0;
-  padding-left: 1.25rem;
+  padding-inline-start: 1.25rem;
 }
 
 .dialog-footer {
@@ -309,7 +310,7 @@ ui5-illustrated-message {
 }
 
 .cm-md-codetools {
-  float: right;
+  float: inline-end;
   display: inline-flex;
   gap: 0.25rem;
   font-family: var(--sapFontFamily);
@@ -351,7 +352,7 @@ ui5-illustrated-message {
 
 .versions-timeline {
   overflow: auto;
-  border-right: 1px solid var(--sapGroup_TitleBorderColor);
+  border-inline-end: 1px solid var(--sapGroup_TitleBorderColor);
 }
 
 .versions-detail {
