@@ -226,6 +226,12 @@ export class App {
       els.backButton.hidden = detail.midColumnVisible;
     });
 
+    // The skip link jumps to the editor, or to the note list when no note is open.
+    document.querySelector('.skip-link')?.addEventListener('click', (event) => {
+      event.preventDefault();
+      this.focusContent();
+    });
+
     els.editorHost.addEventListener('mdnotes-announce', (event: Event) => announce(String((event as CustomEvent).detail)));
 
     // Dropping Markdown files anywhere imports them. Images are handled by the editor.
@@ -291,6 +297,15 @@ export class App {
     } catch (err) {
       this.showError(t('language.reloadFailed'), err);
     }
+  }
+
+  private focusContent(): void {
+    if (!this.els.editorHost.hidden && this.editor) {
+      this.editor.focus();
+      return;
+    }
+    const item = (this.els.notesList.querySelector('[navigated]') ?? this.els.notesList.querySelector('ui5-li')) as HTMLElement | null;
+    (item ?? this.els.searchInput).focus();
   }
 
   // -------------------------------------------------------------------------
