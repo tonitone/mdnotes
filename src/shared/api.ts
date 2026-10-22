@@ -96,7 +96,18 @@ export interface RecoveryEntry {
   savedAt: number;
 }
 
-export type MenuCommand = 'new-note' | 'choose-workspace' | 'find' | 'delete-note' | 'import' | 'export-all' | 'versions' | 'backup';
+export type MenuCommand =
+  | 'new-note'
+  | 'choose-workspace'
+  | 'find'
+  | 'delete-note'
+  | 'import'
+  | 'export-all'
+  | 'versions'
+  | 'backup'
+  | 'view-edit'
+  | 'view-split'
+  | 'view-preview';
 
 export interface LanguageInfo {
   choice: LanguageChoice;

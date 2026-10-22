@@ -13,6 +13,8 @@ import '@ui5/webcomponents/dist/Button.js';
 import '@ui5/webcomponents/dist/CheckBox.js';
 import '@ui5/webcomponents/dist/Option.js';
 import '@ui5/webcomponents/dist/Select.js';
+import '@ui5/webcomponents/dist/SegmentedButton.js';
+import '@ui5/webcomponents/dist/SegmentedButtonItem.js';
 import '@ui5/webcomponents/dist/Dialog.js';
 import '@ui5/webcomponents/dist/Label.js';
 import '@ui5/webcomponents/dist/MultiInput.js';

@@ -1,5 +1,5 @@
 import { syntaxTree } from '@codemirror/language';
-import { Facet, type EditorState, type Range } from '@codemirror/state';
+import { Facet, StateField, type EditorState, type Range } from '@codemirror/state';
 import {
   Decoration,
   EditorView,
@@ -9,6 +9,7 @@ import {
   type ViewUpdate,
 } from '@codemirror/view';
 import { t } from '../../shared/i18n';
+import { markdownToHtml } from '../../shared/markdown/html';
 
 /**
  * Live preview: Markdown is rendered directly in the editor. On lines that
@@ -335,6 +336,65 @@ function buildDecorations(view: EditorView): DecorationSet {
   }
   return Decoration.set(ranges, true);
 }
+
+// ---------------------------------------------------------------------------
+// Tables: outside the cursor, a GFM table is shown as a real table. Replacing
+// several lines needs a block decoration, which CodeMirror only accepts from
+// a state field, not from a view plugin.
+// ---------------------------------------------------------------------------
+
+class TableWidget extends WidgetType {
+  constructor(
+    readonly source: string,
+    readonly resolve: (src: string) => string | null,
+  ) {
+    super();
+  }
+  eq(other: TableWidget): boolean {
+    return other.source === this.source;
+  }
+  toDOM(): HTMLElement {
+    const wrap = document.createElement('div');
+    wrap.className = 'cm-md-table';
+    // Safe: the renderer escapes all text and only emits known tags.
+    wrap.innerHTML = markdownToHtml(this.source, { resolveImage: (src) => this.resolve(src) ?? src });
+    return wrap;
+  }
+  /** Let clicks through: CodeMirror places the cursor, which reveals the source. */
+  ignoreEvent(): boolean {
+    return false;
+  }
+}
+
+function tableDecorations(state: EditorState): DecorationSet {
+  const active = activeLines(state);
+  const resolve = state.facet(assetResolver);
+  const ranges: Range<Decoration>[] = [];
+  syntaxTree(state).iterate({
+    enter: (node) => {
+      if (node.name !== 'Table') return;
+      const first = state.doc.lineAt(node.from);
+      const last = state.doc.lineAt(node.to);
+      let editing = false;
+      for (let n = first.number; n <= last.number && !editing; n++) editing = active.has(n);
+      if (!editing) {
+        const widget = new TableWidget(state.doc.sliceString(first.from, last.to), resolve);
+        ranges.push(Decoration.replace({ widget, block: true }).range(first.from, last.to));
+      }
+      return false;
+    },
+  });
+  return Decoration.set(ranges, true);
+}
+
+export const tablePreview = StateField.define<DecorationSet>({
+  create: tableDecorations,
+  update(decorations, tr) {
+    if (tr.docChanged || tr.selection || syntaxTree(tr.startState) !== syntaxTree(tr.state)) return tableDecorations(tr.state);
+    return decorations;
+  },
+  provide: (field) => EditorView.decorations.from(field),
+});
 
 export const livePreview = ViewPlugin.fromClass(
   class {
