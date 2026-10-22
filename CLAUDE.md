@@ -47,12 +47,19 @@ Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand
   4. Tastenkürzel-Übersicht (Cmd+/).
   Danach: 5. `[[Links]]` mit Rückverweisen, 6. Gliederung, 7. Tabellen bearbeiten, 8. Wörter zählen,
   9. Duplizieren und Vorlagen. Später: 10. Mathe, Mermaid, Fußnoten, 11. Anhänge, 12. Tabs oder Fenster.
+- Design-Überarbeitung: claude.ai Artifact „Plan: Design-Überarbeitung mdnotes“ (Pakete D1 bis D7, je ein PR).
+  Vorgeschlagene Reihenfolge, Toni entscheidet pro Sitzung: D1 Split-Ansicht nach Spaltenbreite, D3 Sprachauswahl aus „Darstellung“ in ein eigenes
+  Shellbar-Menü, D7 UI5 im Editor. Dann Phase 5 Paket 1 zusammen mit D2 (Editor-Kopfzeile) und Punkt 2
+  zusammen mit D4 (Datumsgruppen in der Notizliste). D5 und D6 zwischen den Features.
 
 ## Arbeitsweise
 
 - Gesprächssprache Deutsch, kurz und konkret. Pro Thema ein PR, erst bei grüner CI melden. Bugs vor Features.
   Bei größeren, mehrdeutigen Aufgaben vorher kurz fragen.
 - Design: Standard-Horizon. Eigene Looks wurden abgelehnt (PR #9). UI5-Komponenten nie verändern.
+- Bedienelemente (Knopf, Auswahl, Checkbox, Eingabe, Menü, Dialog, Liste) sind immer UI5-Komponenten.
+  Inhalt (Markdown in Editor und Vorschau) bleibt semantisches HTML und CodeMirror. Noch nativ: die
+  Code-Werkzeuge und das Aufgaben-Kästchen in `live-preview.ts` (Umstellung ist Paket D7 im Design-Plan).
 - Jede neue Ansicht und jeder neue Dialog bekommt einen axe-Test in `tests/e2e/a11y.spec.ts`.
 - Cloud-Sitzung: npm-Registry gesperrt (neue Pakete nur mit Lockfile vom Mac des Nutzers), lokal nur
   Unit-Tests. Die CI ist die Testschleife; Fehler über die Check-Run-Annotations-API lesen. PRs über die REST-API.
