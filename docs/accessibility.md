@@ -10,7 +10,7 @@ Ziel: WCAG 2.2 AA, wie sie EN 301 549 (Kapitel 11, Software) verlangt.
   Hoher Kontrast schwarz und weiß) und auf Englisch.
 - **Alle Zustände:** keine Notiz gewählt, keine Treffer, Label-Ansicht, Papierkorb mit
   schreibgeschützter Notiz, Hinweis bei Änderung von außen.
-- **Alle Menüs und Dialoge:** Darstellung, Weitere Aktionen, Export, Versionen mit Diff,
+- **Alle Menüs und Dialoge:** Darstellung, Sprache, Weitere Aktionen, Export, Versionen mit Diff,
   Backup mit Aktionsmenü, Notizauswahl, Bestätigung „Endgültig löschen“, Eingabedialog.
 - **Tastatur:** Skip-Link als erster Tab-Stopp, F6/Shift+F6 zwischen den drei Bereichen,
   Esc und danach Tab verlässt den Editor, Fokus kehrt nach dem Schließen eines Dialogs zum
