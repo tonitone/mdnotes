@@ -8,7 +8,9 @@
 
 :root[data-look='macos'] {
   --mdn-sidebar: color-mix(in srgb, var(--sapBackgroundColor) 92%, var(--sapTextColor) 8%);
-  --mdn-selection: color-mix(in srgb, var(--sapTextColor) 10%, transparent);
+  /* Opaque, so stacked backgrounds inside UI5 cannot darken it (contrast). */
+  --mdn-selection: color-mix(in srgb, var(--sapBaseColor) 93%, var(--sapTextColor) 7%);
+  --mdn-sidebar-selection: color-mix(in srgb, var(--sapBackgroundColor) 84%, var(--sapTextColor) 16%);
   --mdn-hairline: color-mix(in srgb, var(--sapGroup_TitleBorderColor) 60%, transparent);
 }
 
@@ -68,7 +70,11 @@
 }
 
 :root[data-look='macos'] #libraryList ui5-li[navigated],
-:root[data-look='macos'] #labelList ui5-li[navigated],
+:root[data-look='macos'] #labelList ui5-li[navigated] {
+  --sapList_Background: var(--mdn-sidebar-selection);
+  --sapList_Hover_Background: var(--mdn-sidebar-selection);
+}
+
 :root[data-look='macos'] #notesList ui5-li[navigated] {
   --sapList_Background: var(--mdn-selection);
   --sapList_Hover_Background: var(--mdn-selection);
