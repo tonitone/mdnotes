@@ -1,4 +1,5 @@
 import { setTheme } from '@ui5/webcomponents-base/dist/config/Theme.js';
+import { t } from '../shared/i18n';
 
 /**
  * Appearance: SAP Horizon light, dark and two high-contrast variants.
@@ -16,13 +17,11 @@ const THEMES: Record<Exclude<ThemeChoice, 'system'>, string> = {
   hcw: 'sap_horizon_hcw',
 };
 
-export const THEME_LABELS: Record<ThemeChoice, string> = {
-  system: 'System folgen',
-  light: 'Hell',
-  dark: 'Dunkel',
-  hcb: 'Hoher Kontrast schwarz',
-  hcw: 'Hoher Kontrast weiß',
-};
+export const THEME_CHOICES: ThemeChoice[] = ['system', 'light', 'dark', 'hcb', 'hcw'];
+
+export function themeLabel(choice: ThemeChoice): string {
+  return t(`theme.${choice}`);
+}
 
 const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
 const contrastQuery = window.matchMedia('(forced-colors: active), (prefers-contrast: more)');

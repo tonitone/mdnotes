@@ -7,17 +7,17 @@
     <title>mdnotes</title>
   </head>
   <body>
-    <a class="skip-link" href="#editor-host">Zum Editor springen</a>
+    <a class="skip-link" href="#editor-host" data-i18n="page.skipToEditor">Zum Editor springen</a>
 
     <ui5-shellbar id="shell" primary-title="mdnotes" data-sap-ui-fastnavgroup="true">
-      <ui5-shellbar-item id="backupItem" icon="save" text="Backup"></ui5-shellbar-item>
-      <ui5-shellbar-item id="themeItem" icon="palette" text="Darstellung"></ui5-shellbar-item>
-      <ui5-shellbar-item id="workspaceItem" icon="open-folder" text="Workspace wählen"></ui5-shellbar-item>
+      <ui5-shellbar-item id="backupItem" icon="save" text="Backup" data-i18n-attr="text:shell.backup"></ui5-shellbar-item>
+      <ui5-shellbar-item id="themeItem" icon="palette" text="Darstellung" data-i18n-attr="text:shell.appearance"></ui5-shellbar-item>
+      <ui5-shellbar-item id="workspaceItem" icon="open-folder" text="Workspace wählen" data-i18n-attr="text:shell.chooseWorkspace"></ui5-shellbar-item>
     </ui5-shellbar>
 
-    <ui5-menu id="themeMenu" header-text="Darstellung"></ui5-menu>
+    <ui5-menu id="themeMenu" header-text="Darstellung" data-i18n-attr="header-text:shell.appearance"></ui5-menu>
 
-    <ui5-message-strip id="browserModeStrip" design="Information" hide-close-button hidden>
+    <ui5-message-strip id="browserModeStrip" design="Information" hide-close-button hidden data-i18n="page.browserMode">
       Browser-Modus: Die Notizen liegen nur im Speicher und gehen beim Neuladen verloren.
     </ui5-message-strip>
 
@@ -25,78 +25,83 @@
       <!-- Column 1: library -->
       <section slot="startColumn" class="column" data-sap-ui-fastnavgroup="true">
         <header class="column-header">
-          <ui5-title level="H2" size="H5">Bibliothek</ui5-title>
+          <ui5-title level="H2" size="H5" data-i18n="library.title">Bibliothek</ui5-title>
         </header>
-        <ui5-list id="libraryList" accessible-name="Bibliothek">
-          <ui5-li id="allNotesItem" icon="documents" data-view="all" navigated>Alle Notizen</ui5-li>
-          <ui5-li id="trashItem" icon="delete" data-view="trash">Papierkorb</ui5-li>
+        <ui5-list id="libraryList" accessible-name="Bibliothek" data-i18n-attr="accessible-name:library.title">
+          <ui5-li id="allNotesItem" icon="documents" data-view="all" navigated data-i18n="library.allNotes">Alle Notizen</ui5-li>
+          <ui5-li id="trashItem" icon="delete" data-view="trash" data-i18n="library.trash">Papierkorb</ui5-li>
         </ui5-list>
-        <ui5-list id="labelList" header-text="Labels" accessible-name="Labels" no-data-text="Noch keine Labels"></ui5-list>
+        <ui5-list id="labelList" header-text="Labels" accessible-name="Labels" no-data-text="Noch keine Labels" data-i18n-attr="header-text:library.labels; accessible-name:library.labels; no-data-text:library.noLabels"></ui5-list>
         <p class="workspace-path" id="workspacePath"></p>
       </section>
 
       <!-- Column 2: note list -->
       <section slot="midColumn" class="column" data-sap-ui-fastnavgroup="true">
         <header class="column-header">
-          <ui5-title level="H2" size="H5" id="notesTitle">Notizen</ui5-title>
+          <div class="header-title">
+            <ui5-button id="libraryButton" design="Transparent" icon="nav-back" tooltip="Zur Bibliothek" accessible-name="Zur Bibliothek" data-i18n-attr="tooltip:notes.toLibrary; accessible-name:notes.toLibrary" hidden></ui5-button>
+            <ui5-title level="H2" size="H5" id="notesTitle" data-i18n="notes.title">Notizen</ui5-title>
+          </div>
           <div class="header-actions">
-            <ui5-button id="renameLabelButton" design="Transparent" icon="edit" tooltip="Label umbenennen" accessible-name="Label umbenennen" hidden></ui5-button>
-            <ui5-button id="newNoteButton" design="Emphasized" icon="add" disabled>Neue Notiz</ui5-button>
-            <ui5-button id="moreButton" design="Transparent" icon="overflow" tooltip="Weitere Aktionen" accessible-name="Weitere Aktionen" disabled></ui5-button>
+            <ui5-button id="renameLabelButton" design="Transparent" icon="edit" tooltip="Label umbenennen" accessible-name="Label umbenennen" data-i18n-attr="tooltip:notes.renameLabel; accessible-name:notes.renameLabel" hidden></ui5-button>
+            <ui5-button id="newNoteButton" design="Emphasized" icon="add" disabled data-i18n="notes.new">Neue Notiz</ui5-button>
+            <ui5-button id="moreButton" design="Transparent" icon="overflow" tooltip="Weitere Aktionen" accessible-name="Weitere Aktionen" data-i18n-attr="tooltip:notes.more; accessible-name:notes.more" disabled></ui5-button>
           </div>
         </header>
         <ui5-menu id="moreMenu">
-          <ui5-menu-item text="Importieren …" icon="upload" data-action="import"></ui5-menu-item>
-          <ui5-menu-item text="Alle Notizen exportieren …" icon="download" data-action="export-all"></ui5-menu-item>
+          <ui5-menu-item text="Importieren …" icon="upload" data-action="import" data-i18n-attr="text:notes.import"></ui5-menu-item>
+          <ui5-menu-item text="Alle Notizen exportieren …" icon="download" data-action="export-all" data-i18n-attr="text:notes.exportAll"></ui5-menu-item>
         </ui5-menu>
         <div class="search-row">
-          <ui5-input id="searchInput" type="Search" placeholder="Suchen" accessible-name="Notizen durchsuchen" show-clear-icon disabled>
+          <ui5-input id="searchInput" type="Search" placeholder="Suchen" accessible-name="Notizen durchsuchen" data-i18n-attr="placeholder:search.placeholder; accessible-name:search.label" show-clear-icon disabled>
             <ui5-icon slot="icon" name="search"></ui5-icon>
           </ui5-input>
         </div>
-        <ui5-list id="notesList" accessible-name="Notizen" no-data-text="Noch keine Notizen"></ui5-list>
+        <ui5-list id="notesList" accessible-name="Notizen" no-data-text="Noch keine Notizen" data-i18n-attr="accessible-name:notes.title; no-data-text:notes.empty"></ui5-list>
       </section>
 
       <!-- Column 3: editor -->
       <section slot="endColumn" class="column editor-column" data-sap-ui-fastnavgroup="true">
         <header class="column-header editor-header">
-          <ui5-button id="backButton" design="Transparent" icon="nav-back" tooltip="Zur Notizliste" accessible-name="Zur Notizliste" hidden></ui5-button>
+          <ui5-button id="backButton" design="Transparent" icon="nav-back" tooltip="Zur Notizliste" accessible-name="Zur Notizliste" data-i18n-attr="tooltip:editor.back; accessible-name:editor.back" hidden></ui5-button>
           <div class="editor-meta">
             <span id="fileName" class="file-name"></span>
             <span id="saveStatus" class="save-status" role="status" aria-live="polite"></span>
           </div>
           <div class="header-actions" id="noteActions" hidden>
-            <ui5-button id="versionsButton" design="Transparent" icon="history" tooltip="Versionen" accessible-name="Versionen"></ui5-button>
-            <ui5-button id="exportButton" design="Transparent" icon="action" tooltip="Exportieren" accessible-name="Exportieren"></ui5-button>
-            <ui5-button id="deleteButton" design="Transparent" icon="delete" tooltip="In den Papierkorb" accessible-name="In den Papierkorb"></ui5-button>
+            <ui5-button id="versionsButton" design="Transparent" icon="history" tooltip="Versionen" accessible-name="Versionen" data-i18n-attr="tooltip:editor.versions; accessible-name:editor.versions"></ui5-button>
+            <ui5-button id="exportButton" design="Transparent" icon="action" tooltip="Exportieren" accessible-name="Exportieren" data-i18n-attr="tooltip:editor.export; accessible-name:editor.export"></ui5-button>
+            <ui5-button id="deleteButton" design="Transparent" icon="delete" tooltip="In den Papierkorb" accessible-name="In den Papierkorb" data-i18n-attr="tooltip:editor.trash; accessible-name:editor.trash"></ui5-button>
           </div>
           <div class="header-actions" id="trashActions" hidden>
-            <ui5-button id="restoreButton" design="Emphasized" icon="undo">Wiederherstellen</ui5-button>
-            <ui5-button id="deleteForeverButton" design="Negative" icon="delete">Endgültig löschen</ui5-button>
+            <ui5-button id="restoreButton" design="Emphasized" icon="undo" data-i18n="trash.restore">Wiederherstellen</ui5-button>
+            <ui5-button id="deleteForeverButton" design="Negative" icon="delete" data-i18n="trash.deleteForever">Endgültig löschen</ui5-button>
           </div>
         </header>
         <ui5-menu id="exportMenu">
-          <ui5-menu-item text="Wiki-Markup kopieren" icon="copy" data-action="copy-wiki"></ui5-menu-item>
-          <ui5-menu-item text="Markdown kopieren" icon="copy" data-action="copy-markdown"></ui5-menu-item>
+          <ui5-menu-item text="Wiki-Markup kopieren" icon="copy" data-action="copy-wiki" data-i18n-attr="text:export.copyWiki"></ui5-menu-item>
+          <ui5-menu-item text="Markdown kopieren" icon="copy" data-action="copy-markdown" data-i18n-attr="text:export.copyMarkdown"></ui5-menu-item>
           <ui5-menu-separator></ui5-menu-separator>
-          <ui5-menu-item text="Als Wiki-Markup speichern …" icon="download" data-format="wiki"></ui5-menu-item>
-          <ui5-menu-item text="Als Markdown speichern …" icon="download" data-format="markdown"></ui5-menu-item>
-          <ui5-menu-item text="Als PDF speichern …" icon="pdf-attachment" data-format="pdf"></ui5-menu-item>
+          <ui5-menu-item text="Als Wiki-Markup speichern …" icon="download" data-format="wiki" data-i18n-attr="text:export.saveWiki"></ui5-menu-item>
+          <ui5-menu-item text="Als Markdown speichern …" icon="download" data-format="markdown" data-i18n-attr="text:export.saveMarkdown"></ui5-menu-item>
+          <ui5-menu-item text="Als PDF speichern …" icon="pdf-attachment" data-format="pdf" data-i18n-attr="text:export.savePdf"></ui5-menu-item>
+          <ui5-menu-item text="Als HTML speichern …" icon="attachment-html" data-format="html" data-i18n-attr="text:export.saveHtml"></ui5-menu-item>
+          <ui5-menu-item text="Als Word-Dokument speichern …" icon="doc-attachment" data-format="docx" data-i18n-attr="text:export.saveDocx"></ui5-menu-item>
         </ui5-menu>
         <div id="labelRow" class="label-row" hidden>
-          <ui5-multi-input id="labelInput" placeholder="Label hinzufügen" accessible-name="Labels der Notiz" show-suggestions></ui5-multi-input>
+          <ui5-multi-input id="labelInput" placeholder="Label hinzufügen" accessible-name="Labels der Notiz" data-i18n-attr="placeholder:labels.add; accessible-name:labels.ofNote" show-suggestions></ui5-multi-input>
         </div>
         <div id="noticeRegion"></div>
         <div id="errorRegion" role="alert" aria-live="assertive"></div>
         <div id="editor-host" class="editor-host" tabindex="-1" hidden></div>
-        <p id="editor-help" class="visually-hidden">
+        <p id="editor-help" class="visually-hidden" data-i18n="editor.help">
           Markdown-Editor. Die erste Zeile ist der Titel. Esc und danach Tab verlässt den Editor, F6 wechselt den Bereich.
         </p>
 
-        <ui5-illustrated-message id="noSelection" name="NoEntries" title-text="Keine Notiz ausgewählt" subtitle-text="Wähle links eine Notiz oder lege eine neue an." hidden></ui5-illustrated-message>
+        <ui5-illustrated-message id="noSelection" name="NoEntries" title-text="Keine Notiz ausgewählt" subtitle-text="Wähle eine Notiz aus der Liste oder lege eine neue an." data-i18n-attr="title-text:empty.noSelectionTitle; subtitle-text:empty.noSelectionText" hidden></ui5-illustrated-message>
 
-        <ui5-illustrated-message id="noWorkspace" name="NoData" title-text="Noch kein Workspace" subtitle-text="Wähle einen Ordner. Deine Notizen bleiben dort als normale Markdown-Dateien liegen." hidden>
-          <ui5-button id="chooseWorkspaceButton" design="Emphasized" icon="open-folder">Ordner wählen</ui5-button>
+        <ui5-illustrated-message id="noWorkspace" name="NoData" title-text="Noch kein Workspace" subtitle-text="Wähle einen Ordner. Deine Notizen bleiben dort als normale Markdown-Dateien liegen." data-i18n-attr="title-text:empty.noWorkspaceTitle; subtitle-text:empty.noWorkspaceText" hidden>
+          <ui5-button id="chooseWorkspaceButton" design="Emphasized" icon="open-folder" data-i18n="empty.chooseFolder">Ordner wählen</ui5-button>
         </ui5-illustrated-message>
       </section>
     </ui5-flexible-column-layout>

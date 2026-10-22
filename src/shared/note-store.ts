@@ -2,7 +2,6 @@ import type { NoteDoc, NoteSummary, NotesChangedEvent, SaveResult, SearchHit, Tr
 import { FileExistsError, type FsPort } from './fs-port';
 import { VersionStore, type VersionInfo } from './history';
 import {
-  UNTITLED,
   fileNameFor,
   isNoteId,
   newId,
@@ -10,6 +9,7 @@ import {
   previewFromBody,
   serializeNote,
   titleFromBody,
+  untitled,
   type NoteMeta,
 } from './note';
 
@@ -287,13 +287,13 @@ export class NoteStore {
       const id = newId(now.getTime());
       const meta: NoteMeta = { id, labels: [], created: now.toISOString() };
       const text = serializeNote(meta, '');
-      const fileName = await this.createFile(fileNameFor(UNTITLED, id), text);
+      const fileName = await this.createFile(fileNameFor(untitled(), id), text);
       this.entries.set(id, {
         fileName,
         meta,
         extraFrontMatter: [],
         body: '',
-        title: UNTITLED,
+        title: untitled(),
         preview: '',
         modified: await this.fs.mtime(fileName),
         idPending: false,

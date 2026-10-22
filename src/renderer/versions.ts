@@ -3,29 +3,21 @@ import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import type { NoteDoc, NotesApi, VersionSummary } from '../shared/api';
 import { el, type Ui5Element } from './ui';
+import { t, tp } from '../shared/i18n';
+import { formatVersionTime } from './format';
+import { cspNonce } from './editor/csp';
 
 /**
  * Version dialog: a timeline of versions on the left, a side-by-side diff of
  * the selected version against the current text on the right.
  */
 
-const dateTime = new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
-const timeOnly = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' });
-
-export function formatVersionTime(ms: number): string {
-  const date = new Date(ms);
-  const today = new Date();
-  const yesterday = new Date(today.getTime() - 86_400_000);
-  if (date.toDateString() === today.toDateString()) return `Heute, ${timeOnly.format(date)}`;
-  if (date.toDateString() === yesterday.toDateString()) return `Gestern, ${timeOnly.format(date)}`;
-  return dateTime.format(date);
-}
-
 function readOnlyEditor(label: string): Extension[] {
   return [
     EditorState.readOnly.of(true),
     EditorView.editable.of(false),
     EditorView.lineWrapping,
+    cspNonce(),
     EditorView.contentAttributes.of({ 'aria-label': label }),
     EditorView.theme({
       '&': { fontFamily: 'var(--sapContent_MonospaceFontFamily, monospace)', fontSize: 'var(--sapFontSize)' },
@@ -44,8 +36,12 @@ function summarize(view: MergeView): string {
     if (chunk.toA > chunk.fromA) removed += a.lineAt(Math.max(chunk.fromA, chunk.toA - 1)).number - a.lineAt(chunk.fromA).number + 1;
     if (chunk.toB > chunk.fromB) added += b.lineAt(Math.max(chunk.fromB, chunk.toB - 1)).number - b.lineAt(chunk.fromB).number + 1;
   }
-  if (view.chunks.length === 0) return 'Diese Version ist identisch mit dem aktuellen Stand.';
-  return `${view.chunks.length} ${view.chunks.length === 1 ? 'Änderung' : 'Änderungen'}: ${removed} ${removed === 1 ? 'Zeile' : 'Zeilen'} nur in dieser Version, ${added} ${added === 1 ? 'Zeile' : 'Zeilen'} nur im aktuellen Stand.`;
+  if (view.chunks.length === 0) return t('versions.identical');
+  return t('versions.summary', {
+    changes: tp('versions.changes', view.chunks.length),
+    removed: tp('versions.lines', removed),
+    added: tp('versions.lines', added),
+  });
 }
 
 export async function openVersionDialog(api: NotesApi, id: string, title: string, current: string): Promise<NoteDoc | null> {
@@ -55,11 +51,11 @@ export async function openVersionDialog(api: NotesApi, id: string, title: string
     let merge: MergeView | null = null;
     let selected: VersionSummary | null = null;
 
-    const list = el('ui5-list', { accessibleName: 'Versionen', noDataText: 'Noch keine Versionen' });
+    const list = el('ui5-list', { accessibleName: t('versions.list'), noDataText: t('versions.none') });
     const summary = el('p', { className: 'versions-summary', 'attr:role': 'status', 'attr:aria-live': 'polite' });
     const diffHost = el('div', { className: 'versions-diff' });
-    const restore = el('ui5-button', { design: 'Emphasized', disabled: true }, ['Diese Version wiederherstellen']);
-    const close = el('ui5-button', { design: 'Transparent' }, ['Schließen']);
+    const restore = el('ui5-button', { design: 'Emphasized', disabled: true }, [t('versions.restore')]);
+    const close = el('ui5-button', { design: 'Transparent' }, [t('dialog.close')]);
 
     const content = versions.length
       ? el('div', { className: 'versions-layout' }, [
@@ -67,17 +63,17 @@ export async function openVersionDialog(api: NotesApi, id: string, title: string
           el('div', { className: 'versions-detail' }, [
             summary,
             el('div', { className: 'versions-columns', 'attr:aria-hidden': 'true' }, [
-              el('span', {}, ['Ausgewählte Version']),
-              el('span', {}, ['Aktueller Stand']),
+              el('span', {}, [t('versions.selected')]),
+              el('span', {}, [t('versions.current')]),
             ]),
             diffHost,
           ]),
         ])
       : el('p', { className: 'versions-empty' }, [
-          'Noch keine Versionen. Eine Version entsteht automatisch nach einer kurzen Bearbeitungspause oder beim Wechsel der Notiz.',
+          t('versions.noneLong'),
         ]);
 
-    const dialog = el('ui5-dialog', { headerText: `Versionen: ${title}`, accessibleName: `Versionen von ${title}`, stretch: true }, [
+    const dialog = el('ui5-dialog', { headerText: t('versions.title', { title }), accessibleName: t('versions.accessibleName', { title }), stretch: true }, [
       content,
       el('div', { className: 'dialog-footer', 'attr:slot': 'footer' }, versions.length ? [restore, close] : [close]),
     ]);
@@ -88,8 +84,8 @@ export async function openVersionDialog(api: NotesApi, id: string, title: string
       const text = await api.readVersion(id, version.name);
       merge?.destroy();
       merge = new MergeView({
-        a: { doc: text, extensions: readOnlyEditor(`Version vom ${formatVersionTime(version.time)}`) },
-        b: { doc: current, extensions: readOnlyEditor('Aktueller Stand') },
+        a: { doc: text, extensions: readOnlyEditor(t('versions.versionOf', { time: formatVersionTime(version.time) })) },
+        b: { doc: current, extensions: readOnlyEditor(t('versions.current')) },
         parent: diffHost,
         root: document,
         gutter: true,
@@ -102,7 +98,7 @@ export async function openVersionDialog(api: NotesApi, id: string, title: string
 
     list.append(
       ...versions.map((v, index) =>
-        el('ui5-li', { icon: 'history', description: index === 0 ? 'Neueste Version' : '', 'data-name': v.name }, [formatVersionTime(v.time)]),
+        el('ui5-li', { icon: 'history', description: index === 0 ? t('versions.newest') : '', 'data-name': v.name }, [formatVersionTime(v.time)]),
       ),
     );
     list.addEventListener('item-click', (event: Event) => {
@@ -118,7 +114,7 @@ export async function openVersionDialog(api: NotesApi, id: string, title: string
         result = await api.restoreVersion(id, selected.name);
         dialog.open = false;
       } catch (err) {
-        summary.textContent = 'Die Version konnte nicht wiederhergestellt werden.';
+        summary.textContent = t('versions.restoreFailed');
         console.error(err);
         restore.disabled = false;
       }

@@ -1,4 +1,6 @@
-// Must come first: fonts are served locally instead of from the SAP CDN.
+// Must come first: reports CSP violations, also those caused while loading.
+import './csp-report';
+// Fonts are served locally instead of from the SAP CDN; must load before UI5.
 import './ui5-config';
 
 // Bundle themes, translations and locale data.
@@ -45,6 +47,8 @@ import '@ui5/webcomponents-icons/dist/delete.js';
 import '@ui5/webcomponents-icons/dist/download.js';
 import '@ui5/webcomponents-icons/dist/overflow.js';
 import '@ui5/webcomponents-icons/dist/pdf-attachment.js';
+import '@ui5/webcomponents-icons/dist/attachment-html.js';
+import '@ui5/webcomponents-icons/dist/doc-attachment.js';
 import '@ui5/webcomponents-icons/dist/tag.js';
 import '@ui5/webcomponents-icons/dist/undo.js';
 import '@ui5/webcomponents-icons/dist/upload.js';
@@ -53,20 +57,31 @@ import '@ui5/webcomponents-icons/dist/document-text.js';
 import '@ui5/webcomponents-icons/dist/documents.js';
 import '@ui5/webcomponents-icons/dist/nav-back.js';
 import '@ui5/webcomponents-icons/dist/open-folder.js';
+import '@ui5/webcomponents-icons/dist/globe.js';
 import '@ui5/webcomponents-icons/dist/palette.js';
 import '@ui5/webcomponents-icons/dist/search.js';
 
 import './styles.css';
+import { t } from '../shared/i18n';
 import { getApi } from './api';
 import { App } from './app';
+import { applyLocale } from './i18n';
 import { initAppearance } from './theme';
 
-initAppearance();
+async function start(): Promise<void> {
+  const api = await getApi();
+  // The language must be in place before the app renders any text.
+  const { choice, locale } = await api.getLanguage();
+  await applyLocale(locale);
+  // Only then the theme: switching both at once makes UI5 re-render
+  // components whose translations are still loading (seen with dark themes
+  // in the production build).
+  initAppearance();
+  await new App(api, choice).start();
+}
 
-getApi()
-  .then((api) => new App(api).start())
-  .catch((err: unknown) => {
-    const region = document.getElementById('errorRegion');
-    if (region) region.textContent = `Die App konnte nicht starten: ${String(err)}`;
-    console.error(err);
-  });
+start().catch((err: unknown) => {
+  const region = document.getElementById('errorRegion');
+  if (region) region.textContent = t('app.startFailed', { error: String(err) });
+  console.error(err);
+});

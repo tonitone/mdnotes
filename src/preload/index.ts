@@ -62,6 +62,8 @@ const api: NotesApi = {
   writeRecovery: (id, body) => ipcRenderer.invoke('recovery:write', id, body),
   clearRecovery: (id) => ipcRenderer.invoke('recovery:clear', id),
   listRecovery: () => ipcRenderer.invoke('recovery:list'),
+  getLanguage: () => ipcRenderer.invoke('language:get'),
+  setLanguage: (choice) => ipcRenderer.invoke('language:set', choice),
 
   onMenuCommand: (callback) => subscribe<MenuCommand>('menu:command', callback),
   onNotesChanged: (callback) => subscribe<NotesChangedEvent>('notes:changed', callback),

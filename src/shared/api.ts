@@ -7,6 +7,8 @@
  * variant is running.
  */
 
+import type { LanguageChoice, Locale } from './i18n';
+
 export interface NoteSummary {
   id: string;
   fileName: string;
@@ -59,7 +61,7 @@ export interface NotesChangedEvent {
   added: string[];
 }
 
-export type ExportFormat = 'markdown' | 'wiki' | 'pdf';
+export type ExportFormat = 'markdown' | 'wiki' | 'pdf' | 'html' | 'docx';
 
 export interface VersionSummary {
   name: string;
@@ -95,6 +97,11 @@ export interface RecoveryEntry {
 }
 
 export type MenuCommand = 'new-note' | 'choose-workspace' | 'find' | 'delete-note' | 'import' | 'export-all' | 'versions' | 'backup';
+
+export interface LanguageInfo {
+  choice: LanguageChoice;
+  locale: Locale;
+}
 
 export interface NotesApi {
   readonly mode: 'electron' | 'browser';
@@ -158,6 +165,11 @@ export interface NotesApi {
   writeRecovery(id: string, body: string): Promise<void>;
   clearRecovery(id: string): Promise<void>;
   listRecovery(): Promise<RecoveryEntry[]>;
+
+  /** Language setting and the locale it resolves to (the OS decides for `system`). */
+  getLanguage(): Promise<LanguageInfo>;
+  /** Saves the language setting. The UI reloads afterwards to apply it. */
+  setLanguage(choice: LanguageChoice): Promise<LanguageInfo>;
 
   /** Commands from the native menu. Returns an unsubscribe function. */
   onMenuCommand(callback: (command: MenuCommand) => void): () => void;
