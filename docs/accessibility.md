@@ -99,4 +99,6 @@ Bei jedem Punkt: Was wird angesagt? Stimmt es mit dem überein, was man sieht?
 
 | Datum | System / Screenreader | Version | Ergebnis / Befunde |
 | ----- | --------------------- | ------- | ------------------ |
-|       |                       |         |                    |
+| 2026-10-22 | macOS 27.0.1 (26A434) / VoiceOver | Phase 4 (`feat/strict-csp`, fb4cd62), Dev-Modus | Start und Orientierung, Editor (Aufgaben, Code-Block, Bild mit Beschreibung), Dialoge, Labels, Meldungen und Sprachwechsel: bestanden, keine Befunde |
+| | Windows / NVDA | | noch offen |
+| | Linux / Orca | | noch offen |
