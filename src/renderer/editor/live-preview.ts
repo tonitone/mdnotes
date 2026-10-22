@@ -89,26 +89,30 @@ class CodeToolsWidget extends WidgetType {
     const wrap = document.createElement('span');
     wrap.className = 'cm-md-codetools';
 
-    const select = document.createElement('select');
-    select.setAttribute('aria-label', t('code.language'));
+    // UI5 components (registered in main.ts). The widget ignores all editor events.
+    const select = document.createElement('ui5-select') as HTMLElement & { value: string };
+    select.setAttribute('accessible-name', t('code.language'));
+    select.classList.add('cm-md-lang');
     const known: Array<[string, string]> = [['', t('code.noLanguage')], ...CODE_LANGUAGES];
     const options = known.some(([v]) => v === this.lang) ? known : [...known, [this.lang, this.lang]];
     for (const [value, label] of options) {
-      const option = document.createElement('option');
-      option.value = value;
+      const option = document.createElement('ui5-option');
+      option.setAttribute('value', value);
       option.textContent = label;
-      option.selected = value === this.lang;
+      if (value === this.lang) option.setAttribute('selected', '');
       select.append(option);
     }
-    select.addEventListener('change', () => {
-      view.dispatch({ changes: { from: this.infoFrom, to: this.infoTo, insert: select.value } });
+    select.addEventListener('change', (e) => {
+      const chosen = (e as CustomEvent<{ selectedOption: HTMLElement & { value: string } }>).detail.selectedOption;
+      view.dispatch({ changes: { from: this.infoFrom, to: this.infoTo, insert: chosen.value } });
     });
 
-    const copy = document.createElement('button');
-    copy.type = 'button';
+    const copy = document.createElement('ui5-button');
     copy.className = 'cm-md-copy';
-    copy.textContent = t('code.copy');
-    copy.setAttribute('aria-label', t('code.copyLabel'));
+    copy.setAttribute('icon', 'copy');
+    copy.setAttribute('design', 'Transparent');
+    copy.setAttribute('tooltip', t('code.copyLabel'));
+    copy.setAttribute('accessible-name', t('code.copyLabel'));
     copy.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(this.code);
