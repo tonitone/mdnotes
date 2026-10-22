@@ -39,18 +39,11 @@ Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand
   strenge CSP. Signierung und Auto-Update entfallen (kein App-Store).
 - UI-Tests (`tests/e2e`) laufen gegen den Produktions-Build (`E2E_DEV=1` für den Dev-Server)
   und importieren `test`/`expect` aus `tests/e2e/fixtures.ts` (prüft CSP-Verstöße).
-- Offen: Backups verschlüsseln (optional), blockweises Wiederherstellen aus einer Version.
-- Nächstes: Phase 5 „Alltag und Komfort“. Backlog 1–12 und Übergabe stehen im Plan-Dokument
-  (claude.ai Artifact „Plan: Markdown-Editor“, Abschnitt „Backlog Phase 5“). Erstes Paket, je ein PR:
-  1. Formatier-Kürzel (Cmd+B/I/K, Cmd+Shift+X) und Toolbar, 2. Anheften und Sortieren
-  (Entscheidung offen: `pinned` im Front Matter oder in `config.json`), 3. „Rückgängig“ nach dem Löschen,
-  4. Tastenkürzel-Übersicht (Cmd+/).
-  Danach: 5. `[[Links]]` mit Rückverweisen, 6. Gliederung, 7. Tabellen bearbeiten, 8. Wörter zählen,
-  9. Duplizieren und Vorlagen. Später: 10. Mathe, Mermaid, Fußnoten, 11. Anhänge, 12. Tabs oder Fenster.
-- Design-Überarbeitung: claude.ai Artifact „Plan: Design-Überarbeitung mdnotes“ (Pakete D1 bis D7, je ein PR).
-  Vorgeschlagene Reihenfolge, Toni entscheidet pro Sitzung: D1 Split-Ansicht nach Spaltenbreite, D3 Sprachauswahl aus „Darstellung“ in ein eigenes
-  Shellbar-Menü, D7 UI5 im Editor. Dann Phase 5 Paket 1 zusammen mit D2 (Editor-Kopfzeile) und Punkt 2
-  zusammen mit D4 (Datumsgruppen in der Notizliste). D5 und D6 zwischen den Features.
+- Offen: Backups verschlüsseln (optional, #31), blockweises Wiederherstellen aus einer Version (#32).
+- Nächstes: Alle offenen Pakete (Phase 5 und Design-Überarbeitung D1 bis D7) sind GitHub-Issues in den Meilensteinen
+  „Phase 5.1“ bis „Phase 5.4“ und „Später“. Die Reihenfolge steht in `docs/roadmap.md`, Toni entscheidet sie.
+  Ein PR pro Issue, die Beschreibung enthält `Closes #n`. Hintergrund: claude.ai Artifacts „Plan: Markdown-Editor“
+  (Backlog Phase 5) und „Plan: Design-Überarbeitung mdnotes“.
 
 ## Arbeitsweise
 
