@@ -1,5 +1,7 @@
 import { setTheme } from '@ui5/webcomponents-base/dist/config/Theme.js';
 import { t } from '../shared/i18n';
+import fioriLookUrl from './looks/fiori.css?url';
+import macosLookUrl from './looks/macos.css?url';
 
 /**
  * Appearance: SAP Horizon light, dark and two high-contrast variants.
@@ -9,6 +11,11 @@ import { t } from '../shared/i18n';
 
 export type ThemeChoice = 'system' | 'light' | 'dark' | 'hcb' | 'hcw';
 export type Density = 'compact' | 'cozy';
+/** Optional style on top of Horizon, loaded only when chosen. */
+export type Look = 'standard' | 'fiori' | 'macos';
+
+export const LOOKS: Look[] = ['standard', 'fiori', 'macos'];
+const LOOK_URLS: Record<Exclude<Look, 'standard'>, string> = { fiori: fioriLookUrl, macos: macosLookUrl };
 
 const THEMES: Record<Exclude<ThemeChoice, 'system'>, string> = {
   light: 'sap_horizon',
@@ -45,6 +52,7 @@ function write(key: string, value: string): void {
 
 let themeChoice: ThemeChoice = read('mdnotes.theme', 'system', ['system', 'light', 'dark', 'hcb', 'hcw']);
 let density: Density = read('mdnotes.density', 'compact', ['compact', 'cozy']);
+let look: Look = read('mdnotes.look', 'standard', LOOKS);
 
 function resolveTheme(choice: ThemeChoice): string {
   if (choice !== 'system') return THEMES[choice];
@@ -57,6 +65,29 @@ function applyTheme(): void {
   void setTheme(theme);
   document.documentElement.dataset.theme = theme;
   document.documentElement.style.colorScheme = theme.includes('dark') || theme.endsWith('hcb') ? 'dark' : 'light';
+  applyLook();
+}
+
+/**
+ * Loads the look's style sheet. High-contrast themes always use the
+ * standard look, so their tested contrast is never changed.
+ */
+function applyLook(): void {
+  const highContrast = /hc[bw]$/.test(document.documentElement.dataset.theme ?? '');
+  const effective: Look = highContrast ? 'standard' : look;
+  document.documentElement.dataset.look = effective;
+  let link = document.getElementById('look-style') as HTMLLinkElement | null;
+  if (effective === 'standard') {
+    link?.remove();
+    return;
+  }
+  if (!link) {
+    link = document.createElement('link');
+    link.id = 'look-style';
+    link.rel = 'stylesheet';
+    document.head.append(link);
+  }
+  link.href = LOOK_URLS[effective];
 }
 
 function applyDensity(): void {
@@ -80,6 +111,16 @@ export function setThemeChoice(choice: ThemeChoice): void {
   themeChoice = choice;
   write('mdnotes.theme', choice);
   applyTheme();
+}
+
+export function getLook(): Look {
+  return look;
+}
+
+export function setLook(value: Look): void {
+  look = value;
+  write('mdnotes.look', value);
+  applyLook();
 }
 
 export function getDensity(): Density {

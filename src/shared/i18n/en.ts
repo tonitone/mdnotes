@@ -67,6 +67,10 @@ export const en: Messages = {
   'theme.hcw': 'High contrast white',
   'density.compact': 'Compact',
   'density.cozy': 'Cozy',
+  'look.title': 'Style',
+  'look.standard': 'Standard',
+  'look.fiori': 'Horizon refined',
+  'look.macos': 'macOS style',
 
   'status.created': 'Created',
   'status.unsaved': 'Not saved',

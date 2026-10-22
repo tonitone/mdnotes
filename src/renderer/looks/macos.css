@@ -1,0 +1,122 @@
+/*
+ * Look "macOS style": calm, Apple Notes-like layout with Horizon colors,
+ * fonts and controls. Loaded on demand (see theme.ts). Only SAP theming
+ * parameters and the app's own elements are styled; UI5 components are not
+ * modified. All colors derive from the active Horizon theme, so light and
+ * dark work alike.
+ */
+
+:root[data-look='macos'] {
+  --mdn-sidebar: color-mix(in srgb, var(--sapBackgroundColor) 92%, var(--sapTextColor) 8%);
+  --mdn-selection: color-mix(in srgb, var(--sapSelectedColor) 16%, transparent);
+  --mdn-hairline: color-mix(in srgb, var(--sapGroup_TitleBorderColor) 60%, transparent);
+}
+
+/* Shell bar blends into the sidebar. */
+:root[data-look='macos'] ui5-shellbar {
+  --sapShellColor: var(--mdn-sidebar);
+  --sapShell_Background: var(--mdn-sidebar);
+  --sapShell_BorderColor: transparent;
+  border-bottom: 1px solid var(--mdn-hairline);
+}
+
+:root[data-look='macos'] .column-header {
+  border-bottom: none;
+  min-height: 2.75rem;
+}
+
+/* Sidebar: tinted background, rounded inset selection, no row lines. */
+:root[data-look='macos'] section[slot='startColumn'] {
+  background: var(--mdn-sidebar);
+  border-inline-end: 1px solid var(--mdn-hairline);
+}
+
+:root[data-look='macos'] #libraryList,
+:root[data-look='macos'] #labelList,
+:root[data-look='macos'] #notesList {
+  --sapList_Background: transparent;
+  --sapList_BorderColor: transparent;
+  --sapList_HeaderBackground: transparent;
+  --sapList_HeaderBorderColor: transparent;
+  --sapList_Hover_Background: color-mix(in srgb, var(--sapTextColor) 6%, transparent);
+  padding: 0 0.5rem;
+}
+
+:root[data-look='macos'] #libraryList ui5-li,
+:root[data-look='macos'] #labelList ui5-li,
+:root[data-look='macos'] #notesList ui5-li {
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+:root[data-look='macos'] #libraryList ui5-li[navigated],
+:root[data-look='macos'] #labelList ui5-li[navigated],
+:root[data-look='macos'] #notesList ui5-li[navigated] {
+  --sapList_Background: var(--mdn-selection);
+  --sapList_Hover_Background: var(--mdn-selection);
+}
+
+/* Note list: white column with thin separators between notes. */
+:root[data-look='macos'] section[slot='midColumn'] {
+  background: var(--sapBaseColor);
+  border-inline-end: 1px solid var(--mdn-hairline);
+}
+
+:root[data-look='macos'] #notesList ui5-li + ui5-li {
+  box-shadow: 0 -1px 0 0 var(--mdn-hairline);
+}
+
+:root[data-look='macos'] #notesList ui5-li[navigated],
+:root[data-look='macos'] #notesList ui5-li[navigated] + ui5-li {
+  box-shadow: none;
+}
+
+/* Rounded search field, like the macOS toolbar search. */
+:root[data-look='macos'] #searchInput {
+  --sapField_BorderCornerRadius: 999px;
+  --sapField_Background: var(--mdn-sidebar);
+  --sapField_BorderColor: transparent;
+}
+
+:root[data-look='macos'] .search-row {
+  padding: 0 0.75rem 0.5rem;
+}
+
+/* Editor: paper-white page, file name and status centered and quiet. */
+:root[data-look='macos'] .editor-column,
+:root[data-look='macos'] .editor-host .cm-editor {
+  background: var(--sapBaseColor);
+}
+
+:root[data-look='macos'] .editor-meta {
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+:root[data-look='macos'] .file-name {
+  font-family: var(--sapFontFamily);
+}
+
+:root[data-look='macos'] .label-row {
+  border-bottom: none;
+  padding: 0 1.5rem;
+}
+
+:root[data-look='macos'] .editor-host .cm-editor {
+  font-size: 1.0625rem;
+}
+
+:root[data-look='macos'] .editor-host .cm-content {
+  max-width: 44rem;
+  padding: 1.5rem 3rem 6rem;
+}
+
+:root[data-look='macos'] .cm-md-h1 {
+  font-size: 1.85em;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+:root[data-look='macos'] .workspace-path {
+  padding: 0.75rem 1.25rem;
+}
