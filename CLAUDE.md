@@ -40,9 +40,29 @@ Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand
 - UI-Tests (`tests/e2e`) laufen gegen den Produktions-Build (`E2E_DEV=1` für den Dev-Server)
   und importieren `test`/`expect` aus `tests/e2e/fixtures.ts` (prüft CSP-Verstöße).
 - Offen: Backups verschlüsseln (optional), blockweises Wiederherstellen aus einer Version.
+- Nächstes: Phase 5 „Alltag und Komfort“. Backlog 1–12 und Übergabe stehen im Plan-Dokument
+  (claude.ai Artifact „Plan: Markdown-Editor“, Abschnitt „Backlog Phase 5“). Erstes Paket, je ein PR:
+  1. Formatier-Kürzel (Cmd+B/I/K, Cmd+Shift+X) und Toolbar, 2. Anheften und Sortieren
+  (Entscheidung offen: `pinned` im Front Matter oder in `config.json`), 3. „Rückgängig“ nach dem Löschen,
+  4. Tastenkürzel-Übersicht (Cmd+/).
+  Danach: 5. `[[Links]]` mit Rückverweisen, 6. Gliederung, 7. Tabellen bearbeiten, 8. Wörter zählen,
+  9. Duplizieren und Vorlagen. Später: 10. Mathe, Mermaid, Fußnoten, 11. Anhänge, 12. Tabs oder Fenster.
+
+## Arbeitsweise
+
+- Gesprächssprache Deutsch, kurz und konkret. Pro Thema ein PR, erst bei grüner CI melden. Bugs vor Features.
+  Bei größeren, mehrdeutigen Aufgaben vorher kurz fragen.
+- Design: Standard-Horizon. Eigene Looks wurden abgelehnt (PR #9). UI5-Komponenten nie verändern.
+- Jede neue Ansicht und jeder neue Dialog bekommt einen axe-Test in `tests/e2e/a11y.spec.ts`.
+- Cloud-Sitzung: npm-Registry gesperrt (neue Pakete nur mit Lockfile vom Mac des Nutzers), lokal nur
+  Unit-Tests. Die CI ist die Testschleife; Fehler über die Check-Run-Annotations-API lesen. PRs über die REST-API.
 
 ## Bekannte Risiken
 
+- CodeMirror braucht `root: document` (Fokus im UI5-Slot). Mehrzeilige Ersetzungen nur über ein `StateField`.
+- UI5-Theme erst nach der Sprache setzen, sonst bleibt die App mit dunklem Theme leer.
+- FCL feuert `layout-change` nicht bei programmatischem Layout: immer `setLayout()` nutzen.
+- UI5-Listeneinträge enthalten unsichtbaren Zusatztext: in Tests `toContainText` statt `toHaveText`.
 - UI5 2.27.2 hat einen Render-Loop-Fehler im `ui5-tokenizer` (behoben ab 2.28.0). Betrifft das Label-Feld bei sehr vielen Labels.
 - Die Schrift 72 kopiert `scripts/copy-fonts.mjs` aus node_modules. Pfade prüfen, falls die Konsole warnt.
 - CSP ohne `unsafe-inline`: Neuer Code darf keine `style`-Attribute oder `<style>`-Elemente
