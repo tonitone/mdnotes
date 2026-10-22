@@ -78,6 +78,13 @@
 :root[data-look='macos'] #notesList ui5-li[navigated] {
   --sapList_Background: var(--mdn-selection);
   --sapList_Hover_Background: var(--mdn-selection);
+  /* The preview line stays readable on the selection (4.5:1 in light and dark). */
+  --sapContent_LabelColor: color-mix(in srgb, var(--sapTextColor) 75%, var(--sapBaseColor));
+}
+
+/* Dark: a lighter selection step keeps the preview text contrast. */
+:root[data-look='macos'][data-theme='sap_horizon_dark'] {
+  --mdn-selection: color-mix(in srgb, var(--sapBaseColor) 95%, var(--sapTextColor) 5%);
 }
 
 /* Note list: white column, rows separated by space instead of lines. */
