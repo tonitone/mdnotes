@@ -11,6 +11,7 @@ import type {
   TrashEntry,
 } from '../shared/api';
 import { MAX_ASSET_BYTES, isImageMime } from '../shared/assets';
+import { markdownToHtml } from '../shared/markdown/html';
 import { markdownToWiki } from '../shared/markdown/wiki';
 import { openBackupDialog } from './backup-dialog';
 import { createEditor, type NoteEditor } from './editor/editor';
@@ -29,6 +30,20 @@ const SEARCH_DELAY_MS = 150;
 const RECOVERY_DELAY_MS = 2000;
 
 type View = { kind: 'all' } | { kind: 'trash' } | { kind: 'label'; label: string };
+
+/** Edit with live preview, source next to a rendered preview, or preview only. */
+type ViewMode = 'edit' | 'split' | 'preview';
+const VIEW_MODES: ViewMode[] = ['edit', 'split', 'preview'];
+const PREVIEW_DELAY_MS = 150;
+
+function readViewMode(): ViewMode {
+  try {
+    const value = localStorage.getItem('mdnotes.viewMode') as ViewMode | null;
+    return value && VIEW_MODES.includes(value) ? value : 'edit';
+  } catch {
+    return 'edit';
+  }
+}
 
 /** Below this width the column layout shows a single column (UI5 FCL breakpoint). */
 const narrowQuery = window.matchMedia('(max-width: 599px)');
@@ -62,6 +77,8 @@ export class App {
   private saving: Promise<void> = Promise.resolve();
   private query = '';
   private searchHits: SearchHit[] | null = null;
+  private viewMode: ViewMode = readViewMode();
+  private previewTimer: number | undefined;
 
   private readonly els = {
     fcl: $('fcl'),
@@ -100,6 +117,9 @@ export class App {
     noticeRegion: $('noticeRegion'),
     errorRegion: $('errorRegion'),
     editorHost: $('editor-host'),
+    editorArea: $('editorArea'),
+    previewPane: $('previewPane'),
+    viewModeButton: $('viewModeButton'),
     noSelection: $('noSelection'),
     noWorkspace: $('noWorkspace'),
     chooseWorkspaceButton: $('chooseWorkspaceButton'),
@@ -129,6 +149,7 @@ export class App {
     if (__BROWSER_MODE__) (window as unknown as { __editorView: unknown }).__editorView = this.editor.view;
     this.buildThemeMenu();
     this.bindEvents();
+    this.applyViewMode();
 
     const workspace = await this.api.getWorkspace();
     if (workspace) {
@@ -233,6 +254,27 @@ export class App {
     // Fired on resize and user interaction, not when the app sets the layout.
     els.fcl.addEventListener('layout-change', () => this.updateColumnButtons());
 
+    els.viewModeButton.addEventListener('selection-change', (event: Event) => {
+      const item = (event as CustomEvent<{ selectedItems: HTMLElement[] }>).detail.selectedItems?.[0];
+      const mode = item?.dataset.mode as ViewMode | undefined;
+      if (mode && VIEW_MODES.includes(mode)) this.setViewMode(mode);
+    });
+    // Links in the preview open in the default browser (Electron) or a new tab.
+    els.previewPane.addEventListener('click', (event) => {
+      const link = (event.target as HTMLElement).closest('a');
+      if (!link) return;
+      event.preventDefault();
+      const href = link.getAttribute('href') ?? '';
+      if (/^(https?:|mailto:)/i.test(href)) window.open(href, '_blank', 'noopener');
+    });
+    // In split view the preview follows the editor's scroll position.
+    this.editor?.view.scrollDOM.addEventListener('scroll', () => {
+      if (this.viewMode !== 'split') return;
+      const from = this.editor!.view.scrollDOM;
+      const ratio = from.scrollTop / Math.max(1, from.scrollHeight - from.clientHeight);
+      els.previewPane.scrollTop = ratio * (els.previewPane.scrollHeight - els.previewPane.clientHeight);
+    });
+
     // The skip link jumps to the editor, or to the note list when no note is open.
     document.querySelector('.skip-link')?.addEventListener('click', (event) => {
       event.preventDefault();
@@ -260,6 +302,9 @@ export class App {
       if (command === 'export-all') void this.exportAll();
       if (command === 'versions') void this.openVersions();
       if (command === 'backup') void this.openBackup();
+      if (command === 'view-edit') this.setViewMode('edit');
+      if (command === 'view-split') this.setViewMode('split');
+      if (command === 'view-preview') this.setViewMode('preview');
     });
     this.api.onFlushRequest(() => this.flush());
     this.api.onNotesChanged((event) => void this.onNotesChanged(event));
@@ -319,9 +364,58 @@ export class App {
     this.els.libraryButton.hidden = Boolean(fcl.startColumnVisible) || !fcl.midColumnVisible;
   }
 
+  // -------------------------------------------------------------------------
+  // View modes: edit, split, preview
+  // -------------------------------------------------------------------------
+
+  private loadDoc(body: string, options?: { readOnly?: boolean }): void {
+    this.editor?.setDoc(body, options);
+    this.renderPreview();
+  }
+
+  private setViewMode(mode: ViewMode): void {
+    const editorHadFocus = this.els.editorHost.contains(document.activeElement);
+    this.viewMode = mode;
+    try {
+      localStorage.setItem('mdnotes.viewMode', mode);
+    } catch {
+      // No storage: the mode only lasts for this session.
+    }
+    this.applyViewMode();
+    // Keep focus where the user can continue: the preview has no editor.
+    if (mode === 'preview' && editorHadFocus) this.els.previewPane.focus();
+    else if (mode !== 'preview' && this.els.previewPane.contains(document.activeElement)) this.editor?.focus();
+  }
+
+  private applyViewMode(): void {
+    const mode = this.viewMode;
+    this.els.editorArea.dataset.mode = mode;
+    this.els.editorHost.hidden = mode === 'preview';
+    this.els.previewPane.hidden = mode === 'edit';
+    // Next to the preview the editor shows plain source.
+    this.editor?.setLivePreview(mode === 'edit');
+    for (const item of this.els.viewModeButton.children as HTMLCollectionOf<Ui5Element>) item.selected = item.dataset.mode === mode;
+    this.renderPreview();
+  }
+
+  private schedulePreview(): void {
+    if (this.viewMode === 'edit') return;
+    window.clearTimeout(this.previewTimer);
+    this.previewTimer = window.setTimeout(() => this.renderPreview(), PREVIEW_DELAY_MS);
+  }
+
+  private renderPreview(): void {
+    if (this.viewMode === 'edit' || !this.editor) return;
+    // Safe: the renderer escapes all text, allows only known tags and safe link targets.
+    this.els.previewPane.innerHTML = markdownToHtml(this.editor.getDoc(), {
+      resolveImage: (src) => this.api.assetUrl(src) ?? src,
+    });
+  }
+
   private focusContent(): void {
-    if (!this.els.editorHost.hidden && this.editor) {
-      this.editor.focus();
+    if (!this.els.editorArea.hidden && this.editor) {
+      if (this.viewMode === 'preview') this.els.previewPane.focus();
+      else this.editor.focus();
       return;
     }
     const item = (this.els.notesList.querySelector('[navigated]') ?? this.els.notesList.querySelector('ui5-li')) as HTMLElement | null;
@@ -474,7 +568,8 @@ export class App {
 
   private showView(view: 'editor' | 'trashEntry' | 'noSelection' | 'noWorkspace'): void {
     const editing = view === 'editor' || view === 'trashEntry';
-    this.els.editorHost.hidden = !editing;
+    this.els.editorArea.hidden = !editing;
+    this.els.viewModeButton.hidden = !editing;
     this.els.noSelection.hidden = view !== 'noSelection';
     this.els.noWorkspace.hidden = view !== 'noWorkspace';
     this.els.noteActions.hidden = view !== 'editor';
@@ -506,7 +601,7 @@ export class App {
       const doc = await this.api.readNote(id);
       this.closeEditor();
       this.currentId = id;
-      this.editor?.setDoc(doc.body);
+      this.loadDoc(doc.body);
       this.els.fileName.textContent = doc.fileName;
       this.setStatus(t('status.modifiedAt', { time: formatModified(doc.modified) }));
       this.renderTokens(doc.labels);
@@ -533,10 +628,12 @@ export class App {
       this.closeEditor();
       this.currentId = doc.id;
       this.renderList();
-      this.editor?.setDoc(doc.body);
+      this.loadDoc(doc.body);
       this.els.fileName.textContent = doc.fileName;
       this.setStatus(t('status.created'));
       this.renderTokens([]);
+      // A new note is written, not read: leave preview-only mode.
+      if (this.viewMode === 'preview') this.setViewMode('edit');
       this.showView('editor');
       this.setLayout('ThreeColumnsEndExpanded');
       this.editor?.focus();
@@ -549,6 +646,7 @@ export class App {
     if (!this.currentId) return;
     this.dirty = true;
     this.scheduleRecovery();
+    this.schedulePreview();
     if (this.conflict) return;
     this.setStatus(t('status.unsaved'));
     window.clearTimeout(this.saveTimer);
@@ -716,7 +814,7 @@ export class App {
       const entry = this.trash.find((t) => t.trashName === trashName);
       this.closeEditor();
       this.currentTrash = trashName;
-      this.editor?.setDoc(body, { readOnly: true });
+      this.loadDoc(body, { readOnly: true });
       this.els.fileName.textContent = entry?.title ?? '';
       this.setStatus(entry ? t('trash.deletedAt', { time: formatModified(entry.trashedAt) }) : '');
       this.showView('trashEntry');
@@ -875,7 +973,7 @@ export class App {
     if (!id || !view) return;
     const doc = await this.api.readNote(id);
     const head = Math.min(view.state.selection.main.head, doc.body.length);
-    this.editor!.setDoc(doc.body);
+    this.loadDoc(doc.body);
     view.dispatch({ selection: { anchor: head } });
     this.dirty = false;
     this.els.fileName.textContent = doc.fileName;
@@ -922,7 +1020,7 @@ export class App {
       const title = this.notes.find((n) => n.id === id)?.title ?? '';
       const doc = await openVersionDialog(this.api, id, title, this.editor.getDoc());
       if (doc && id === this.currentId) {
-        this.editor.setDoc(doc.body);
+        this.loadDoc(doc.body);
         this.dirty = false;
         this.applySaveResult(doc);
         this.setStatus(t('status.savedAt', { time: formatTime(doc.modified) }));

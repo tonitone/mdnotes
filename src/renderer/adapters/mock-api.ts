@@ -47,6 +47,11 @@ function greet(name: string): string {
 2. Aufwände schätzen
 3. Ziele festhalten
 
+| Thema | Status | Aufwand |
+| :--- | :---: | ---: |
+| Export nach Confluence | offen | 3 |
+| Tabellen in der Vorschau | ✅ fertig | 2 |
+
 Offene Frage: Brauchen wir den Export nach Confluence schon im ersten Release?
 `,
   },

@@ -147,3 +147,16 @@ describe('markdownToHtml', () => {
     assert.match(doc, /Content-Security-Policy/);
   });
 });
+
+describe('tables in HTML', () => {
+  it('renders the header, rows and alignment as classes (no style attributes, strict CSP)', () => {
+    const html = markdownToHtml(
+      '| Suite | Status |\n|-------|--------|\n| PickerOptsHelperTest (PHP unit) | ✅ grün |\n| Karma JS (116 Tests) | ✅ grün (11 pending) |\n\n| a | b | c |\n| :- | :-: | -: |\n| 1 | 2 | 3 |',
+    );
+    assert.match(html, /<th>Suite<\/th><th>Status<\/th>/);
+    assert.match(html, /<td>PickerOptsHelperTest \(PHP unit\)<\/td><td>✅ grün<\/td>/);
+    assert.match(html, /<td>✅ grün \(11 pending\)<\/td>/);
+    assert.match(html, /<th class="align-left">a<\/th><th class="align-center">b<\/th><th class="align-right">c<\/th>/);
+    assert.doesNotMatch(html, /style=/);
+  });
+});
