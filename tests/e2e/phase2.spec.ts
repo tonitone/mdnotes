@@ -97,12 +97,13 @@ test.describe('code blocks', () => {
 
     const tools = page.locator('.cm-md-codetools');
     await expect(tools).toBeVisible();
-    const select = tools.locator('select');
-    await expect(select).toHaveValue('ts');
-    await select.selectOption('javascript');
+    const select = tools.locator('ui5-select');
+    await expect(select).toHaveJSProperty('value', 'ts');
+    await select.click();
+    await page.locator('ui5-option[value="javascript"]').click();
     expect(await editorDoc(page)).toContain('```javascript\nfunction greet');
 
-    await tools.locator('button').click();
+    await tools.locator('ui5-button').click();
     expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('function greet(name: string)');
     await expect(page.locator('#announcer')).toHaveText('Code kopiert');
   });

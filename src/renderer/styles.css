@@ -348,32 +348,12 @@ ui5-illustrated-message {
 .cm-md-codetools {
   float: inline-end;
   display: inline-flex;
+  align-items: center;
   gap: 0.25rem;
-  font-family: var(--sapFontFamily);
-  font-size: var(--sapFontSmallSize);
 }
 
-.cm-md-codetools select,
-.cm-md-codetools button {
-  min-height: 1.5rem;
-  padding: 0 0.5rem;
-  border: 1px solid var(--sapButton_BorderColor);
-  border-radius: var(--sapButton_BorderCornerRadius);
-  background: var(--sapButton_Background);
-  color: var(--sapButton_TextColor);
-  font: inherit;
-  cursor: pointer;
-}
-
-.cm-md-codetools select:focus-visible,
-.cm-md-codetools button:focus-visible {
-  outline: var(--sapContent_FocusWidth) var(--sapContent_FocusStyle) var(--sapContent_FocusColor);
-  outline-offset: 1px;
-}
-
-.cm-md-codetools button:hover,
-.cm-md-codetools select:hover {
-  background: var(--sapButton_Hover_Background);
+.cm-md-codetools ui5-select {
+  min-width: 8rem;
 }
 
 /* Versions dialog */
