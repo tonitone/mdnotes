@@ -71,6 +71,8 @@ ui5-flexible-column-layout {
 
 .editor-column {
   background: var(--sapBaseColor);
+  /* Lets the split view react to the width of this column, not of the window. */
+  container-type: inline-size;
 }
 
 .editor-header {
@@ -116,12 +118,12 @@ ui5-flexible-column-layout {
   min-height: 0;
 }
 
-/* Split view: source and preview side by side, stacked in narrow windows. */
+/* Split view: source and preview side by side, stacked in a narrow editor column. */
 .editor-area[data-mode='split'] .editor-host {
   border-inline-end: 1px solid var(--sapGroup_TitleBorderColor);
 }
 
-@media (max-width: 700px) {
+@container (max-width: 700px) {
   .editor-area[data-mode='split'] {
     flex-direction: column;
   }
