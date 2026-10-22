@@ -85,3 +85,22 @@ test('a new note leaves preview mode', async ({ page }) => {
   await expect(page.locator('#editorArea')).toHaveAttribute('data-mode', 'edit');
   await expect(editor(page)).toBeFocused();
 });
+
+test('split mode stacks by editor column width, not by window width', async ({ page }) => {
+  const area = page.locator('#editorArea');
+  const direction = () => area.evaluate((el) => getComputedStyle(el).flexDirection);
+  const columnWidth = () => page.locator('.editor-column').evaluate((el) => el.getBoundingClientRect().width);
+
+  // A 1200 px window is wider than 700 px, but with three columns the editor
+  // column is narrower than that, so source and preview are stacked.
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await openNote(page, 'Einkauf');
+  await chooseMode(page, 'split');
+  await expect.poll(columnWidth).toBeLessThanOrEqual(700);
+  await expect.poll(direction).toBe('column');
+
+  // A very wide window gives the column enough room for two panes side by side.
+  await page.setViewportSize({ width: 2400, height: 900 });
+  await expect.poll(columnWidth).toBeGreaterThan(700);
+  await expect.poll(direction).toBe('row');
+});
