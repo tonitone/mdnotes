@@ -7,6 +7,8 @@ import { EditorState, type Extension } from '@codemirror/state';
 import { drawSelection, EditorView, keymap, placeholder } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
 import { assetResolver, livePreview } from './live-preview';
+import { t } from '../../shared/i18n';
+import { cspNonce } from './csp';
 
 /**
  * CodeMirror editor with live preview. All colors and fonts come from the
@@ -47,7 +49,8 @@ const codeHighlight = HighlightStyle.define([
   { tag: [tags.string, tags.special(tags.string)], color: 'var(--sapPositiveTextColor)' },
   { tag: [tags.number, tags.bool, tags.null], color: 'var(--sapCriticalTextColor)' },
   { tag: [tags.comment, tags.meta], color: 'var(--sapContent_LabelColor)', fontStyle: 'italic' },
-  { tag: [tags.function(tags.variableName), tags.function(tags.propertyName)], color: 'var(--sapLinkColor)' },
+  // Link color is too light on the code block background in dark themes (axe); weight marks functions instead.
+  { tag: [tags.function(tags.variableName), tags.function(tags.propertyName)], color: 'var(--sapTextColor)', fontWeight: 'bold' },
   { tag: [tags.typeName, tags.className], color: 'var(--sapNegativeTextColor)' },
   { tag: tags.processingInstruction, color: 'var(--sapContent_LabelColor)' },
   { tag: tags.url, color: 'var(--sapLinkColor)' },
@@ -105,13 +108,14 @@ export function createEditor(parent: HTMLElement, options: EditorOptions): NoteE
     history(),
     drawSelection(),
     EditorView.lineWrapping,
+    cspNonce(),
     search({ top: true }),
     highlightSelectionMatches(),
     markdown({ base: markdownLanguage, codeLanguages: languages, addKeymap: true }),
     syntaxHighlighting(codeHighlight),
     assetResolver.of(options.resolveAsset),
     livePreview,
-    placeholder('Die erste Zeile wird der Titel …'),
+    placeholder(t('editor.placeholder')),
     fioriTheme,
     readOnlyExtension(isReadOnly),
     keymap.of([
@@ -129,7 +133,7 @@ export function createEditor(parent: HTMLElement, options: EditorOptions): NoteE
       indentWithTab,
     ]),
     EditorView.contentAttributes.of({
-      'aria-label': 'Notizinhalt',
+      'aria-label': t('editor.contentLabel'),
       'aria-describedby': 'editor-help',
       spellcheck: 'true',
       lang: 'de',

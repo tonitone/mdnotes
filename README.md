@@ -29,6 +29,8 @@ Stand: Phase 3 des Plans abgeschlossen.
   oder ein ganzes Backup wiederherstellen
 - Crash-Recovery: ungespeicherter Text wird nach einem Absturz beim Start angeboten
 - Labels über alle Notizen umbenennen oder zusammenführen
+- Oberfläche auf Deutsch oder Englisch (folgt dem System oder fest eingestellt unter
+  Darstellung → Sprache), Layout für Rechts-nach-links-Sprachen vorbereitet
 
 ## Schnellstart
 
@@ -66,6 +68,7 @@ src/
     assets.ts       Bilder in assets/ (Name aus dem Inhalts-Hash)
     markdown/       Parser und Export nach Wiki-Markup und HTML
     api.ts          Schnittstelle zwischen Oberfläche und Dateisystem
+    i18n/           Sprachdateien (de.ts legt die Schlüssel fest, en.ts muss sie alle haben)
   main/           Electron-Hauptprozess: Fenster, Menü, IPC, Sicherheit
     workspace.ts    Workspace mit File-Watcher
     transfer.ts     Export (Markdown, Wiki, PDF) und Import
@@ -87,6 +90,18 @@ darunter ist verschieden (`MemoryFs` bzw. `NodeFs`). So laufen beide Varianten n
 auseinander. Im Electron-Build ist `__BROWSER_MODE__` gleich `false`, der Mock-Adapter wird
 dadurch nicht mit ausgeliefert.
 
+## Sprachen
+
+- Texte stehen in `src/shared/i18n/de.ts` und `en.ts`. Code ruft `t('schlüssel', { platzhalter })`
+  auf, Mehrzahl über `tp('schlüssel', anzahl)` mit den Varianten `.one` und `.other`.
+- Statische Texte in `index.html` tragen `data-i18n` (Textinhalt) oder
+  `data-i18n-attr="attribut:schlüssel; …"`.
+- Ein Unit-Test prüft, dass jede Sprache genau dieselben Schlüssel und Platzhalter hat.
+- Die Einstellung liegt in `config.json` (Browser-Modus: `localStorage`, Test-Override `?lang=en`).
+  Ein Wechsel lädt das Fenster neu; das native Menü wird sofort neu aufgebaut.
+- Rechts-nach-links: `dir` am `<html>` folgt der Sprache, das CSS nutzt logische Eigenschaften
+  (`margin-inline-start` usw.). Eine neue Sprache braucht nur eine weitere Datei in `i18n/`.
+
 ## Wie Dateien benannt werden
 
 - Jede Notiz hat eine feste ID (ULID) im Front Matter. Links, Historie und Backups hängen
@@ -105,14 +120,22 @@ dadurch nicht mit ausgeliefert.
 - Themes: Hell, Dunkel, Hoher Kontrast schwarz und weiß. "System folgen" erkennt
   auch Kontrastdesigns des Betriebssystems.
 - Speicherstatus und Fehler werden über Live-Regionen angesagt.
+- In schmalen Fenstern (eine Spalte) führen Zurück-Knöpfe vom Editor zur Liste und von
+  der Liste zur Bibliothek.
+- Automatische Prüfung (axe, Tastatur, Reflow) und Checkliste für Screenreader:
+  [docs/accessibility.md](docs/accessibility.md).
 
 ## Sicherheit
 
 - Renderer ohne Node-Zugriff (`contextIsolation`, `sandbox`), IPC nur vom eigenen Fenster,
   Argumente werden im Main-Prozess geprüft.
 - Alle Netzwerkanfragen werden blockiert. Links öffnen im Standardbrowser.
-- Content-Security-Policy ohne Inline-Skripte. Inline-Styles sind vorerst erlaubt
-  (UI5, CodeMirror). Das wird in Phase 4 geprüft und verschärft.
+- Content-Security-Policy ohne Inline-Skripte, ohne Inline-Styles und ohne
+  `style`-Attribute. CodeMirrors `<style>`-Elemente tragen eine Nonce, die beim Build
+  entsteht. Die UI-Tests laufen gegen den Produktions-Build und schlagen bei jedem
+  CSP-Verstoß fehl (`src/renderer/csp-report.ts`).
+- Exportierte HTML-Dateien enthalten keine Skripte und laden nur eingebettete Bilder
+  oder Bilder über https.
 
 ## Bekannte offene Punkte
 
@@ -121,8 +144,6 @@ dadurch nicht mit ausgeliefert.
   Update, sobald 2.28.0 erscheint.
 - **Schrift 72:** `copy-fonts.mjs` sucht die Dateien in den UI5-Theming-Paketen. Findet es
   keine, nutzt die App Arial oder Helvetica. Die Konsole meldet das beim Installieren.
-- **Kleine Fenster:** Unter etwa 600 px zeigt das Flexible Column Layout nur eine Spalte.
-  Der Zurück-Knopf im Editor führt zur Liste. Die Bibliothek ist dort noch nicht erreichbar.
 - **Backups** sind nicht verschlüsselt. Liegt der Backup-Ordner in einer Cloud, sind die
   Notizen dort im Klartext.
 - **Wiki-Markup:** Aufgaben werden zu ☐/☑, weil Wiki-Markup keine Checkboxen kennt. Bilder

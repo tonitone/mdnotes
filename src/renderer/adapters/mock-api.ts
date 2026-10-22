@@ -1,9 +1,11 @@
 import type { BackupInfo, BackupSettings, ExportFormat, ImportReport, NotesApi, NotesChangedEvent } from '../../shared/api';
 import { assetNameFor, assetNameFromPath } from '../../shared/assets';
 import { MemoryFs } from '../../shared/fs-port';
+import { markdownToHtmlDocument } from '../../shared/markdown/html';
 import { markdownToWiki } from '../../shared/markdown/wiki';
 import { newId, parseNote, serializeNote, slugify, titleFromBody } from '../../shared/note';
 import { NoteStore } from '../../shared/note-store';
+import { isLanguageChoice, resolveLocale, t, type LanguageChoice } from '../../shared/i18n';
 
 /**
  * Browser mode: the same NoteStore logic as in Electron, but on top of an
@@ -97,6 +99,21 @@ function pickFiles(): Promise<File[] | null> {
   });
 }
 
+const LANGUAGE_KEY = 'mdnotes.language';
+
+/** `?lang=en` in the URL wins (for tests), then the stored choice. */
+function readLanguage(): LanguageChoice {
+  const fromUrl = new URLSearchParams(location.search).get('lang');
+  if (isLanguageChoice(fromUrl)) return fromUrl;
+  try {
+    const stored = localStorage.getItem(LANGUAGE_KEY);
+    if (isLanguageChoice(stored)) return stored;
+  } catch {
+    // Storage blocked.
+  }
+  return 'system';
+}
+
 export async function createMockApi(): Promise<NotesApi> {
   const fs = new MemoryFs(true);
   // Store in reverse so the welcome note is the newest.
@@ -116,7 +133,9 @@ export async function createMockApi(): Promise<NotesApi> {
   const changeListeners = new Set<(event: NotesChangedEvent) => void>();
   const exports: MockExport[] = (window.__mdnotesExports = []);
   // Browser mode keeps backups and recovery data in memory only.
-  let backupSettings: BackupSettings = { folder: 'Arbeitsspeicher (Browser-Modus)', auto: 'off', includeHistory: false, keep: 10 };
+  let backupSettings: BackupSettings = { folder: null, auto: 'off', includeHistory: false, keep: 10 };
+  // Resolved on use: the locale is only set after the mock is created.
+  const settings = () => ({ ...backupSettings, folder: t('backup.browserFolder') });
   const backups: Array<{ info: BackupInfo; files: Map<string, string> }> = [];
   const recovery = new Map<string, { body: string; savedAt: number }>();
   const findBackup = (file: string) => {
@@ -174,13 +193,15 @@ export async function createMockApi(): Promise<NotesApi> {
     async exportNote(id, format) {
       const doc = store.read(id);
       const base = slugify(doc.title);
-      if (format === 'pdf') {
-        // Printing to PDF needs Electron; browser mode only records the request.
-        exports.push({ format, fileName: `${base}.pdf`, content: doc.body });
-        return `${base}.pdf`;
+      if (format === 'pdf' || format === 'docx') {
+        // PDF and DOCX need the main process (printing, ZIP); browser mode only records the request.
+        exports.push({ format, fileName: `${base}.${format}`, content: doc.body });
+        return `${base}.${format}`;
       }
-      const fileName = `${base}.${format === 'wiki' ? 'txt' : 'md'}`;
-      const content = format === 'wiki' ? markdownToWiki(doc.body) : doc.body;
+      const ext = { wiki: 'txt', markdown: 'md', html: 'html' }[format];
+      const fileName = `${base}.${ext}`;
+      const content =
+        format === 'wiki' ? markdownToWiki(doc.body) : format === 'html' ? markdownToHtmlDocument(doc.body, doc.title) : doc.body;
       exports.push({ format, fileName, content });
       download(fileName, content);
       return fileName;
@@ -203,12 +224,12 @@ export async function createMockApi(): Promise<NotesApi> {
     restoreVersion: (id, name) => store.restoreVersion(id, name),
     renameLabel: (from, to) => store.renameLabel(from, to),
 
-    getBackupSettings: async () => backupSettings,
+    getBackupSettings: async () => settings(),
     async updateBackupSettings(patch) {
       backupSettings = { ...backupSettings, ...patch };
-      return backupSettings;
+      return settings();
     },
-    chooseBackupFolder: async () => backupSettings,
+    chooseBackupFolder: async () => settings(),
     async createBackup() {
       const now = Date.now();
       const stamp = new Date(now).toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 15);
@@ -243,6 +264,20 @@ export async function createMockApi(): Promise<NotesApi> {
         else entries.push({ id, title: titleFromBody(body), body, savedAt });
       }
       return entries;
+    },
+
+    async getLanguage() {
+      const choice = readLanguage();
+      return { choice, locale: resolveLocale(choice, navigator.languages) };
+    },
+    async setLanguage(choice) {
+      if (!isLanguageChoice(choice)) throw new Error('Invalid language.');
+      try {
+        localStorage.setItem(LANGUAGE_KEY, choice);
+      } catch {
+        // No storage: the choice is lost on reload.
+      }
+      return { choice, locale: resolveLocale(choice, navigator.languages) };
     },
 
     onMenuCommand: noop,

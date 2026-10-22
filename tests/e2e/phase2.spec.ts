@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 const editor = (page: Page) => page.locator('.cm-content');
 const listItems = (page: Page) => page.locator('#notesList ui5-li');

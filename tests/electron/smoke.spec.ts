@@ -31,7 +31,8 @@ test.beforeAll(async () => {
 
   const asset = `${createHash('sha256').update(PIXEL_PNG).digest('hex').slice(0, 16)}.png`;
   await writeFile(path.join(workspace, 'assets', asset), PIXEL_PNG);
-  await writeFile(path.join(workspace, 'hallo.md'), `# Hallo\n\n![Pixel](assets/${asset})\n`);
+  // Image, code block and task, so the editor's widgets render under the app's CSP.
+  await writeFile(path.join(workspace, 'hallo.md'), `# Hallo\n\n![Pixel](assets/${asset})\n\n- [ ] Aufgabe\n\n\`\`\`js\nconst a = 1;\n\`\`\`\n`);
   // A note with unsaved text left over from a "crash".
   await writeFile(path.join(workspace, 'crash.md'), `---\nid: ${CRASH_ID}\nlabels: []\ncreated: 2026-10-01T10:00:00.000Z\n---\n# Crash\n`);
   await mkdir(path.join(userData, 'recovery'));
@@ -39,7 +40,8 @@ test.beforeAll(async () => {
   backups = path.join(root, 'backups');
   await writeFile(
     path.join(userData, 'config.json'),
-    JSON.stringify({ workspace, backup: { folder: backups, auto: 'off', includeHistory: true, keep: 10 } }),
+    // German UI regardless of the runner's OS language.
+    JSON.stringify({ workspace, language: 'de', backup: { folder: backups, auto: 'off', includeHistory: true, keep: 10 } }),
   );
 
   app = await electron.launch({
@@ -59,7 +61,8 @@ test.afterAll(async () => {
 const listItems = () => page.locator('#notesList ui5-li');
 
 test('starts with the configured workspace', async () => {
-  await expect(page.locator('#workspacePath')).toHaveText(workspace);
+  // A cold start on CI runners can take longer than the default timeout.
+  await expect(page.locator('#workspacePath')).toHaveText(workspace, { timeout: 20_000 });
   await expect(listItems().filter({ hasText: 'Hallo' })).toHaveCount(1);
 });
 
@@ -81,6 +84,27 @@ test('shows images through the asset protocol', async () => {
   const img = page.locator('img.cm-md-image');
   await expect(img).toHaveAttribute('src', /^mdnotes-asset:\/\/local\/[0-9a-f]{16}\.png$/);
   await expect.poll(() => img.evaluate((i: HTMLImageElement) => i.naturalWidth)).toBe(1);
+});
+
+test('exports a note with its image as HTML and Word document', async () => {
+  await listItems().filter({ hasText: 'Hallo' }).click();
+  for (const format of ['html', 'docx'] as const) {
+    const target = path.join(root, `export.${format}`);
+    // Replace the save dialog, which tests cannot operate.
+    await app.evaluate(({ dialog }, file) => {
+      dialog.showSaveDialog = (async () => ({ canceled: false, filePath: file })) as typeof dialog.showSaveDialog;
+    }, target);
+    await page.locator('#exportButton').click();
+    await page.locator(`#exportMenu ui5-menu-item[data-format="${format}"]`).click();
+    await expect.poll(async () => (await readFile(target).catch(() => Buffer.alloc(0))).length, { timeout: 10_000 }).toBeGreaterThan(0);
+    const data = await readFile(target);
+    if (format === 'html') {
+      expect(data.toString('utf8')).toContain('<img src="data:image/png;base64,');
+    } else {
+      expect(data.subarray(0, 2).toString()).toBe('PK');
+      expect(data.includes(Buffer.from('word/media/image1.png'))).toBe(true);
+    }
+  }
 });
 
 test('creates a note on disk, saves it and renames it after its title', async () => {
@@ -129,4 +153,13 @@ test('moves notes to the trash folder', async () => {
   await page.locator('#deleteButton').click();
   await expect.poll(async () => (await readdir(path.join(workspace, '.trash'))).length).toBe(1);
   expect((await readdir(workspace)).includes('extern.md')).toBe(false);
+});
+
+test('reports no Content Security Policy violations', async () => {
+  // Open the appearance menu as well, so its styles are applied once.
+  await page.locator('#themeItem').click();
+  await expect(page.locator('#themeMenu')).toHaveJSProperty('open', true);
+  await page.keyboard.press('Escape');
+  const violations = await page.evaluate(() => window.__cspViolations ?? []);
+  expect(violations).toEqual([]);
 });
