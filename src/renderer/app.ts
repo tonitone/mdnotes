@@ -84,12 +84,14 @@ export class App {
     fcl: $('fcl'),
     shell: $('shell'),
     themeItem: $('themeItem'),
+    languageItem: $('languageItem'),
     backupItem: $('backupItem'),
     renameLabelButton: $('renameLabelButton'),
     libraryButton: $('libraryButton'),
     versionsButton: $('versionsButton'),
     workspaceItem: $('workspaceItem'),
     themeMenu: $('themeMenu'),
+    languageMenu: $('languageMenu'),
     browserModeStrip: $('browserModeStrip'),
     workspacePath: $('workspacePath'),
     libraryList: $('libraryList'),
@@ -148,6 +150,7 @@ export class App {
     // Expose the editor to e2e tests in browser mode only.
     if (__BROWSER_MODE__) (window as unknown as { __editorView: unknown }).__editorView = this.editor.view;
     this.buildThemeMenu();
+    this.buildLanguageMenu();
     this.bindEvents();
     this.applyViewMode();
 
@@ -172,19 +175,18 @@ export class App {
     els.versionsButton.addEventListener('click', () => void this.openVersions());
     els.renameLabelButton.addEventListener('click', () => void this.renameCurrentLabel());
 
-    els.themeItem.addEventListener('click', (event: Event) => {
-      const detail = (event as CustomEvent<{ targetRef: HTMLElement }>).detail;
-      event.preventDefault?.();
-      els.themeMenu.opener = detail?.targetRef ?? els.themeItem;
-      els.themeMenu.open = true;
-    });
+    this.openMenuFromShellbar(els.themeItem, els.themeMenu);
+    this.openMenuFromShellbar(els.languageItem, els.languageMenu);
     els.themeMenu.addEventListener('item-click', (event: Event) => {
       const item = (event as CustomEvent<{ item: HTMLElement }>).detail.item;
-      const { theme, density, language } = item.dataset;
+      const { theme, density } = item.dataset;
       if (theme) setThemeChoice(theme as ThemeChoice);
       if (density) setDensity(density as 'compact' | 'cozy');
-      if (isLanguageChoice(language)) void this.changeLanguage(language);
       this.buildThemeMenu();
+    });
+    els.languageMenu.addEventListener('item-click', (event: Event) => {
+      const language = (event as CustomEvent<{ item: HTMLElement }>).detail.item.dataset.language;
+      if (isLanguageChoice(language)) void this.changeLanguage(language);
     });
 
     // Library: all notes, trash and labels.
@@ -322,20 +324,24 @@ export class App {
     for (const value of ['compact', 'cozy'] as const) {
       menu.append(el('ui5-menu-item', { 'attr:text': t(`density.${value}`), 'data-density': value, icon: value === density ? 'accept' : '' }));
     }
-    menu.append(el('ui5-menu-separator'));
-    menu.append(
-      el(
-        'ui5-menu-item',
-        { 'attr:text': t('language.title'), icon: 'globe', id: 'languageMenuItem' },
-        LANGUAGE_CHOICES.map((value) =>
-          el('ui5-menu-item', {
-            'attr:text': t(`language.${value}`),
-            'data-language': value,
-            icon: value === this.language ? 'accept' : '',
-          }),
-        ),
-      ),
-    );
+  }
+
+  private buildLanguageMenu(): void {
+    const menu = this.els.languageMenu;
+    menu.replaceChildren();
+    for (const value of LANGUAGE_CHOICES) {
+      menu.append(el('ui5-menu-item', { 'attr:text': t(`language.${value}`), 'data-language': value, icon: value === this.language ? 'accept' : '' }));
+    }
+  }
+
+  /** Opens `menu` from its shellbar item, also when the item sits in the overflow popover. */
+  private openMenuFromShellbar(item: Ui5Element, menu: Ui5Element): void {
+    item.addEventListener('click', (event: Event) => {
+      const detail = (event as CustomEvent<{ targetRef: HTMLElement }>).detail;
+      event.preventDefault?.();
+      menu.opener = detail?.targetRef ?? item;
+      menu.open = true;
+    });
   }
 
   /** Saves the language and reloads the window, which applies it everywhere. */
