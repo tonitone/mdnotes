@@ -8,7 +8,7 @@
 
 :root[data-look='macos'] {
   --mdn-sidebar: color-mix(in srgb, var(--sapBackgroundColor) 92%, var(--sapTextColor) 8%);
-  --mdn-selection: color-mix(in srgb, var(--sapSelectedColor) 16%, transparent);
+  --mdn-selection: color-mix(in srgb, var(--sapTextColor) 10%, transparent);
   --mdn-hairline: color-mix(in srgb, var(--sapGroup_TitleBorderColor) 60%, transparent);
 }
 
@@ -39,7 +39,25 @@
   --sapList_HeaderBackground: transparent;
   --sapList_HeaderBorderColor: transparent;
   --sapList_Hover_Background: color-mix(in srgb, var(--sapTextColor) 6%, transparent);
+  /* No navigation bar at the row edge; the rounded selection shows it. */
+  --sapList_SelectionBorderColor: transparent;
+  /* Section headers like the macOS sidebar: small, grey, no bar. */
+  --sapGroup_TitleBackground: transparent;
+  --sapGroup_TitleBorderColor: transparent;
+  --sapGroup_TitleTextColor: var(--sapContent_LabelColor);
+  --sapFontHeader4Size: var(--sapFontSmallSize);
+  width: auto;
   padding: 0 0.5rem;
+}
+
+/* Labels follow the library directly instead of sitting at the bottom. */
+:root[data-look='macos'] #libraryList {
+  flex: 0 0 auto;
+}
+
+:root[data-look='macos'] #labelList {
+  flex: 1 1 auto;
+  max-height: none;
 }
 
 :root[data-look='macos'] #libraryList ui5-li,
@@ -56,19 +74,14 @@
   --sapList_Hover_Background: var(--mdn-selection);
 }
 
-/* Note list: white column with thin separators between notes. */
+/* Note list: white column, rows separated by space instead of lines. */
 :root[data-look='macos'] section[slot='midColumn'] {
   background: var(--sapBaseColor);
   border-inline-end: 1px solid var(--mdn-hairline);
 }
 
 :root[data-look='macos'] #notesList ui5-li + ui5-li {
-  box-shadow: 0 -1px 0 0 var(--mdn-hairline);
-}
-
-:root[data-look='macos'] #notesList ui5-li[navigated],
-:root[data-look='macos'] #notesList ui5-li[navigated] + ui5-li {
-  box-shadow: none;
+  margin-top: 2px;
 }
 
 /* Rounded search field, like the macOS toolbar search. */
