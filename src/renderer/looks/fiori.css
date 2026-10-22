@@ -26,6 +26,7 @@
 :root[data-look='fiori'] #labelList,
 :root[data-look='fiori'] #notesList,
 :root[data-look='fiori'] .editor-host {
+  width: auto;
   margin: 0 0.75rem 0.75rem;
   border-radius: var(--sapTile_BorderCornerRadius, 1rem);
   background: var(--sapGroup_ContentBackground);
@@ -35,6 +36,19 @@
 
 :root[data-look='fiori'] #libraryList {
   flex: 0 0 auto;
+}
+
+/* Section header inside the label card: quiet, like a Horizon card header. */
+:root[data-look='fiori'] #labelList {
+  --sapGroup_TitleBackground: transparent;
+  --sapGroup_TitleBorderColor: var(--sapList_BorderColor);
+  --sapFontHeader4Size: var(--sapFontHeader6Size);
+  flex: 0 1 auto;
+}
+
+/* Header rows align with the cards below them. */
+:root[data-look='fiori'] .column-header {
+  padding-inline: 1.25rem 0.75rem;
 }
 
 :root[data-look='fiori'] .label-row {
