@@ -434,6 +434,10 @@ function buildMenu(): void {
       submenu: [
         { label: t('menu.find'), accelerator: 'CmdOrCtrl+F', click: () => sendMenu('find') },
         { type: 'separator' },
+        { label: t('view.edit'), accelerator: 'CmdOrCtrl+1', click: () => sendMenu('view-edit') },
+        { label: t('view.split'), accelerator: 'CmdOrCtrl+2', click: () => sendMenu('view-split') },
+        { label: t('view.preview'), accelerator: 'CmdOrCtrl+3', click: () => sendMenu('view-preview') },
+        { type: 'separator' },
         { role: 'resetZoom', label: t('menu.resetZoom') },
         { role: 'zoomIn', label: t('menu.zoomIn') },
         { role: 'zoomOut', label: t('menu.zoomOut') },

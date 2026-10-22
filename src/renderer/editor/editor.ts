@@ -3,11 +3,11 @@ import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { languages } from '@codemirror/language-data';
 import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search';
-import { EditorState, type Extension } from '@codemirror/state';
+import { Compartment, EditorState, type Extension } from '@codemirror/state';
 import { drawSelection, EditorView, keymap, placeholder } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
-import { assetResolver, livePreview } from './live-preview';
-import { t } from '../../shared/i18n';
+import { assetResolver, livePreview, tablePreview } from './live-preview';
+import { getLocale, t } from '../../shared/i18n';
 import { cspNonce } from './csp';
 
 /**
@@ -62,6 +62,8 @@ export interface NoteEditor {
   setDoc(text: string, options?: { readOnly?: boolean }): void;
   getDoc(): string;
   focus(): void;
+  /** Live preview on (rendered Markdown) or off (plain source, e.g. next to the preview pane). */
+  setLivePreview(on: boolean): void;
 }
 
 export interface EditorOptions {
@@ -102,6 +104,9 @@ async function insertImages(view: EditorView, files: File[], pos: number, option
 }
 
 export function createEditor(parent: HTMLElement, options: EditorOptions): NoteEditor {
+  const preview = new Compartment();
+  let previewOn = true;
+  const previewExtension = () => (previewOn ? [livePreview, tablePreview] : []);
   const readOnlyExtension = (on: boolean) => [EditorState.readOnly.of(on), EditorView.editable.of(!on)];
 
   const extensions = (isReadOnly: boolean): Extension[] => [
@@ -114,7 +119,7 @@ export function createEditor(parent: HTMLElement, options: EditorOptions): NoteE
     markdown({ base: markdownLanguage, codeLanguages: languages, addKeymap: true }),
     syntaxHighlighting(codeHighlight),
     assetResolver.of(options.resolveAsset),
-    livePreview,
+    preview.of(previewExtension()),
     placeholder(t('editor.placeholder')),
     fioriTheme,
     readOnlyExtension(isReadOnly),
@@ -136,7 +141,7 @@ export function createEditor(parent: HTMLElement, options: EditorOptions): NoteE
       'aria-label': t('editor.contentLabel'),
       'aria-describedby': 'editor-help',
       spellcheck: 'true',
-      lang: 'de',
+      lang: getLocale(),
     }),
     EditorView.domEventHandlers({
       paste(event, view) {
@@ -173,5 +178,10 @@ export function createEditor(parent: HTMLElement, options: EditorOptions): NoteE
     },
     getDoc: () => view.state.doc.toString(),
     focus: () => view.focus(),
+    setLivePreview(on) {
+      if (on === previewOn) return;
+      previewOn = on;
+      view.dispatch({ effects: preview.reconfigure(previewExtension()) });
+    },
   };
 }
