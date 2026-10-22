@@ -1,14 +1,14 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 
-/** Language setting: German and English UI, switched through the appearance menu. */
+/** Language setting: German and English UI, switched through its own shellbar menu. */
 
 const listItems = (page: Page) => page.locator('#notesList ui5-li');
 
-async function chooseLanguage(page: Page, menuText: string, value: string) {
-  await page.locator('#themeItem').click();
-  await page.locator(`ui5-menu-item[text="${menuText}"]`).click();
-  await page.locator(`ui5-menu-item[data-language="${value}"]`).click();
+async function chooseLanguage(page: Page, value: string) {
+  await page.locator('#languageItem').click();
+  await expect(page.locator('#languageMenu')).toHaveJSProperty('open', true);
+  await page.locator(`#languageMenu ui5-menu-item[data-language="${value}"]`).click();
 }
 
 test('follows the browser language (German in tests)', async ({ page }) => {
@@ -23,7 +23,7 @@ test('switches to English and back, and keeps the choice', async ({ page }) => {
   await page.goto('/');
   await expect(listItems(page).first()).toBeVisible();
 
-  await chooseLanguage(page, 'Sprache', 'en');
+  await chooseLanguage(page, 'en');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.locator('#newNoteButton')).toHaveText('New note');
   await expect(page.locator('#notesTitle')).toHaveText('Notes');
@@ -34,7 +34,7 @@ test('switches to English and back, and keeps the choice', async ({ page }) => {
   await page.reload();
   await expect(page.locator('#newNoteButton')).toHaveText('New note');
 
-  await chooseLanguage(page, 'Language', 'de');
+  await chooseLanguage(page, 'de');
   await expect(page.locator('html')).toHaveAttribute('lang', 'de');
   await expect(page.locator('#newNoteButton')).toHaveText('Neue Notiz');
 });
