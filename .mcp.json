@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "ui5-webcomponents": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@ui5/webcomponents-mcp-server"]
+    }
+  }
+}
