@@ -79,7 +79,8 @@ function renderBlock(block: Block, opts: HtmlOptions): string {
     case 'list':
       return renderList(block, opts);
     case 'table': {
-      const style = (i: number) => (block.align[i] ? ` style="text-align:${block.align[i]}"` : '');
+      // Classes instead of style attributes: the app's CSP blocks inline styles.
+      const style = (i: number) => (block.align[i] ? ` class="align-${block.align[i]}"` : '');
       const head = block.header.map((c, i) => `<th${style(i)}>${renderInline(c, opts)}</th>`).join('');
       const rows = block.rows
         .map((r) => `<tr>${r.map((c, i) => `<td${style(i)}>${renderInline(c, opts)}</td>`).join('')}</tr>`)
@@ -110,6 +111,7 @@ const PRINT_CSS = `
   table { border-collapse: collapse; margin: 8px 0; }
   th, td { border: 1px solid #a9b4be; padding: 4px 8px; }
   th { background: #eff1f2; }
+  .align-left { text-align: left; } .align-center { text-align: center; } .align-right { text-align: right; }
   img { max-width: 100%; }
   li.task { list-style: none; margin-inline-start: -1.2em; }
   a { color: #0064d9; }
