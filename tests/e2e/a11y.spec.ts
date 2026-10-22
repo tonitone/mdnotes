@@ -88,11 +88,16 @@ test('notice strip after an outside change', async ({ page }) => {
 // Menus and dialogs
 // ---------------------------------------------------------------------------
 
-test('menus: appearance, more actions, export', async ({ page }) => {
+test('menus: appearance, language, more actions, export', async ({ page }) => {
   await openApp(page);
   await page.locator('#themeItem').click();
   await expect(page.locator('#themeMenu')).toHaveJSProperty('open', true);
   await expectNoSeriousViolations(page, 'appearance menu');
+  await page.keyboard.press('Escape');
+
+  await page.locator('#languageItem').click();
+  await expect(page.locator('#languageMenu')).toHaveJSProperty('open', true);
+  await expectNoSeriousViolations(page, 'language menu');
   await page.keyboard.press('Escape');
 
   await page.locator('#moreButton').click();
