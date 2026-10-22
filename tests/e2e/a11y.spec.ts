@@ -40,6 +40,34 @@ for (const theme of ['light', 'dark', 'hcb', 'hcw'] as const) {
   });
 }
 
+for (const look of ['fiori', 'macos'] as const) {
+  for (const theme of ['light', 'dark'] as const) {
+    test(`look ${look}, theme ${theme}`, async ({ page }) => {
+      await page.addInitScript(
+        ([l, th]) => {
+          localStorage.setItem('mdnotes.look', l);
+          localStorage.setItem('mdnotes.theme', th);
+        },
+        [look, theme],
+      );
+      await openApp(page);
+      await expect(page.locator('html')).toHaveAttribute('data-look', look);
+      await openNote(page, 'Willkommen');
+      await expectNoSeriousViolations(page, `${look} ${theme}`);
+    });
+  }
+}
+
+test('high-contrast themes ignore the look', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('mdnotes.look', 'macos');
+    localStorage.setItem('mdnotes.theme', 'hcb');
+  });
+  await openApp(page);
+  await expect(page.locator('html')).toHaveAttribute('data-look', 'standard');
+  await expect(page.locator('#look-style')).toHaveCount(0);
+});
+
 test('main view in English', async ({ page }) => {
   await openApp(page, '/?lang=en');
   await openNote(page, 'Willkommen');

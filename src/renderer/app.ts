@@ -14,7 +14,7 @@ import { MAX_ASSET_BYTES, isImageMime } from '../shared/assets';
 import { markdownToWiki } from '../shared/markdown/wiki';
 import { openBackupDialog } from './backup-dialog';
 import { createEditor, type NoteEditor } from './editor/editor';
-import { THEME_CHOICES, getDensity, getThemeChoice, setDensity, setThemeChoice, themeLabel, type ThemeChoice } from './theme';
+import { LOOKS, THEME_CHOICES, getDensity, getLook, getThemeChoice, setDensity, setLook, setThemeChoice, themeLabel, type Look, type ThemeChoice } from './theme';
 import { announce, confirmDialog, el, infoDialog, promptDialog, type Ui5Element } from './ui';
 import { openVersionDialog } from './versions';
 import { formatModified, formatTime, formatVersionTime } from './format';
@@ -159,8 +159,9 @@ export class App {
     });
     els.themeMenu.addEventListener('item-click', (event: Event) => {
       const item = (event as CustomEvent<{ item: HTMLElement }>).detail.item;
-      const { theme, density, language } = item.dataset;
+      const { theme, density, language, look } = item.dataset;
       if (theme) setThemeChoice(theme as ThemeChoice);
+      if (look) setLook(look as Look);
       if (density) setDensity(density as 'compact' | 'cozy');
       if (isLanguageChoice(language)) void this.changeLanguage(language);
       this.buildThemeMenu();
@@ -278,6 +279,16 @@ export class App {
       menu.append(el('ui5-menu-item', { 'attr:text': t(`density.${value}`), 'data-density': value, icon: value === density ? 'accept' : '' }));
     }
     menu.append(el('ui5-menu-separator'));
+    const currentLook = getLook();
+    menu.append(
+      el(
+        'ui5-menu-item',
+        { 'attr:text': t('look.title'), icon: 'palette' },
+        LOOKS.map((value) =>
+          el('ui5-menu-item', { 'attr:text': t(`look.${value}`), 'data-look': value, icon: value === currentLook ? 'accept' : '' }),
+        ),
+      ),
+    );
     menu.append(
       el(
         'ui5-menu-item',

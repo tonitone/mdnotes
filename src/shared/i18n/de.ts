@@ -75,6 +75,10 @@ export const de = {
   'theme.hcw': 'Hoher Kontrast weiß',
   'density.compact': 'Kompakt',
   'density.cozy': 'Komfortabel',
+  'look.title': 'Stil',
+  'look.standard': 'Standard',
+  'look.fiori': 'Horizon verfeinert',
+  'look.macos': 'macOS-Stil',
 
   // Status line
   'status.created': 'Neu angelegt',

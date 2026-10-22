@@ -1,0 +1,64 @@
+/*
+ * Look "Horizon refined": strict SAP Fiori, closer to the Horizon card
+ * pattern. Loaded on demand (see theme.ts). Only SAP theming parameters and
+ * the app's own elements are styled; UI5 components are not modified.
+ */
+
+:root[data-look='fiori'] body,
+:root[data-look='fiori'] .column,
+:root[data-look='fiori'] .editor-column {
+  background: var(--sapBackgroundColor);
+}
+
+/* Column headers sit on the page, without separator lines. */
+:root[data-look='fiori'] .column-header {
+  min-height: 3rem;
+  padding: 0.5rem 1rem 0.25rem;
+  border-bottom: none;
+}
+
+:root[data-look='fiori'] .search-row {
+  padding: 0.25rem 0.75rem 0.75rem;
+}
+
+/* Lists and the editor become Horizon cards: rounded, shadow, inset. */
+:root[data-look='fiori'] #libraryList,
+:root[data-look='fiori'] #labelList,
+:root[data-look='fiori'] #notesList,
+:root[data-look='fiori'] .editor-host {
+  margin: 0 0.75rem 0.75rem;
+  border-radius: var(--sapTile_BorderCornerRadius, 1rem);
+  background: var(--sapGroup_ContentBackground);
+  box-shadow: var(--sapContent_Shadow0);
+  overflow: auto;
+}
+
+:root[data-look='fiori'] #libraryList {
+  flex: 0 0 auto;
+}
+
+:root[data-look='fiori'] .label-row {
+  padding: 0 0.75rem 0.5rem;
+  border-bottom: none;
+}
+
+:root[data-look='fiori'] .workspace-path {
+  padding: 0.25rem 1.25rem 1rem;
+}
+
+/* Editor: more air and a clear title. */
+:root[data-look='fiori'] .editor-host .cm-content {
+  padding: 2.5rem 3rem 6rem;
+}
+
+:root[data-look='fiori'] .cm-md-h1,
+:root[data-look='fiori'] .cm-md-h2,
+:root[data-look='fiori'] .cm-md-h3 {
+  font-family: var(--sapFontHeaderFamily, var(--sapFontFamily));
+  color: var(--sapTitleColor, var(--sapTextColor));
+}
+
+:root[data-look='fiori'] .cm-md-h1 {
+  font-size: 2em;
+  letter-spacing: -0.01em;
+}
