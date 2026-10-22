@@ -104,3 +104,33 @@ test('split mode stacks by editor column width, not by window width', async ({ p
   await expect.poll(columnWidth).toBeGreaterThan(700);
   await expect.poll(direction).toBe('row');
 });
+
+test('the column layout comes back when the window grows after "Zur Bibliothek"', async ({ page }) => {
+  await page.setViewportSize({ width: 500, height: 800 });
+  await page.goto('/');
+  await expect(listItems(page).first()).toBeVisible();
+  await page.locator('#libraryButton').click();
+  await expect(page.locator('#allNotesItem')).toBeVisible();
+  await expect(listItems(page).first()).toBeHidden();
+
+  await page.setViewportSize({ width: 1400, height: 800 });
+  await expect(listItems(page).first()).toBeVisible();
+  await expect(page.locator('#noSelection')).toBeVisible();
+  await listItems(page).first().click();
+  await expect(page.locator('#editorArea')).toBeVisible();
+  await expect(listItems(page).first()).toBeVisible();
+});
+
+test('a narrow window without an open note shows the list', async ({ page }) => {
+  await page.setViewportSize({ width: 500, height: 800 });
+  await page.goto('/');
+  await expect(listItems(page).first()).toBeVisible();
+  await expect(page.locator('#noSelection')).toBeHidden();
+
+  // Shrinking from a wide window does the same.
+  await page.setViewportSize({ width: 1400, height: 800 });
+  await expect(page.locator('#noSelection')).toBeVisible();
+  await page.setViewportSize({ width: 500, height: 800 });
+  await expect(listItems(page).first()).toBeVisible();
+  await expect(page.locator('#noSelection')).toBeHidden();
+});
