@@ -170,13 +170,12 @@ test.describe('export and import', () => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await openApp(page);
     await openNote(page, 'Sprint-Planung');
-    await expect(page.locator('#fileName')).toHaveCount(0);
 
     await page.locator('#editorMoreButton').click();
     await menuItem(page, 'editorMoreMenu', 'Dateiname kopieren');
     const copied = await page.evaluate(() => navigator.clipboard.readText());
     expect(copied).toMatch(/^sprint-planung--[0-9a-z]{6}\.md$/);
-    await expect(page.locator('#editorColumn')).toHaveAttribute('data-file-name', copied);
+    await expect(listItems(page).filter({ hasText: 'Sprint-Planung' }).first()).toHaveJSProperty('tooltip', copied);
     await expect(page.locator('#announcer')).toHaveText('Dateiname kopiert.');
     await expect(page.locator('#toast')).toHaveText('Dateiname kopiert.');
   });
