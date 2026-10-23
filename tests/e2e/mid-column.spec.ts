@@ -29,6 +29,15 @@ async function resizeColumnTo(page: Page, columnPx: number) {
   await expect.poll(async () => Math.abs((await columnWidth(page)) - columnPx)).toBeLessThan(8);
 }
 
+/** Right edge of the real title text (not of the ui5-title box, which ends before the buttons anyway). */
+async function titleTextRight(page: Page): Promise<number> {
+  return page.locator('#notesTitle').evaluate((title) => {
+    const range = document.createRange();
+    range.selectNodeContents(title);
+    return range.getBoundingClientRect().right;
+  });
+}
+
 async function checkHeader(page: Page, compact: boolean) {
   const rem = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
   expect(rem).toBe(16);
@@ -42,9 +51,9 @@ async function checkHeader(page: Page, compact: boolean) {
   if (compact) await expect(button).toHaveText('');
   else await expect(button).toHaveText('Neue Notiz');
 
-  const title = (await page.locator('#notesTitle').boundingBox())!;
-  const action = (await button.boundingBox())!;
-  expect(title.x + title.width).toBeLessThanOrEqual(action.x + 0.5);
+  // The whole title text ends before the first header action.
+  const first = (await page.locator('.header-actions ui5-button:not([hidden])').first().boundingBox())!;
+  expect(await titleTextRight(page)).toBeLessThanOrEqual(first.x + 0.5);
 }
 
 test('narrow middle column (about 255 px): icon-only button, no overlap, axe', async ({ page }) => {
@@ -57,4 +66,22 @@ test('wide middle column: icon and text, no overlap, axe', async ({ page }) => {
   await openWithNote(page, 350);
   await checkHeader(page, false);
   await expectNoSeriousViolations(page, 'wide middle column');
+});
+
+test('long label name: the title is cut off before the buttons', async ({ page }) => {
+  await openWithNote(page, 350);
+  await page.locator('#labelList ui5-li', { hasText: 'arbeit' }).click();
+  await page.locator('#renameLabelButton').click();
+  const input = page.locator('ui5-dialog ui5-input input');
+  await input.fill('Ein sehr langer Labelname fuer das Projekt Sommerfest');
+  await input.press('Enter');
+  const title = page.locator('#notesTitle');
+  await expect(title).toHaveText('Label: Ein sehr langer Labelname fuer das Projekt Sommerfest');
+
+  const box = (await title.boundingBox())!;
+  const first = (await page.locator('.header-actions ui5-button:not([hidden])').first().boundingBox())!;
+  // Premise: the text really is longer than the room it gets.
+  expect(await titleTextRight(page)).toBeGreaterThan(first.x);
+  // The title box ends before the buttons.
+  expect(box.x + box.width).toBeLessThanOrEqual(first.x + 0.5);
 });
