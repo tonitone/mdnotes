@@ -73,10 +73,11 @@ test('long label name: the title is cut off before the buttons', async ({ page }
   await page.locator('#labelList ui5-li', { hasText: 'arbeit' }).click();
   await page.locator('#renameLabelButton').click();
   const input = page.locator('ui5-dialog ui5-input input');
-  await input.fill('Ein sehr langer Labelname fuer das Projekt Sommerfest');
+  // Labels are limited to 40 characters (MAX_LABEL_LENGTH); a longer name would be shortened and the view would fall back to all notes.
+  await input.fill('Ein sehr langer Labelname Sommerfest');
   await input.press('Enter');
   const title = page.locator('#notesTitle');
-  await expect(title).toHaveText('Label: Ein sehr langer Labelname fuer das Projekt Sommerfest');
+  await expect(title).toHaveText('Label: Ein sehr langer Labelname Sommerfest');
 
   const box = (await title.boundingBox())!;
   const first = (await page.locator('.header-actions ui5-button:not([hidden])').first().boundingBox())!;
