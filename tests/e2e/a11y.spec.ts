@@ -271,6 +271,7 @@ test('More actions menu: keyboard opens and copies, focus returns to the button'
   // Open again and choose the first entry with the keyboard.
   await page.keyboard.press('Enter');
   await expect(menu).toHaveJSProperty('open', true);
+  await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
   await expect(menu).toHaveJSProperty('open', false);
   await expect(page.locator('#toast')).toHaveText('Dateiname kopiert.');
