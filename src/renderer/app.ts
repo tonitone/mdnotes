@@ -76,6 +76,7 @@ export class App {
   private recoveryQueue: Promise<unknown> = Promise.resolve();
   private saving: Promise<void> = Promise.resolve();
   private query = '';
+  private fileName = '';
   private searchHits: SearchHit[] | null = null;
   private viewMode: ViewMode = readViewMode();
   private previewTimer: number | undefined;
@@ -105,7 +106,7 @@ export class App {
     moreMenu: $('moreMenu'),
     searchInput: $('searchInput'),
     backButton: $('backButton'),
-    fileName: $('fileName'),
+    editorColumn: $('editorColumn'),
     saveStatus: $('saveStatus'),
     noteActions: $('noteActions'),
     exportButton: $('exportButton'),
@@ -578,7 +579,14 @@ export class App {
     this.notes.splice(index, 1);
     this.notes.unshift(updated);
     this.renderList();
-    if (result.id === this.currentId) this.els.fileName.textContent = updated.fileName;
+    if (result.id === this.currentId) this.setFileName(updated.fileName);
+  }
+
+  /** The file name is not shown; it stays in state and in `data-file-name` for tests. */
+  private setFileName(name: string): void {
+    this.fileName = name;
+    if (name) this.els.editorColumn.dataset.fileName = name;
+    else delete this.els.editorColumn.dataset.fileName;
   }
 
   private showView(view: 'editor' | 'trashEntry' | 'noSelection' | 'noWorkspace'): void {
@@ -591,7 +599,7 @@ export class App {
     this.els.labelRow.hidden = view !== 'editor';
     this.els.trashActions.hidden = view !== 'trashEntry';
     if (!editing) {
-      this.els.fileName.textContent = '';
+      this.setFileName('');
       this.els.saveStatus.textContent = '';
     }
   }
@@ -617,7 +625,7 @@ export class App {
       this.closeEditor();
       this.currentId = id;
       this.loadDoc(doc.body);
-      this.els.fileName.textContent = doc.fileName;
+      this.setFileName(doc.fileName);
       this.setStatus(t('status.modifiedAt', { time: formatModified(doc.modified) }));
       this.renderTokens(doc.labels);
       this.showView('editor');
@@ -644,7 +652,7 @@ export class App {
       this.currentId = doc.id;
       this.renderList();
       this.loadDoc(doc.body);
-      this.els.fileName.textContent = doc.fileName;
+      this.setFileName(doc.fileName);
       this.setStatus(t('status.created'));
       this.renderTokens([]);
       // A new note is written, not read: leave preview-only mode.
@@ -830,7 +838,7 @@ export class App {
       this.closeEditor();
       this.currentTrash = trashName;
       this.loadDoc(body, { readOnly: true });
-      this.els.fileName.textContent = entry?.title ?? '';
+      this.setFileName(entry?.title ?? '');
       this.setStatus(entry ? t('trash.deletedAt', { time: formatModified(entry.trashedAt) }) : '');
       this.showView('trashEntry');
       this.setLayout('ThreeColumnsEndExpanded');
@@ -991,7 +999,7 @@ export class App {
     this.loadDoc(doc.body);
     view.dispatch({ selection: { anchor: head } });
     this.dirty = false;
-    this.els.fileName.textContent = doc.fileName;
+    this.setFileName(doc.fileName);
     this.renderTokens(doc.labels);
   }
 

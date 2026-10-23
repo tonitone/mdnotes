@@ -89,13 +89,6 @@ ui5-flexible-column-layout {
   font-size: var(--sapFontSmallSize);
 }
 
-.file-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: var(--sapContent_MonospaceFontFamily, monospace);
-}
-
 .save-status {
   white-space: nowrap;
 }

@@ -63,11 +63,10 @@
       </section>
 
       <!-- Column 3: editor -->
-      <section slot="endColumn" class="column editor-column" data-sap-ui-fastnavgroup="true">
+      <section slot="endColumn" id="editorColumn" class="column editor-column" data-sap-ui-fastnavgroup="true">
         <header class="column-header editor-header">
           <ui5-button id="backButton" design="Transparent" icon="nav-back" tooltip="Zur Notizliste" accessible-name="Zur Notizliste" data-i18n-attr="tooltip:editor.back; accessible-name:editor.back" hidden></ui5-button>
           <div class="editor-meta">
-            <span id="fileName" class="file-name"></span>
             <span id="saveStatus" class="save-status" role="status" aria-live="polite"></span>
           </div>
           <ui5-segmented-button id="viewModeButton" accessible-name="Ansicht" data-i18n-attr="accessible-name:view.mode" hidden>
