@@ -613,11 +613,9 @@ export class App {
     if (result.id === this.currentId) this.setFileName(updated.fileName);
   }
 
-  /** The file name is not shown; it stays in state and in `data-file-name` for tests. */
+  /** The file name is not shown in the header; it is only kept for "Copy file name". */
   private setFileName(name: string): void {
     this.fileName = name;
-    if (name) this.els.editorColumn.dataset.fileName = name;
-    else delete this.els.editorColumn.dataset.fileName;
   }
 
   private showView(view: 'editor' | 'trashEntry' | 'noSelection' | 'noWorkspace'): void {
