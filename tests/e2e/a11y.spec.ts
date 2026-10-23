@@ -40,6 +40,26 @@ for (const theme of ['light', 'dark', 'hcb', 'hcw'] as const) {
   });
 }
 
+// Code block tools (ui5-select and ui5-button at the fence line)
+for (const theme of ['light', 'hcb'] as const) {
+  test(`code block tools, cursor outside the fence: theme ${theme}`, async ({ page }) => {
+    await page.addInitScript((value) => localStorage.setItem('mdnotes.theme', value), theme);
+    await openApp(page);
+    await openNote(page, 'Willkommen');
+    await expect(page.locator('.cm-md-codetools')).toBeVisible();
+    await expectNoSeriousViolations(page, `code tools ${theme}`);
+  });
+
+  test(`code block tools with the language list open: theme ${theme}`, async ({ page }) => {
+    await page.addInitScript((value) => localStorage.setItem('mdnotes.theme', value), theme);
+    await openApp(page);
+    await openNote(page, 'Willkommen');
+    await page.locator('.cm-md-codetools ui5-select').click();
+    await expect(page.locator('.cm-md-codetools ui5-option[value="javascript"]')).toBeVisible();
+    await expectNoSeriousViolations(page, `code tools list open ${theme}`);
+  });
+}
+
 test('main view in English', async ({ page }) => {
   await openApp(page, '/?lang=en');
   await openNote(page, 'Willkommen');
