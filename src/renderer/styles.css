@@ -36,6 +36,7 @@ ui5-flexible-column-layout {
   min-height: 2.75rem;
   padding: 0.25rem 1rem;
   border-bottom: 1px solid var(--sapGroup_TitleBorderColor);
+  flex-wrap: nowrap;
 }
 
 .header-title {
@@ -43,6 +44,14 @@ ui5-flexible-column-layout {
   align-items: center;
   gap: 0.25rem;
   min-width: 0;
+}
+
+/* The title shrinks with an ellipsis, so the header actions can never cover it. */
+.header-title ui5-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .search-row {
