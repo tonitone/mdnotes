@@ -51,8 +51,13 @@ Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand
   Bei größeren, mehrdeutigen Aufgaben vorher kurz fragen.
 - Design: Standard-Horizon. Eigene Looks wurden abgelehnt (PR #9). UI5-Komponenten nie verändern.
 - Bedienelemente (Knopf, Auswahl, Checkbox, Eingabe, Menü, Dialog, Liste) sind immer UI5-Komponenten.
-  Inhalt (Markdown in Editor und Vorschau) bleibt semantisches HTML und CodeMirror. Noch nativ: die
-  Code-Werkzeuge und das Aufgaben-Kästchen in `live-preview.ts` (Umstellung ist Paket D7 im Design-Plan).
+  Inhalt (Markdown in Editor und Vorschau) bleibt semantisches HTML und CodeMirror. Die Code-Werkzeuge
+  (`ui5-select`, `ui5-button`) in `live-preview.ts` sind UI5. Das Aufgaben-Kästchen bleibt das native
+  `<input type="checkbox">`, als Teil des Markdown-Inhalts (Spike D7 mit `ui5-checkbox` ist gescheitert):
+  Es müsste unter die vorgesehene Box von 2,75rem/2rem verkleinert werden (UI5 verändert, Klickfläche
+  und Fokusring ragen aus der Zeile, Höhe unter 24 px gefährdet WCAG 2.5.8), und jeder Tastendruck über
+  einer Aufgabe würde schwere Shadow-DOM-Elemente neu erzeugen. Prüfungen am nativen Kästchen:
+  Tastatur (Space), Zielgröße mindestens 24 px per CSS, zugänglicher Name (`task.open`/`task.done`).
 - Jede neue Ansicht und jeder neue Dialog bekommt einen axe-Test in `tests/e2e/a11y.spec.ts`.
 - Cloud-Sitzung: npm-Registry gesperrt (neue Pakete nur mit Lockfile vom Mac des Nutzers), lokal nur
   Unit-Tests. Die CI ist die Testschleife; Fehler über die Check-Run-Annotations-API lesen. PRs über die REST-API.

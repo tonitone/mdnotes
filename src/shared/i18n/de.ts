@@ -224,7 +224,6 @@ export const de = {
   // Code blocks in the editor
   'code.noLanguage': 'Keine Sprache',
   'code.language': 'Sprache des Code-Blocks',
-  'code.copy': 'Kopieren',
   'code.copyLabel': 'Code kopieren',
   'code.copied': 'Code kopiert',
   'code.copyFailed': 'Kopieren nicht möglich',
