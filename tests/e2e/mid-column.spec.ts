@@ -91,3 +91,28 @@ test('long label name: the title is cut off before the buttons', async ({ page }
   );
   expect(ellipsis).toBe(true);
 });
+
+test('label view just above its threshold: text button and the whole title fit', async ({ page }) => {
+  // The rename button needs room: the label view switches to the icon below 22 rem (352 px).
+  await openWithNote(page, 360);
+  await page.locator('#labelList ui5-li', { hasText: 'arbeit' }).click();
+  await expect(page.locator('#renameLabelButton')).toBeVisible();
+  await expect(page.locator('#newNoteButton')).toHaveText('Neue Notiz');
+
+  const title = page.locator('#notesTitle');
+  await expect(title).toHaveText('Label: arbeit');
+  const box = (await title.boundingBox())!;
+  const first = (await page.locator('.header-actions ui5-button:not([hidden])').first().boundingBox())!;
+  const textRight = await titleTextRight(page);
+  // Not cut off and not covered.
+  expect(textRight).toBeLessThanOrEqual(box.x + box.width + 0.5);
+  expect(textRight).toBeLessThanOrEqual(first.x + 0.5);
+});
+
+test('label view in a narrow column: icon-only button', async ({ page }) => {
+  await openWithNote(page, 300);
+  await page.locator('#labelList ui5-li', { hasText: 'arbeit' }).click();
+  await expect(page.locator('#renameLabelButton')).toBeVisible();
+  await expect(page.locator('#newNoteButton')).toHaveText('');
+  await expect(page.getByRole('button', { name: 'Neue Notiz' })).toBeVisible();
+});
