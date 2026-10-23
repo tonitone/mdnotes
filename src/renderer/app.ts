@@ -18,6 +18,7 @@ import { createEditor, type NoteEditor } from './editor/editor';
 import { THEME_CHOICES, getDensity, getThemeChoice, setDensity, setThemeChoice, themeLabel, type ThemeChoice } from './theme';
 import { announce, confirmDialog, el, infoDialog, promptDialog, type Ui5Element } from './ui';
 import { openVersionDialog } from './versions';
+import { observeCompact } from './compact';
 import { formatModified, formatTime, formatVersionTime } from './format';
 import { LANGUAGE_CHOICES, isLanguageChoice, t, tp, type LanguageChoice } from '../shared/i18n';
 
@@ -26,6 +27,8 @@ const SAVE_DELAY_MS = 700;
 /** Delay before renaming the file after its title. */
 const FINALIZE_DELAY_MS = 4000;
 const SEARCH_DELAY_MS = 150;
+/** Below this width of the middle column, "New note" shows only its icon. */
+const NEW_NOTE_COMPACT_REM = 17;
 /** Unsaved text is written to the crash recovery store at most this often. */
 const RECOVERY_DELAY_MS = 2000;
 
@@ -152,6 +155,7 @@ export class App {
     this.buildThemeMenu();
     this.buildLanguageMenu();
     this.bindEvents();
+    this.observeMiddleColumn();
     this.applyViewMode();
 
     const workspace = await this.api.getWorkspace();
@@ -341,6 +345,15 @@ export class App {
       event.preventDefault?.();
       menu.opener = detail?.targetRef ?? item;
       menu.open = true;
+    });
+  }
+
+  /** Narrow middle column: "New note" keeps only its icon; tooltip and accessible name stay. */
+  private observeMiddleColumn(): void {
+    const column = document.querySelector<HTMLElement>('section[slot="midColumn"]');
+    if (!column) return;
+    observeCompact(column, NEW_NOTE_COMPACT_REM, (compact) => {
+      this.els.newNoteButton.textContent = compact ? '' : t('notes.new');
     });
   }
 
