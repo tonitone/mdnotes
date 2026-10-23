@@ -114,7 +114,7 @@ test.describe('code blocks', () => {
     await expect(page.locator('#announcer')).toHaveText('Code kopiert');
   });
 
-  test('keyboard: Alt+Down opens the list, Escape closes it, F4 and Enter pick', async ({ page, context }) => {
+  test('keyboard: Space opens the list, Escape closes it, F4 and Enter pick', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await openApp(page);
     await openNote(page, 'Willkommen');
@@ -122,15 +122,18 @@ test.describe('code blocks', () => {
     const tools = page.locator('.cm-md-codetools');
     const select = tools.locator('ui5-select');
     const option = tools.locator('ui5-option[value="javascript"]');
-    await select.focus();
-    await page.keyboard.press('Alt+ArrowDown');
+    // The key handlers sit on the select's inner focusable root.
+    const root = select.locator('.ui5-select-label-root');
+    await root.focus();
+    await expect(root).toBeFocused();
+    await page.keyboard.press('Space');
     await expect(option).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(option).toBeHidden();
     expect(await editorDoc(page)).toContain('```ts\nfunction greet');
 
     // "ts" is the last option (not in the list), so ArrowUp picks the one before it.
-    await select.focus();
+    await root.focus();
     await page.keyboard.press('F4');
     await expect(option).toBeVisible();
     await page.keyboard.press('ArrowUp');
