@@ -359,8 +359,9 @@ ui5-illustrated-message {
   min-width: 8rem;
 }
 
-/* The fence line contains its floated tools, so the next code line never sits under them. */
-.cm-md-codeblock-tools {
+/* The fence line contains its floated tools, so the next code line never sits under them.
+   The longer selector wins over CodeMirror's own `.cm-line { display: block }`. */
+.cm-content .cm-line.cm-md-codeblock-tools {
   display: flow-root;
 }
 

@@ -114,7 +114,7 @@ test.describe('code blocks', () => {
     await expect(page.locator('#announcer')).toHaveText('Code kopiert');
   });
 
-  test('keyboard: Space opens the list, Escape closes it, Enter picks', async ({ page, context }) => {
+  test('keyboard: Alt+Down opens the list, Escape closes it, F4 and Enter pick', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await openApp(page);
     await openNote(page, 'Willkommen');
@@ -123,7 +123,7 @@ test.describe('code blocks', () => {
     const select = tools.locator('ui5-select');
     const option = tools.locator('ui5-option[value="javascript"]');
     await select.focus();
-    await page.keyboard.press('Space');
+    await page.keyboard.press('Alt+ArrowDown');
     await expect(option).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(option).toBeHidden();
@@ -131,7 +131,7 @@ test.describe('code blocks', () => {
 
     // "ts" is the last option (not in the list), so ArrowUp picks the one before it.
     await select.focus();
-    await page.keyboard.press('Enter');
+    await page.keyboard.press('F4');
     await expect(option).toBeVisible();
     await page.keyboard.press('ArrowUp');
     await page.keyboard.press('Enter');
