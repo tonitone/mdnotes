@@ -180,6 +180,18 @@ test.describe('export and import', () => {
     await expect(page.locator('#toast')).toHaveText('Dateiname kopiert.');
   });
 
+  test('a failing clipboard shows the copy error', async ({ page }) => {
+    await openApp(page);
+    await openNote(page, 'Sprint-Planung');
+    await page.evaluate(() => {
+      Object.defineProperty(navigator.clipboard, 'writeText', { configurable: true, value: () => Promise.reject(new Error('denied')) });
+    });
+    await page.locator('#editorMoreButton').click();
+    await menuItem(page, 'editorMoreMenu', 'Dateiname kopieren');
+    await expect(page.locator('#errorRegion ui5-message-strip')).toContainText('Kopieren in die Zwischenablage ist fehlgeschlagen.');
+    await expect(page.locator('#toast')).not.toHaveText('Dateiname kopiert.');
+  });
+
   test('copying the file name right after a title change copies the renamed file', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await openApp(page);
