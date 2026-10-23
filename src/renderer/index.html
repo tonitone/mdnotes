@@ -78,6 +78,7 @@
             <ui5-button id="versionsButton" design="Transparent" icon="history" tooltip="Versionen" accessible-name="Versionen" data-i18n-attr="tooltip:editor.versions; accessible-name:editor.versions"></ui5-button>
             <ui5-button id="exportButton" design="Transparent" icon="action" tooltip="Exportieren" accessible-name="Exportieren" data-i18n-attr="tooltip:editor.export; accessible-name:editor.export"></ui5-button>
             <ui5-button id="deleteButton" design="Transparent" icon="delete" tooltip="In den Papierkorb" accessible-name="In den Papierkorb" data-i18n-attr="tooltip:editor.trash; accessible-name:editor.trash"></ui5-button>
+            <ui5-button id="editorMoreButton" design="Transparent" icon="overflow" tooltip="Weitere Aktionen" accessible-name="Weitere Aktionen" data-i18n-attr="tooltip:editor.more; accessible-name:editor.more"></ui5-button>
           </div>
           <div class="header-actions" id="trashActions" hidden>
             <ui5-button id="restoreButton" design="Emphasized" icon="undo" data-i18n="trash.restore">Wiederherstellen</ui5-button>
@@ -93,6 +94,9 @@
           <ui5-menu-item text="Als PDF speichern …" icon="pdf-attachment" data-format="pdf" data-i18n-attr="text:export.savePdf"></ui5-menu-item>
           <ui5-menu-item text="Als HTML speichern …" icon="attachment-html" data-format="html" data-i18n-attr="text:export.saveHtml"></ui5-menu-item>
           <ui5-menu-item text="Als Word-Dokument speichern …" icon="doc-attachment" data-format="docx" data-i18n-attr="text:export.saveDocx"></ui5-menu-item>
+        </ui5-menu>
+        <ui5-menu id="editorMoreMenu">
+          <ui5-menu-item text="Dateiname kopieren" icon="copy" data-action="copy-file-name" data-i18n-attr="text:editor.copyFileName"></ui5-menu-item>
         </ui5-menu>
         <div id="labelRow" class="label-row" hidden>
           <ui5-multi-input id="labelInput" placeholder="Label hinzufügen" accessible-name="Labels der Notiz" data-i18n-attr="placeholder:labels.add; accessible-name:labels.ofNote" show-suggestions></ui5-multi-input>
