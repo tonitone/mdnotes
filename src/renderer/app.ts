@@ -17,6 +17,7 @@ import { openBackupDialog } from './backup-dialog';
 import { createEditor, type NoteEditor } from './editor/editor';
 import { THEME_CHOICES, getDensity, getThemeChoice, setDensity, setThemeChoice, themeLabel, type ThemeChoice } from './theme';
 import { announce, confirmDialog, el, infoDialog, promptDialog, type Ui5Element } from './ui';
+import { observeCompact } from './compact';
 import { openVersionDialog } from './versions';
 import { formatModified, formatTime, formatVersionTime } from './format';
 import { LANGUAGE_CHOICES, isLanguageChoice, t, tp, type LanguageChoice } from '../shared/i18n';
@@ -35,6 +36,9 @@ type View = { kind: 'all' } | { kind: 'trash' } | { kind: 'label'; label: string
 type ViewMode = 'edit' | 'split' | 'preview';
 const VIEW_MODES: ViewMode[] = ['edit', 'split', 'preview'];
 const PREVIEW_DELAY_MS = 150;
+/** Below this width of the editor column the view switch shows only icons. */
+const COMPACT_VIEW_SWITCH_REM = 30;
+const VIEW_MODE_ICONS: Record<ViewMode, string> = { edit: 'edit', split: 'screen-split-two', preview: 'show' };
 
 function readViewMode(): ViewMode {
   try {
@@ -77,6 +81,7 @@ export class App {
   private saving: Promise<void> = Promise.resolve();
   private query = '';
   private fileName = '';
+  private compactViewSwitch = false;
   private searchHits: SearchHit[] | null = null;
   private viewMode: ViewMode = readViewMode();
   private previewTimer: number | undefined;
@@ -270,6 +275,10 @@ export class App {
     narrowQuery.addEventListener('change', () => this.syncLayoutToWidth());
     this.syncLayoutToWidth();
 
+    observeCompact(els.editorColumn, COMPACT_VIEW_SWITCH_REM, (compact) => {
+      this.compactViewSwitch = compact;
+      this.updateViewSwitchLabels();
+    });
     els.viewModeButton.addEventListener('selection-change', (event: Event) => {
       const item = (event as CustomEvent<{ selectedItems: HTMLElement[] }>).detail.selectedItems?.[0];
       const mode = item?.dataset.mode as ViewMode | undefined;
@@ -411,6 +420,18 @@ export class App {
     // Keep focus where the user can continue: the preview has no editor.
     if (mode === 'preview' && editorHadFocus) this.els.previewPane.focus();
     else if (mode !== 'preview' && this.els.previewPane.contains(document.activeElement)) this.editor?.focus();
+  }
+
+  /** Narrow column: icons only. Tooltip and accessible name always carry the translated text. */
+  private updateViewSwitchLabels(): void {
+    for (const item of this.els.viewModeButton.children as HTMLCollectionOf<Ui5Element>) {
+      const mode = item.dataset.mode as ViewMode;
+      const label = t(`view.${mode}`);
+      item.textContent = this.compactViewSwitch ? '' : label;
+      item.icon = this.compactViewSwitch ? VIEW_MODE_ICONS[mode] : '';
+      item.tooltip = label;
+      item.accessibleName = label;
+    }
   }
 
   private applyViewMode(): void {

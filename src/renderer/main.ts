@@ -62,6 +62,8 @@ import '@ui5/webcomponents-icons/dist/open-folder.js';
 import '@ui5/webcomponents-icons/dist/globe.js';
 import '@ui5/webcomponents-icons/dist/palette.js';
 import '@ui5/webcomponents-icons/dist/search.js';
+import '@ui5/webcomponents-icons/dist/screen-split-two.js';
+import '@ui5/webcomponents-icons/dist/show.js';
 
 import './styles.css';
 import { t } from '../shared/i18n';
