@@ -104,10 +104,10 @@ test('tasks can be checked by click', async ({ page }) => {
   await listItems(page).first().click();
   await editor(page).click();
   await page.keyboard.press('Control+End');
-  const open = page.locator('.cm-md-task:not([checked])').first();
-  const before = await page.locator('.cm-md-task[checked]').count();
+  const open = page.locator('.cm-md-task:not(:checked)').first();
+  const before = await page.locator('.cm-md-task:checked').count();
   await open.click();
-  await expect(page.locator('.cm-md-task[checked]')).toHaveCount(before + 1);
+  await expect(page.locator('.cm-md-task:checked')).toHaveCount(before + 1);
 });
 
 test('Esc then Tab leaves the editor (no keyboard trap)', async ({ page }) => {
