@@ -36,18 +36,21 @@ test('loads no resources from the network', async ({ page }) => {
   expect(external).toEqual([]);
 });
 
+/** The list entry shows the file name as its tooltip. */
+const firstEntryFileName = (page: Page) => page.locator('#notesList ui5-li').first().evaluate((li) => (li as HTMLElement & { tooltip?: string }).tooltip ?? '');
+
 test('new note: title from first line, file name follows after a pause', async ({ page }) => {
   await openApp(page);
   await page.locator('#newNoteButton').click();
   await expect(editor(page)).toBeFocused();
-  await expect(page.locator('#fileName')).toHaveText(/^neue-notiz--[0-9a-z]{6}\.md$/);
+  await expect.poll(() => firstEntryFileName(page)).toMatch(/^neue-notiz--[0-9a-z]{6}\.md$/);
 
   await page.keyboard.type('# Einkauf Samstag\n\nMilch und Brot');
   await expect(page.locator('#saveStatus')).toHaveText(/Gespeichert um/);
   await expect(listItems(page).first()).toContainText('Einkauf Samstag');
 
   // Renaming only happens after the 4 second pause.
-  await expect(page.locator('#fileName')).toHaveText(/^einkauf-samstag--[0-9a-z]{6}\.md$/, { timeout: 8000 });
+  await expect.poll(() => firstEntryFileName(page), { timeout: 8000 }).toMatch(/^einkauf-samstag--[0-9a-z]{6}\.md$/);
 });
 
 const editorDoc = (page: Page) =>

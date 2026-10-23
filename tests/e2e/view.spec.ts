@@ -134,3 +134,70 @@ test('a narrow window without an open note shows the list', async ({ page }) => 
   await expect(listItems(page).first()).toBeVisible();
   await expect(page.locator('#noSelection')).toBeHidden();
 });
+
+const HEADER_IDS = ['viewModeButton', 'saveStatus', 'versionsButton', 'exportButton', 'deleteButton', 'editorMoreButton'];
+
+for (const [name, width] of [
+  ['very narrow', 320],
+  ['narrow', 640],
+  ['wide', 1920],
+] as const) {
+  test(`header with a ${name} editor column: no overlapping boxes, same names for the view buttons`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await openNote(page, 'Sprint-Planung');
+    const compact = name !== 'wide';
+    const columnWidth = (await page.locator('#editorColumn').boundingBox())!.width;
+    if (compact) expect(columnWidth).toBeLessThan(480);
+    else expect(columnWidth).toBeGreaterThan(480);
+
+    // The save status only has a box once it shows a text.
+    await editor(page).click();
+    await page.keyboard.type(' ');
+    await expect(page.locator('#saveStatus')).toHaveText(/Gespeichert um/);
+
+    // Icons only in a narrow column, text in a wide one; the names never change.
+    const items = page.locator('#viewModeButton ui5-segmented-button-item');
+    await expect(items.first()).toHaveJSProperty('accessibleName', 'Bearbeiten');
+    await expect(items.nth(1)).toHaveJSProperty('accessibleName', 'Geteilt');
+    await expect(items.nth(2)).toHaveJSProperty('accessibleName', 'Vorschau');
+    await expect(items.first()).toHaveText(compact ? '' : 'Bearbeiten');
+    await expect(items.first()).toHaveJSProperty('icon', compact ? 'edit' : '');
+
+    // Every control must be there; a hidden one fails here instead of being skipped below.
+    const ids = name === 'very narrow' ? ['backButton', ...HEADER_IDS] : HEADER_IDS;
+    for (const id of ids) await expect(page.locator(`#${id}`), `${id} is visible`).toBeVisible();
+
+    const boxes = await page.evaluate(
+      (list) =>
+        list.map((id) => {
+          const rect = document.getElementById(id)!.getBoundingClientRect();
+          return { id, width: rect.width, height: rect.height, left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
+        }),
+      ids,
+    );
+    for (const box of boxes) expect(box.width > 0 && box.height > 0, `${box.id} has a box`).toBe(true);
+    for (const [i, a] of boxes.entries()) {
+      for (const b of boxes.slice(i + 1)) {
+        const overlaps = a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5;
+        expect(overlaps, `${a.id} overlaps ${b.id}`).toBe(false);
+      }
+    }
+
+    // The wrapping header must not widen the page (WCAG 1.4.10 reflow at 320 px).
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow, 'no horizontal page scroll').toBeLessThanOrEqual(0);
+    for (const box of boxes) expect(box.right, `${box.id} stays inside the viewport`).toBeLessThanOrEqual(width + 0.5);
+  });
+}
+
+for (const theme of ['light', 'hcb'] as const) {
+  test(`compact header with icon-only view switch has no serious axe violations: theme ${theme}`, async ({ page }) => {
+    await page.addInitScript((value) => localStorage.setItem('mdnotes.theme', value), theme);
+    await page.setViewportSize({ width: 640, height: 800 });
+    await openNote(page, 'Willkommen');
+    const items = page.locator('#viewModeButton ui5-segmented-button-item');
+    await expect(items.first()).toHaveText('');
+    await expect(items.first()).toHaveJSProperty('icon', 'edit');
+    await expectNoSeriousViolations(page, `compact header, ${theme}`);
+  });
+}
