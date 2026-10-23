@@ -181,6 +181,21 @@ test.describe('export and import', () => {
     await expect(page.locator('#toast')).toHaveText('Dateiname kopiert.');
   });
 
+  test('copying the file name right after a title change copies the renamed file', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await openApp(page);
+    await page.locator('#newNoteButton').click();
+    await expect(editor(page)).toBeFocused();
+    await page.keyboard.type('# Frisch umbenannt');
+
+    // Well inside the 4 second pause after which the file name normally follows.
+    await page.locator('#editorMoreButton').click();
+    await menuItem(page, 'editorMoreMenu', 'Dateiname kopieren');
+    await expect(page.locator('#toast')).toHaveText('Dateiname kopiert.');
+    const copied = await page.evaluate(() => navigator.clipboard.readText());
+    expect(copied).toMatch(/^frisch-umbenannt--[0-9a-z]{6}\.md$/);
+  });
+
   test('import Markdown files with the file chooser', async ({ page }) => {
     await openApp(page);
     await page.locator('#moreButton').click();
