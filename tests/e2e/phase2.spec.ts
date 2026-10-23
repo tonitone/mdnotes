@@ -100,12 +100,99 @@ test.describe('code blocks', () => {
     const select = tools.locator('ui5-select');
     await expect(select).toHaveJSProperty('value', 'ts');
     await select.click();
-    await page.locator('ui5-option[value="javascript"]').click();
-    expect(await editorDoc(page)).toContain('```javascript\nfunction greet');
+    await tools.locator('ui5-option[value="javascript"]').click();
+    await expect.poll(() => editorDoc(page)).toContain('```javascript\nfunction greet');
+    // The visible selected text follows, and focus returns to the editor.
+    await expect(tools.locator('ui5-select .ui5-select-label-root')).toHaveText('JavaScript');
+    await expect(editor(page)).toBeFocused();
 
-    await tools.locator('ui5-button').click();
+    const copy = tools.locator('ui5-button');
+    await expect(copy).toHaveAttribute('tooltip', 'Code kopieren');
+    await expect(copy.locator('button')).toHaveAccessibleName('Code kopieren');
+    await copy.click();
     expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('function greet(name: string)');
     await expect(page.locator('#announcer')).toHaveText('Code kopiert');
+  });
+
+  test('keyboard: Space opens the list, Escape closes it, Enter picks', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await openApp(page);
+    await openNote(page, 'Willkommen');
+
+    const tools = page.locator('.cm-md-codetools');
+    const select = tools.locator('ui5-select');
+    const option = tools.locator('ui5-option[value="javascript"]');
+    await select.focus();
+    await page.keyboard.press('Space');
+    await expect(option).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(option).toBeHidden();
+    expect(await editorDoc(page)).toContain('```ts\nfunction greet');
+
+    // "ts" is the last option (not in the list), so ArrowUp picks the one before it.
+    await select.focus();
+    await page.keyboard.press('Enter');
+    await expect(option).toBeVisible();
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('Enter');
+    await expect.poll(() => editorDoc(page)).not.toContain('```ts\nfunction greet');
+    await expect(editor(page)).toBeFocused();
+
+    // The copy button works from the keyboard and keeps focus.
+    const copy = page.locator('.cm-md-codetools ui5-button');
+    await copy.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#announcer')).toHaveText('Code kopiert');
+    await expect(copy).toBeFocused();
+  });
+
+  test('typing above or inside a block keeps the UI5 tools', async ({ page }) => {
+    await openApp(page);
+    await openNote(page, 'Willkommen');
+
+    const tools = page.locator('.cm-md-codetools');
+    await expect(tools).toHaveCount(1);
+    await tools.evaluate((el) => {
+      el.setAttribute('data-test-node', 'kept');
+      el.querySelector('ui5-select')?.setAttribute('data-test-node', 'kept');
+    });
+
+    // Above the block
+    await editor(page).click();
+    await page.keyboard.press('Control+Home');
+    await page.keyboard.type('Neu ');
+    await expect.poll(() => editorDoc(page)).toMatch(/^Neu # Willkommen/);
+    await expect(page.locator('.cm-md-codetools[data-test-node="kept"] ui5-select[data-test-node="kept"]')).toHaveCount(1);
+
+    // Inside the block (three lines above the empty last line: the "return" line)
+    await page.keyboard.press('Control+End');
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.type('// x');
+    await expect.poll(() => editorDoc(page)).toContain('// x');
+    await expect(page.locator('.cm-md-codetools[data-test-node="kept"] ui5-select[data-test-node="kept"]')).toHaveCount(1);
+
+    // The tools still copy the current code, read at click time.
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await tools.locator('ui5-button').click();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('// x');
+  });
+
+  test('the fence line contains the tools and does not cover the next line', async ({ page }) => {
+    await openApp(page);
+    await openNote(page, 'Willkommen');
+
+    const fence = page.locator('.cm-md-codeblock-tools');
+    const next = page.locator('.cm-md-codeblock-tools + .cm-line');
+    const select = fence.locator('ui5-select');
+    await expect(select).toBeVisible();
+    const f = (await fence.boundingBox())!;
+    const s = (await select.boundingBox())!;
+    const n = (await next.boundingBox())!;
+    expect(s.y).toBeGreaterThanOrEqual(f.y - 0.5);
+    expect(s.y + s.height).toBeLessThanOrEqual(f.y + f.height + 0.5);
+    expect(n.y).toBeGreaterThanOrEqual(s.y + s.height - 0.5);
   });
 });
 
@@ -252,5 +339,24 @@ test.describe('outside changes', () => {
     await keepMine.click();
     await expect(page.locator('#noticeRegion')).toBeEmpty();
     expect(await editorDoc(page)).toContain('- Birnen');
+  });
+});
+
+test.describe('task checkbox (native, part of the content)', () => {
+  test('has a 24 px target, an accessible name and toggles with Space', async ({ page }) => {
+    await openApp(page);
+    await openNote(page, 'Willkommen');
+
+    const boxes = page.locator('input.cm-md-task');
+    await expect(boxes).toHaveCount(3);
+    const size = (await boxes.first().boundingBox())!;
+    expect(size.width).toBeGreaterThanOrEqual(24);
+    expect(size.height).toBeGreaterThanOrEqual(24);
+    await expect(boxes.first()).toHaveAccessibleName('Aufgabe erledigt');
+    await expect(boxes.nth(1)).toHaveAccessibleName('Aufgabe offen');
+
+    await boxes.nth(1).focus();
+    await page.keyboard.press('Space');
+    await expect.poll(() => editorDoc(page)).toContain('- [x] Titel ändern');
   });
 });
