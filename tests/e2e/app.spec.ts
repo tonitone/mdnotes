@@ -40,14 +40,14 @@ test('new note: title from first line, file name follows after a pause', async (
   await openApp(page);
   await page.locator('#newNoteButton').click();
   await expect(editor(page)).toBeFocused();
-  await expect(page.locator('#fileName')).toHaveText(/^neue-notiz--[0-9a-z]{6}\.md$/);
+  await expect(page.locator('#editorColumn')).toHaveAttribute('data-file-name', /^neue-notiz--[0-9a-z]{6}\.md$/);
 
   await page.keyboard.type('# Einkauf Samstag\n\nMilch und Brot');
   await expect(page.locator('#saveStatus')).toHaveText(/Gespeichert um/);
   await expect(listItems(page).first()).toContainText('Einkauf Samstag');
 
   // Renaming only happens after the 4 second pause.
-  await expect(page.locator('#fileName')).toHaveText(/^einkauf-samstag--[0-9a-z]{6}\.md$/, { timeout: 8000 });
+  await expect(page.locator('#editorColumn')).toHaveAttribute('data-file-name', /^einkauf-samstag--[0-9a-z]{6}\.md$/, { timeout: 8000 });
 });
 
 const editorDoc = (page: Page) =>
