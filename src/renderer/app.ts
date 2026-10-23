@@ -27,6 +27,10 @@ const SAVE_DELAY_MS = 700;
 /** Delay before renaming the file after its title. */
 const FINALIZE_DELAY_MS = 4000;
 const SEARCH_DELAY_MS = 150;
+/** Below this width of the middle column, "New note" shows only its icon. */
+const NEW_NOTE_COMPACT_REM = 17;
+/** Extra room for each further icon button in the header (rename label, back to library). */
+const HEADER_BUTTON_REM = 5;
 /** Unsaved text is written to the crash recovery store at most this often. */
 const RECOVERY_DELAY_MS = 2000;
 
@@ -72,6 +76,8 @@ export class App {
   private dirty = false;
   /** An outside change is waiting for the user's decision; autosave is paused. */
   private conflict = false;
+  private compactThresholdRem = 0;
+  private stopCompactObserver: (() => void) | null = null;
   private saveTimer: number | undefined;
   private finalizeTimer: number | undefined;
   private searchTimer: number | undefined;
@@ -160,6 +166,7 @@ export class App {
     this.buildThemeMenu();
     this.buildLanguageMenu();
     this.bindEvents();
+    this.observeMiddleColumn();
     this.applyViewMode();
 
     const workspace = await this.api.getWorkspace();
@@ -368,6 +375,28 @@ export class App {
     });
   }
 
+  /** Narrow middle column: "New note" keeps only its icon; tooltip and accessible name stay. */
+  private observeMiddleColumn(): void {
+    this.updateCompactObserver();
+  }
+
+  /**
+   * The threshold grows with the other buttons that are visible in the header,
+   * so the title always keeps room. Observing again reports the state once.
+   */
+  private updateCompactObserver(): void {
+    const column = document.querySelector<HTMLElement>('section[slot="midColumn"]');
+    if (!column) return;
+    const extra = Number(!this.els.renameLabelButton.hidden) + Number(!this.els.libraryButton.hidden);
+    const thresholdRem = NEW_NOTE_COMPACT_REM + extra * HEADER_BUTTON_REM;
+    if (thresholdRem === this.compactThresholdRem) return;
+    this.compactThresholdRem = thresholdRem;
+    this.stopCompactObserver?.();
+    this.stopCompactObserver = observeCompact(column, thresholdRem, (compact) => {
+      this.els.newNoteButton.textContent = compact ? '' : t('notes.new');
+    });
+  }
+
   /** Saves the language and reloads the window, which applies it everywhere. */
   private async changeLanguage(choice: LanguageChoice): Promise<void> {
     if (choice === this.language) return;
@@ -398,6 +427,7 @@ export class App {
     const { fcl } = this.els;
     this.els.backButton.hidden = Boolean(fcl.midColumnVisible);
     this.els.libraryButton.hidden = Boolean(fcl.startColumnVisible) || !fcl.midColumnVisible;
+    this.updateCompactObserver();
   }
 
   // -------------------------------------------------------------------------
@@ -544,6 +574,7 @@ export class App {
           : t('notes.title');
     this.els.newNoteButton.hidden = this.view.kind === 'trash';
     this.els.renameLabelButton.hidden = this.view.kind !== 'label';
+    this.updateCompactObserver();
   }
 
   private async runSearch(): Promise<void> {

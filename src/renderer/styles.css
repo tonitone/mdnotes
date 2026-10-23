@@ -36,12 +36,18 @@ ui5-flexible-column-layout {
   min-height: 2.75rem;
   padding: 0.25rem 1rem;
   border-bottom: 1px solid var(--sapGroup_TitleBorderColor);
+  flex-wrap: nowrap;
 }
 
 .header-title {
   display: flex;
   align-items: center;
   gap: 0.25rem;
+  min-width: 0;
+}
+
+/* wrapping-type="None" on the ui5-title makes it truncate with an ellipsis; it only needs to be allowed to shrink. */
+.header-title ui5-title {
   min-width: 0;
 }
 
