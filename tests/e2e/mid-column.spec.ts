@@ -84,4 +84,10 @@ test('long label name: the title is cut off before the buttons', async ({ page }
   expect(await titleTextRight(page)).toBeGreaterThan(first.x);
   // The title box ends before the buttons.
   expect(box.x + box.width).toBeLessThanOrEqual(first.x + 0.5);
+  // The overflow is clipped with an ellipsis inside the ui5-title (wrapping-type="None"), not just hidden.
+  await expect(title).toHaveAttribute('wrapping-type', 'None');
+  const ellipsis = await title.evaluate((host) =>
+    Array.from(host.shadowRoot?.querySelectorAll('*') ?? []).some((node) => getComputedStyle(node).textOverflow === 'ellipsis'),
+  );
+  expect(ellipsis).toBe(true);
 });
