@@ -17,8 +17,8 @@ import { openBackupDialog } from './backup-dialog';
 import { createEditor, type NoteEditor } from './editor/editor';
 import { THEME_CHOICES, getDensity, getThemeChoice, setDensity, setThemeChoice, themeLabel, type ThemeChoice } from './theme';
 import { announce, confirmDialog, el, infoDialog, promptDialog, type Ui5Element } from './ui';
-import { openVersionDialog } from './versions';
 import { observeCompact } from './compact';
+import { openVersionDialog } from './versions';
 import { formatModified, formatTime, formatVersionTime } from './format';
 import { LANGUAGE_CHOICES, isLanguageChoice, t, tp, type LanguageChoice } from '../shared/i18n';
 
@@ -40,6 +40,9 @@ type View = { kind: 'all' } | { kind: 'trash' } | { kind: 'label'; label: string
 type ViewMode = 'edit' | 'split' | 'preview';
 const VIEW_MODES: ViewMode[] = ['edit', 'split', 'preview'];
 const PREVIEW_DELAY_MS = 150;
+/** Below this width of the editor column the view switch shows only icons. */
+const COMPACT_VIEW_SWITCH_REM = 30;
+const VIEW_MODE_ICONS: Record<ViewMode, string> = { edit: 'edit', split: 'screen-split-two', preview: 'show' };
 
 function readViewMode(): ViewMode {
   try {
@@ -83,6 +86,8 @@ export class App {
   private recoveryQueue: Promise<unknown> = Promise.resolve();
   private saving: Promise<void> = Promise.resolve();
   private query = '';
+  private fileName = '';
+  private compactViewSwitch = false;
   private searchHits: SearchHit[] | null = null;
   private viewMode: ViewMode = readViewMode();
   private previewTimer: number | undefined;
@@ -112,11 +117,13 @@ export class App {
     moreMenu: $('moreMenu'),
     searchInput: $('searchInput'),
     backButton: $('backButton'),
-    fileName: $('fileName'),
+    editorColumn: $('editorColumn'),
     saveStatus: $('saveStatus'),
     noteActions: $('noteActions'),
     exportButton: $('exportButton'),
     exportMenu: $('exportMenu'),
+    editorMoreButton: $('editorMoreButton'),
+    editorMoreMenu: $('editorMoreMenu'),
     deleteButton: $('deleteButton'),
     trashActions: $('trashActions'),
     restoreButton: $('restoreButton'),
@@ -240,6 +247,14 @@ export class App {
       if (action === 'copy-markdown') void this.copyCurrent('markdown');
       if (format) void this.exportCurrent(format as ExportFormat);
     });
+    els.editorMoreButton.addEventListener('click', () => {
+      els.editorMoreMenu.opener = els.editorMoreButton;
+      els.editorMoreMenu.open = true;
+    });
+    els.editorMoreMenu.addEventListener('item-click', (event: Event) => {
+      const action = (event as CustomEvent<{ item: HTMLElement }>).detail.item.dataset.action;
+      if (action === 'copy-file-name') void this.copyFileName();
+    });
     els.deleteButton.addEventListener('click', () => void this.trashCurrent());
     els.restoreButton.addEventListener('click', () => void this.restoreCurrentTrash());
     els.deleteForeverButton.addEventListener('click', () => void this.deleteCurrentTrashForever());
@@ -267,6 +282,11 @@ export class App {
     narrowQuery.addEventListener('change', () => this.syncLayoutToWidth());
     this.syncLayoutToWidth();
 
+    // Observed for the lifetime of the window, so the disposer is not needed.
+    observeCompact(els.editorColumn, COMPACT_VIEW_SWITCH_REM, (compact) => {
+      this.compactViewSwitch = compact;
+      this.updateViewSwitchLabels();
+    });
     els.viewModeButton.addEventListener('selection-change', (event: Event) => {
       const item = (event as CustomEvent<{ selectedItems: HTMLElement[] }>).detail.selectedItems?.[0];
       const mode = item?.dataset.mode as ViewMode | undefined;
@@ -431,6 +451,18 @@ export class App {
     // Keep focus where the user can continue: the preview has no editor.
     if (mode === 'preview' && editorHadFocus) this.els.previewPane.focus();
     else if (mode !== 'preview' && this.els.previewPane.contains(document.activeElement)) this.editor?.focus();
+  }
+
+  /** Narrow column: icons only. Tooltip and accessible name always carry the translated text. */
+  private updateViewSwitchLabels(): void {
+    for (const item of this.els.viewModeButton.children as HTMLCollectionOf<Ui5Element>) {
+      const mode = item.dataset.mode as ViewMode;
+      const label = t(`view.${mode}`);
+      item.textContent = this.compactViewSwitch ? '' : label;
+      item.icon = this.compactViewSwitch ? VIEW_MODE_ICONS[mode] : '';
+      item.tooltip = label;
+      item.accessibleName = label;
+    }
   }
 
   private applyViewMode(): void {
@@ -610,7 +642,12 @@ export class App {
     this.notes.splice(index, 1);
     this.notes.unshift(updated);
     this.renderList();
-    if (result.id === this.currentId) this.els.fileName.textContent = updated.fileName;
+    if (result.id === this.currentId) this.setFileName(updated.fileName);
+  }
+
+  /** The file name is not shown in the header; it is only kept for "Copy file name". */
+  private setFileName(name: string): void {
+    this.fileName = name;
   }
 
   private showView(view: 'editor' | 'trashEntry' | 'noSelection' | 'noWorkspace'): void {
@@ -623,7 +660,7 @@ export class App {
     this.els.labelRow.hidden = view !== 'editor';
     this.els.trashActions.hidden = view !== 'trashEntry';
     if (!editing) {
-      this.els.fileName.textContent = '';
+      this.setFileName('');
       this.els.saveStatus.textContent = '';
     }
   }
@@ -649,7 +686,7 @@ export class App {
       this.closeEditor();
       this.currentId = id;
       this.loadDoc(doc.body);
-      this.els.fileName.textContent = doc.fileName;
+      this.setFileName(doc.fileName);
       this.setStatus(t('status.modifiedAt', { time: formatModified(doc.modified) }));
       this.renderTokens(doc.labels);
       this.showView('editor');
@@ -676,7 +713,7 @@ export class App {
       this.currentId = doc.id;
       this.renderList();
       this.loadDoc(doc.body);
-      this.els.fileName.textContent = doc.fileName;
+      this.setFileName(doc.fileName);
       this.setStatus(t('status.created'));
       this.renderTokens([]);
       // A new note is written, not read: leave preview-only mode.
@@ -862,7 +899,7 @@ export class App {
       this.closeEditor();
       this.currentTrash = trashName;
       this.loadDoc(body, { readOnly: true });
-      this.els.fileName.textContent = entry?.title ?? '';
+      this.setFileName(entry?.title ?? '');
       this.setStatus(entry ? t('trash.deletedAt', { time: formatModified(entry.trashedAt) }) : '');
       this.showView('trashEntry');
       this.setLayout('ThreeColumnsEndExpanded');
@@ -916,6 +953,19 @@ export class App {
     try {
       await navigator.clipboard.writeText(format === 'wiki' ? markdownToWiki(body) : body);
       announce(format === 'wiki' ? t('announce.wikiCopied') : t('announce.markdownCopied'));
+    } catch (err) {
+      this.showError(t('error.copy'), err);
+    }
+  }
+
+  private async copyFileName(): Promise<void> {
+    if (!this.currentId) return;
+    // The name follows the title only after a pause; settle a pending rename first.
+    await this.flush();
+    if (!this.fileName) return;
+    try {
+      await navigator.clipboard.writeText(this.fileName);
+      announce(t('announce.fileNameCopied'));
     } catch (err) {
       this.showError(t('error.copy'), err);
     }
@@ -1023,7 +1073,7 @@ export class App {
     this.loadDoc(doc.body);
     view.dispatch({ selection: { anchor: head } });
     this.dirty = false;
-    this.els.fileName.textContent = doc.fileName;
+    this.setFileName(doc.fileName);
     this.renderTokens(doc.labels);
   }
 

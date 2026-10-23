@@ -83,23 +83,17 @@ ui5-flexible-column-layout {
 
 .editor-header {
   justify-content: flex-start;
+  /* In a very narrow column the status wraps to its own row instead of overlapping. */
+  flex-wrap: wrap;
 }
 
 .editor-meta {
   display: flex;
-  flex: 1;
-  justify-content: space-between;
-  gap: 1rem;
+  flex: 1 1 auto;
+  justify-content: flex-end;
   min-width: 0;
   color: var(--sapContent_LabelColor);
   font-size: var(--sapFontSmallSize);
-}
-
-.file-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: var(--sapContent_MonospaceFontFamily, monospace);
 }
 
 .save-status {

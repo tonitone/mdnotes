@@ -166,6 +166,47 @@ test.describe('export and import', () => {
     expect(exports.at(-1)).toMatchObject({ format: 'markdown', fileName: 'sprint-planung.md' });
   });
 
+  test('copy the file name through the More actions menu', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await openApp(page);
+    await openNote(page, 'Sprint-Planung');
+
+    await page.locator('#editorMoreButton').click();
+    await menuItem(page, 'editorMoreMenu', 'Dateiname kopieren');
+    const copied = await page.evaluate(() => navigator.clipboard.readText());
+    expect(copied).toMatch(/^sprint-planung--[0-9a-z]{6}\.md$/);
+    await expect(listItems(page).filter({ hasText: 'Sprint-Planung' }).first()).toHaveJSProperty('tooltip', copied);
+    await expect(page.locator('#announcer')).toHaveText('Dateiname kopiert.');
+    await expect(page.locator('#toast')).toHaveText('Dateiname kopiert.');
+  });
+
+  test('a failing clipboard shows the copy error', async ({ page }) => {
+    await openApp(page);
+    await openNote(page, 'Sprint-Planung');
+    await page.evaluate(() => {
+      Object.defineProperty(navigator.clipboard, 'writeText', { configurable: true, value: () => Promise.reject(new Error('denied')) });
+    });
+    await page.locator('#editorMoreButton').click();
+    await menuItem(page, 'editorMoreMenu', 'Dateiname kopieren');
+    await expect(page.locator('#errorRegion ui5-message-strip')).toContainText('Kopieren in die Zwischenablage ist fehlgeschlagen.');
+    await expect(page.locator('#toast')).not.toHaveText('Dateiname kopiert.');
+  });
+
+  test('copying the file name right after a title change copies the renamed file', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await openApp(page);
+    await page.locator('#newNoteButton').click();
+    await expect(editor(page)).toBeFocused();
+    await page.keyboard.type('# Frisch umbenannt');
+
+    // Well inside the 4 second pause after which the file name normally follows.
+    await page.locator('#editorMoreButton').click();
+    await menuItem(page, 'editorMoreMenu', 'Dateiname kopieren');
+    await expect(page.locator('#toast')).toHaveText('Dateiname kopiert.');
+    const copied = await page.evaluate(() => navigator.clipboard.readText());
+    expect(copied).toMatch(/^frisch-umbenannt--[0-9a-z]{6}\.md$/);
+  });
+
   test('import Markdown files with the file chooser', async ({ page }) => {
     await openApp(page);
     await page.locator('#moreButton').click();
