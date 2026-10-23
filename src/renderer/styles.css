@@ -36,12 +36,18 @@ ui5-flexible-column-layout {
   min-height: 2.75rem;
   padding: 0.25rem 1rem;
   border-bottom: 1px solid var(--sapGroup_TitleBorderColor);
+  flex-wrap: nowrap;
 }
 
 .header-title {
   display: flex;
   align-items: center;
   gap: 0.25rem;
+  min-width: 0;
+}
+
+/* wrapping-type="None" on the ui5-title makes it truncate with an ellipsis; it only needs to be allowed to shrink. */
+.header-title ui5-title {
   min-width: 0;
 }
 
@@ -71,27 +77,23 @@ ui5-flexible-column-layout {
 
 .editor-column {
   background: var(--sapBaseColor);
+  /* Lets the split view react to the width of this column, not of the window. */
+  container-type: inline-size;
 }
 
 .editor-header {
   justify-content: flex-start;
+  /* In a very narrow column the status wraps to its own row instead of overlapping. */
+  flex-wrap: wrap;
 }
 
 .editor-meta {
   display: flex;
-  flex: 1;
-  justify-content: space-between;
-  gap: 1rem;
+  flex: 1 1 auto;
+  justify-content: flex-end;
   min-width: 0;
   color: var(--sapContent_LabelColor);
   font-size: var(--sapFontSmallSize);
-}
-
-.file-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: var(--sapContent_MonospaceFontFamily, monospace);
 }
 
 .save-status {
@@ -116,12 +118,12 @@ ui5-flexible-column-layout {
   min-height: 0;
 }
 
-/* Split view: source and preview side by side, stacked in narrow windows. */
+/* Split view: source and preview side by side, stacked in a narrow editor column. */
 .editor-area[data-mode='split'] .editor-host {
   border-inline-end: 1px solid var(--sapGroup_TitleBorderColor);
 }
 
-@media (max-width: 700px) {
+@container (max-width: 700px) {
   .editor-area[data-mode='split'] {
     flex-direction: column;
   }
