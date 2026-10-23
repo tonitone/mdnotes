@@ -10,7 +10,17 @@ const listItems = (page: Page) => page.locator('#notesList ui5-li');
 async function openWithNote(page: Page, width: number, rootFontSize?: string) {
   await page.setViewportSize({ width, height: 800 });
   // A larger root font size makes the 17 rem threshold wider than the column.
-  if (rootFontSize) await page.addInitScript((size) => void (document.documentElement.style.fontSize = size), rootFontSize);
+  if (rootFontSize) {
+    await page.addInitScript((size) => {
+      // The init script runs before <html> exists.
+      const observer = new MutationObserver(() => {
+        if (!document.documentElement) return;
+        document.documentElement.style.fontSize = size;
+        observer.disconnect();
+      });
+      observer.observe(document, { childList: true });
+    }, rootFontSize);
+  }
   await page.goto('/');
   await expect(listItems(page).first()).toBeVisible();
   await listItems(page).filter({ hasText: 'Willkommen' }).first().click();
