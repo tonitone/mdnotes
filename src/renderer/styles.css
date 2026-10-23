@@ -240,15 +240,13 @@ ui5-illustrated-message {
 }
 
 .cm-md-task {
-  display: inline-block;
-  vertical-align: middle;
-  /* Keep the task line as tall as a normal line. */
-  min-width: 0;
-  min-height: 0;
-  width: 1.5rem;
-  height: 1.25rem;
-  margin-block: -0.75rem;
-  margin-inline-end: 0.25rem;
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  margin-inline-end: 0.4rem;
+  vertical-align: -0.15rem;
+  accent-color: var(--sapSelectedColor);
+  cursor: pointer;
 }
 
 .cm-md-hr {

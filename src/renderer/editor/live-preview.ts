@@ -158,13 +158,14 @@ class TaskWidget extends WidgetType {
     return other.checked === this.checked && other.pos === this.pos;
   }
   toDOM(view: EditorView): HTMLElement {
-    const box = document.createElement('ui5-checkbox') as HTMLElement & { checked: boolean };
+    const box = document.createElement('input');
+    box.type = 'checkbox';
     box.className = 'cm-md-task';
-    box.toggleAttribute('checked', this.checked);
-    box.setAttribute('accessible-name', this.checked ? t('task.done') : t('task.open'));
-    // Keep the editor focus and the cursor where they are.
+    box.checked = this.checked;
+    box.setAttribute('aria-label', this.checked ? t('task.done') : t('task.open'));
     box.addEventListener('mousedown', (e) => e.preventDefault());
-    box.addEventListener('change', () => {
+    box.addEventListener('click', (e) => {
+      e.preventDefault();
       view.dispatch({ changes: { from: this.pos + 1, to: this.pos + 2, insert: this.checked ? ' ' : 'x' } });
     });
     return box;
