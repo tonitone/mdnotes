@@ -85,7 +85,6 @@ ui5-flexible-column-layout {
   display: flex;
   flex: 1 1 auto;
   justify-content: flex-end;
-  gap: 1rem;
   min-width: 0;
   color: var(--sapContent_LabelColor);
   font-size: var(--sapFontSmallSize);

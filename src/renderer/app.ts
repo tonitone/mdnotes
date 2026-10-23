@@ -275,6 +275,7 @@ export class App {
     narrowQuery.addEventListener('change', () => this.syncLayoutToWidth());
     this.syncLayoutToWidth();
 
+    // Observed for the lifetime of the window, so the disposer is not needed.
     observeCompact(els.editorColumn, COMPACT_VIEW_SWITCH_REM, (compact) => {
       this.compactViewSwitch = compact;
       this.updateViewSwitchLabels();
