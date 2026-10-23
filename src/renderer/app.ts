@@ -929,7 +929,10 @@ export class App {
   }
 
   private async copyFileName(): Promise<void> {
-    if (!this.currentId || !this.fileName) return;
+    if (!this.currentId) return;
+    // The name follows the title only after a pause; settle a pending rename first.
+    await this.flush();
+    if (!this.fileName) return;
     try {
       await navigator.clipboard.writeText(this.fileName);
       announce(t('announce.fileNameCopied'));
