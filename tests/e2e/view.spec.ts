@@ -194,7 +194,7 @@ for (const theme of ['light', 'hcb'] as const) {
   test(`compact header with icon-only view switch has no serious axe violations: theme ${theme}`, async ({ page }) => {
     await page.addInitScript((value) => localStorage.setItem('mdnotes.theme', value), theme);
     await page.setViewportSize({ width: 640, height: 800 });
-    await openNote(page, 'Sprint-Planung');
+    await openNote(page, 'Willkommen');
     const items = page.locator('#viewModeButton ui5-segmented-button-item');
     await expect(items.first()).toHaveText('');
     await expect(items.first()).toHaveJSProperty('icon', 'edit');
