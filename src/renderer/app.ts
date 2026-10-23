@@ -17,6 +17,7 @@ import { openBackupDialog } from './backup-dialog';
 import { createEditor, type NoteEditor } from './editor/editor';
 import { THEME_CHOICES, getDensity, getThemeChoice, setDensity, setThemeChoice, themeLabel, type ThemeChoice } from './theme';
 import { announce, confirmDialog, el, infoDialog, promptDialog, type Ui5Element } from './ui';
+import { observeCompact } from './compact';
 import { openVersionDialog } from './versions';
 import { formatModified, formatTime, formatVersionTime } from './format';
 import { LANGUAGE_CHOICES, isLanguageChoice, t, tp, type LanguageChoice } from '../shared/i18n';
@@ -26,6 +27,10 @@ const SAVE_DELAY_MS = 700;
 /** Delay before renaming the file after its title. */
 const FINALIZE_DELAY_MS = 4000;
 const SEARCH_DELAY_MS = 150;
+/** Below this width of the middle column, "New note" shows only its icon. */
+const NEW_NOTE_COMPACT_REM = 17;
+/** Extra room for each further icon button in the header (rename label, back to library). */
+const HEADER_BUTTON_REM = 5;
 /** Unsaved text is written to the crash recovery store at most this often. */
 const RECOVERY_DELAY_MS = 2000;
 
@@ -35,6 +40,9 @@ type View = { kind: 'all' } | { kind: 'trash' } | { kind: 'label'; label: string
 type ViewMode = 'edit' | 'split' | 'preview';
 const VIEW_MODES: ViewMode[] = ['edit', 'split', 'preview'];
 const PREVIEW_DELAY_MS = 150;
+/** Below this width of the editor column the view switch shows only icons. */
+const COMPACT_VIEW_SWITCH_REM = 30;
+const VIEW_MODE_ICONS: Record<ViewMode, string> = { edit: 'edit', split: 'screen-split-two', preview: 'show' };
 
 function readViewMode(): ViewMode {
   try {
@@ -68,6 +76,8 @@ export class App {
   private dirty = false;
   /** An outside change is waiting for the user's decision; autosave is paused. */
   private conflict = false;
+  private compactThresholdRem = 0;
+  private stopCompactObserver: (() => void) | null = null;
   private saveTimer: number | undefined;
   private finalizeTimer: number | undefined;
   private searchTimer: number | undefined;
@@ -76,6 +86,8 @@ export class App {
   private recoveryQueue: Promise<unknown> = Promise.resolve();
   private saving: Promise<void> = Promise.resolve();
   private query = '';
+  private fileName = '';
+  private compactViewSwitch = false;
   private searchHits: SearchHit[] | null = null;
   private viewMode: ViewMode = readViewMode();
   private previewTimer: number | undefined;
@@ -84,12 +96,14 @@ export class App {
     fcl: $('fcl'),
     shell: $('shell'),
     themeItem: $('themeItem'),
+    languageItem: $('languageItem'),
     backupItem: $('backupItem'),
     renameLabelButton: $('renameLabelButton'),
     libraryButton: $('libraryButton'),
     versionsButton: $('versionsButton'),
     workspaceItem: $('workspaceItem'),
     themeMenu: $('themeMenu'),
+    languageMenu: $('languageMenu'),
     browserModeStrip: $('browserModeStrip'),
     workspacePath: $('workspacePath'),
     libraryList: $('libraryList'),
@@ -103,11 +117,13 @@ export class App {
     moreMenu: $('moreMenu'),
     searchInput: $('searchInput'),
     backButton: $('backButton'),
-    fileName: $('fileName'),
+    editorColumn: $('editorColumn'),
     saveStatus: $('saveStatus'),
     noteActions: $('noteActions'),
     exportButton: $('exportButton'),
     exportMenu: $('exportMenu'),
+    editorMoreButton: $('editorMoreButton'),
+    editorMoreMenu: $('editorMoreMenu'),
     deleteButton: $('deleteButton'),
     trashActions: $('trashActions'),
     restoreButton: $('restoreButton'),
@@ -148,7 +164,9 @@ export class App {
     // Expose the editor to e2e tests in browser mode only.
     if (__BROWSER_MODE__) (window as unknown as { __editorView: unknown }).__editorView = this.editor.view;
     this.buildThemeMenu();
+    this.buildLanguageMenu();
     this.bindEvents();
+    this.observeMiddleColumn();
     this.applyViewMode();
 
     const workspace = await this.api.getWorkspace();
@@ -172,19 +190,18 @@ export class App {
     els.versionsButton.addEventListener('click', () => void this.openVersions());
     els.renameLabelButton.addEventListener('click', () => void this.renameCurrentLabel());
 
-    els.themeItem.addEventListener('click', (event: Event) => {
-      const detail = (event as CustomEvent<{ targetRef: HTMLElement }>).detail;
-      event.preventDefault?.();
-      els.themeMenu.opener = detail?.targetRef ?? els.themeItem;
-      els.themeMenu.open = true;
-    });
+    this.openMenuFromShellbar(els.themeItem, els.themeMenu);
+    this.openMenuFromShellbar(els.languageItem, els.languageMenu);
     els.themeMenu.addEventListener('item-click', (event: Event) => {
       const item = (event as CustomEvent<{ item: HTMLElement }>).detail.item;
-      const { theme, density, language } = item.dataset;
+      const { theme, density } = item.dataset;
       if (theme) setThemeChoice(theme as ThemeChoice);
       if (density) setDensity(density as 'compact' | 'cozy');
-      if (isLanguageChoice(language)) void this.changeLanguage(language);
       this.buildThemeMenu();
+    });
+    els.languageMenu.addEventListener('item-click', (event: Event) => {
+      const language = (event as CustomEvent<{ item: HTMLElement }>).detail.item.dataset.language;
+      if (isLanguageChoice(language)) void this.changeLanguage(language);
     });
 
     // Library: all notes, trash and labels.
@@ -230,6 +247,14 @@ export class App {
       if (action === 'copy-markdown') void this.copyCurrent('markdown');
       if (format) void this.exportCurrent(format as ExportFormat);
     });
+    els.editorMoreButton.addEventListener('click', () => {
+      els.editorMoreMenu.opener = els.editorMoreButton;
+      els.editorMoreMenu.open = true;
+    });
+    els.editorMoreMenu.addEventListener('item-click', (event: Event) => {
+      const action = (event as CustomEvent<{ item: HTMLElement }>).detail.item.dataset.action;
+      if (action === 'copy-file-name') void this.copyFileName();
+    });
     els.deleteButton.addEventListener('click', () => void this.trashCurrent());
     els.restoreButton.addEventListener('click', () => void this.restoreCurrentTrash());
     els.deleteForeverButton.addEventListener('click', () => void this.deleteCurrentTrashForever());
@@ -253,7 +278,15 @@ export class App {
     });
     // Fired on resize and user interaction, not when the app sets the layout.
     els.fcl.addEventListener('layout-change', () => this.updateColumnButtons());
+    // A column layout chosen in a narrow window must not outlive the window size.
+    narrowQuery.addEventListener('change', () => this.syncLayoutToWidth());
+    this.syncLayoutToWidth();
 
+    // Observed for the lifetime of the window, so the disposer is not needed.
+    observeCompact(els.editorColumn, COMPACT_VIEW_SWITCH_REM, (compact) => {
+      this.compactViewSwitch = compact;
+      this.updateViewSwitchLabels();
+    });
     els.viewModeButton.addEventListener('selection-change', (event: Event) => {
       const item = (event as CustomEvent<{ selectedItems: HTMLElement[] }>).detail.selectedItems?.[0];
       const mode = item?.dataset.mode as ViewMode | undefined;
@@ -322,20 +355,46 @@ export class App {
     for (const value of ['compact', 'cozy'] as const) {
       menu.append(el('ui5-menu-item', { 'attr:text': t(`density.${value}`), 'data-density': value, icon: value === density ? 'accept' : '' }));
     }
-    menu.append(el('ui5-menu-separator'));
-    menu.append(
-      el(
-        'ui5-menu-item',
-        { 'attr:text': t('language.title'), icon: 'globe', id: 'languageMenuItem' },
-        LANGUAGE_CHOICES.map((value) =>
-          el('ui5-menu-item', {
-            'attr:text': t(`language.${value}`),
-            'data-language': value,
-            icon: value === this.language ? 'accept' : '',
-          }),
-        ),
-      ),
-    );
+  }
+
+  private buildLanguageMenu(): void {
+    const menu = this.els.languageMenu;
+    menu.replaceChildren();
+    for (const value of LANGUAGE_CHOICES) {
+      menu.append(el('ui5-menu-item', { 'attr:text': t(`language.${value}`), 'data-language': value, icon: value === this.language ? 'accept' : '' }));
+    }
+  }
+
+  /** Opens `menu` from its shellbar item, also when the item sits in the overflow popover. */
+  private openMenuFromShellbar(item: Ui5Element, menu: Ui5Element): void {
+    item.addEventListener('click', (event: Event) => {
+      const detail = (event as CustomEvent<{ targetRef: HTMLElement }>).detail;
+      event.preventDefault?.();
+      menu.opener = detail?.targetRef ?? item;
+      menu.open = true;
+    });
+  }
+
+  /** Narrow middle column: "New note" keeps only its icon; tooltip and accessible name stay. */
+  private observeMiddleColumn(): void {
+    this.updateCompactObserver();
+  }
+
+  /**
+   * The threshold grows with the other buttons that are visible in the header,
+   * so the title always keeps room. Observing again reports the state once.
+   */
+  private updateCompactObserver(): void {
+    const column = document.querySelector<HTMLElement>('section[slot="midColumn"]');
+    if (!column) return;
+    const extra = Number(!this.els.renameLabelButton.hidden) + Number(!this.els.libraryButton.hidden);
+    const thresholdRem = NEW_NOTE_COMPACT_REM + extra * HEADER_BUTTON_REM;
+    if (thresholdRem === this.compactThresholdRem) return;
+    this.compactThresholdRem = thresholdRem;
+    this.stopCompactObserver?.();
+    this.stopCompactObserver = observeCompact(column, thresholdRem, (compact) => {
+      this.els.newNoteButton.textContent = compact ? '' : t('notes.new');
+    });
   }
 
   /** Saves the language and reloads the window, which applies it everywhere. */
@@ -357,11 +416,18 @@ export class App {
     requestAnimationFrame(() => this.updateColumnButtons());
   }
 
+  /** Wide: all columns. Narrow: keep an open entry, otherwise show the list instead of the empty editor. */
+  private syncLayoutToWidth(): void {
+    if (!narrowQuery.matches) this.setLayout('ThreeColumnsEndExpanded');
+    else if (this.currentId === null && this.currentTrash === null) this.setLayout('TwoColumnsMidExpanded');
+  }
+
   /** In narrow windows, back buttons lead to the hidden columns. */
   private updateColumnButtons(): void {
     const { fcl } = this.els;
     this.els.backButton.hidden = Boolean(fcl.midColumnVisible);
     this.els.libraryButton.hidden = Boolean(fcl.startColumnVisible) || !fcl.midColumnVisible;
+    this.updateCompactObserver();
   }
 
   // -------------------------------------------------------------------------
@@ -385,6 +451,18 @@ export class App {
     // Keep focus where the user can continue: the preview has no editor.
     if (mode === 'preview' && editorHadFocus) this.els.previewPane.focus();
     else if (mode !== 'preview' && this.els.previewPane.contains(document.activeElement)) this.editor?.focus();
+  }
+
+  /** Narrow column: icons only. Tooltip and accessible name always carry the translated text. */
+  private updateViewSwitchLabels(): void {
+    for (const item of this.els.viewModeButton.children as HTMLCollectionOf<Ui5Element>) {
+      const mode = item.dataset.mode as ViewMode;
+      const label = t(`view.${mode}`);
+      item.textContent = this.compactViewSwitch ? '' : label;
+      item.icon = this.compactViewSwitch ? VIEW_MODE_ICONS[mode] : '';
+      item.tooltip = label;
+      item.accessibleName = label;
+    }
   }
 
   private applyViewMode(): void {
@@ -496,6 +574,7 @@ export class App {
           : t('notes.title');
     this.els.newNoteButton.hidden = this.view.kind === 'trash';
     this.els.renameLabelButton.hidden = this.view.kind !== 'label';
+    this.updateCompactObserver();
   }
 
   private async runSearch(): Promise<void> {
@@ -563,7 +642,12 @@ export class App {
     this.notes.splice(index, 1);
     this.notes.unshift(updated);
     this.renderList();
-    if (result.id === this.currentId) this.els.fileName.textContent = updated.fileName;
+    if (result.id === this.currentId) this.setFileName(updated.fileName);
+  }
+
+  /** The file name is not shown in the header; it is only kept for "Copy file name". */
+  private setFileName(name: string): void {
+    this.fileName = name;
   }
 
   private showView(view: 'editor' | 'trashEntry' | 'noSelection' | 'noWorkspace'): void {
@@ -576,7 +660,7 @@ export class App {
     this.els.labelRow.hidden = view !== 'editor';
     this.els.trashActions.hidden = view !== 'trashEntry';
     if (!editing) {
-      this.els.fileName.textContent = '';
+      this.setFileName('');
       this.els.saveStatus.textContent = '';
     }
   }
@@ -602,7 +686,7 @@ export class App {
       this.closeEditor();
       this.currentId = id;
       this.loadDoc(doc.body);
-      this.els.fileName.textContent = doc.fileName;
+      this.setFileName(doc.fileName);
       this.setStatus(t('status.modifiedAt', { time: formatModified(doc.modified) }));
       this.renderTokens(doc.labels);
       this.showView('editor');
@@ -629,7 +713,7 @@ export class App {
       this.currentId = doc.id;
       this.renderList();
       this.loadDoc(doc.body);
-      this.els.fileName.textContent = doc.fileName;
+      this.setFileName(doc.fileName);
       this.setStatus(t('status.created'));
       this.renderTokens([]);
       // A new note is written, not read: leave preview-only mode.
@@ -815,7 +899,7 @@ export class App {
       this.closeEditor();
       this.currentTrash = trashName;
       this.loadDoc(body, { readOnly: true });
-      this.els.fileName.textContent = entry?.title ?? '';
+      this.setFileName(entry?.title ?? '');
       this.setStatus(entry ? t('trash.deletedAt', { time: formatModified(entry.trashedAt) }) : '');
       this.showView('trashEntry');
       this.setLayout('ThreeColumnsEndExpanded');
@@ -869,6 +953,19 @@ export class App {
     try {
       await navigator.clipboard.writeText(format === 'wiki' ? markdownToWiki(body) : body);
       announce(format === 'wiki' ? t('announce.wikiCopied') : t('announce.markdownCopied'));
+    } catch (err) {
+      this.showError(t('error.copy'), err);
+    }
+  }
+
+  private async copyFileName(): Promise<void> {
+    if (!this.currentId) return;
+    // The name follows the title only after a pause; settle a pending rename first.
+    await this.flush();
+    if (!this.fileName) return;
+    try {
+      await navigator.clipboard.writeText(this.fileName);
+      announce(t('announce.fileNameCopied'));
     } catch (err) {
       this.showError(t('error.copy'), err);
     }
@@ -976,7 +1073,7 @@ export class App {
     this.loadDoc(doc.body);
     view.dispatch({ selection: { anchor: head } });
     this.dirty = false;
-    this.els.fileName.textContent = doc.fileName;
+    this.setFileName(doc.fileName);
     this.renderTokens(doc.labels);
   }
 

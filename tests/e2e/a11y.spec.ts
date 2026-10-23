@@ -88,11 +88,16 @@ test('notice strip after an outside change', async ({ page }) => {
 // Menus and dialogs
 // ---------------------------------------------------------------------------
 
-test('menus: appearance, more actions, export', async ({ page }) => {
+test('menus: appearance, language, more actions, export', async ({ page }) => {
   await openApp(page);
   await page.locator('#themeItem').click();
   await expect(page.locator('#themeMenu')).toHaveJSProperty('open', true);
   await expectNoSeriousViolations(page, 'appearance menu');
+  await page.keyboard.press('Escape');
+
+  await page.locator('#languageItem').click();
+  await expect(page.locator('#languageMenu')).toHaveJSProperty('open', true);
+  await expectNoSeriousViolations(page, 'language menu');
   await page.keyboard.press('Escape');
 
   await page.locator('#moreButton').click();
@@ -104,6 +109,12 @@ test('menus: appearance, more actions, export', async ({ page }) => {
   await page.locator('#exportButton').click();
   await expect(page.locator('#exportMenu')).toHaveJSProperty('open', true);
   await expectNoSeriousViolations(page, 'export menu');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#exportMenu')).toHaveJSProperty('open', false);
+
+  await page.locator('#editorMoreButton').click();
+  await expect(page.locator('#editorMoreMenu')).toHaveJSProperty('open', true);
+  await expectNoSeriousViolations(page, 'editor more menu');
 });
 
 test('versions dialog with a diff', async ({ page }) => {
@@ -240,4 +251,30 @@ test.describe('text spacing', () => {
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(0);
   });
+});
+
+test('More actions menu: keyboard opens and copies, focus returns to the button', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await openApp(page);
+  await openNote(page, 'Sprint-Planung');
+  const button = page.locator('#editorMoreButton');
+  const menu = page.locator('#editorMoreMenu');
+
+  // Open with Enter, close with Escape.
+  await button.focus();
+  await page.keyboard.press('Enter');
+  await expect(menu).toHaveJSProperty('open', true);
+  await page.keyboard.press('Escape');
+  await expect(menu).toHaveJSProperty('open', false);
+  await expect(button).toBeFocused();
+
+  // Open again and choose the first entry with the keyboard.
+  await page.keyboard.press('Enter');
+  await expect(menu).toHaveJSProperty('open', true);
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect(menu).toHaveJSProperty('open', false);
+  await expect(page.locator('#toast')).toHaveText('Dateiname kopiert.');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(/^sprint-planung--[0-9a-z]{6}\.md$/);
+  await expect(button).toBeFocused();
 });
