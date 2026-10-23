@@ -66,14 +66,14 @@
       <section slot="endColumn" id="editorColumn" class="column editor-column" data-sap-ui-fastnavgroup="true">
         <header class="column-header editor-header">
           <ui5-button id="backButton" design="Transparent" icon="nav-back" tooltip="Zur Notizliste" accessible-name="Zur Notizliste" data-i18n-attr="tooltip:editor.back; accessible-name:editor.back" hidden></ui5-button>
-          <div class="editor-meta">
-            <span id="saveStatus" class="save-status" role="status" aria-live="polite"></span>
-          </div>
           <ui5-segmented-button id="viewModeButton" accessible-name="Ansicht" data-i18n-attr="accessible-name:view.mode" hidden>
             <ui5-segmented-button-item data-mode="edit" data-i18n="view.edit" selected>Bearbeiten</ui5-segmented-button-item>
             <ui5-segmented-button-item data-mode="split" data-i18n="view.split">Geteilt</ui5-segmented-button-item>
             <ui5-segmented-button-item data-mode="preview" data-i18n="view.preview">Vorschau</ui5-segmented-button-item>
           </ui5-segmented-button>
+          <div class="editor-meta">
+            <span id="saveStatus" class="save-status" role="status" aria-live="polite"></span>
+          </div>
           <div class="header-actions" id="noteActions" hidden>
             <ui5-button id="versionsButton" design="Transparent" icon="history" tooltip="Versionen" accessible-name="Versionen" data-i18n-attr="tooltip:editor.versions; accessible-name:editor.versions"></ui5-button>
             <ui5-button id="exportButton" design="Transparent" icon="action" tooltip="Exportieren" accessible-name="Exportieren" data-i18n-attr="tooltip:editor.export; accessible-name:editor.export"></ui5-button>
