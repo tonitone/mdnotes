@@ -109,6 +109,11 @@ test('menus: appearance, language, more actions, export', async ({ page }) => {
   await page.locator('#exportButton').click();
   await expect(page.locator('#exportMenu')).toHaveJSProperty('open', true);
   await expectNoSeriousViolations(page, 'export menu');
+  await page.keyboard.press('Escape');
+
+  await page.locator('#editorMoreButton').click();
+  await expect(page.locator('#editorMoreMenu')).toHaveJSProperty('open', true);
+  await expectNoSeriousViolations(page, 'editor more menu');
 });
 
 test('versions dialog with a diff', async ({ page }) => {

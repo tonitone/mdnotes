@@ -134,3 +134,38 @@ test('a narrow window without an open note shows the list', async ({ page }) => 
   await expect(listItems(page).first()).toBeVisible();
   await expect(page.locator('#noSelection')).toBeHidden();
 });
+
+for (const [name, width] of [
+  ['narrow', 640],
+  ['wide', 1920],
+] as const) {
+  test(`header with a ${name} editor column: no overlapping boxes, same names for the view buttons`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await openNote(page, 'Sprint-Planung');
+    const columnWidth = (await page.locator('#editorColumn').boundingBox())!.width;
+    if (name === 'narrow') expect(columnWidth).toBeLessThan(480);
+    else expect(columnWidth).toBeGreaterThan(480);
+
+    // Icons only in a narrow column, text in a wide one; the names never change.
+    const items = page.locator('#viewModeButton ui5-segmented-button-item');
+    await expect(items.first()).toHaveJSProperty('accessibleName', 'Bearbeiten');
+    await expect(items.nth(1)).toHaveJSProperty('accessibleName', 'Geteilt');
+    await expect(items.nth(2)).toHaveJSProperty('accessibleName', 'Vorschau');
+    await expect(items.first()).toHaveText(name === 'narrow' ? '' : 'Bearbeiten');
+    await expect(items.first()).toHaveJSProperty('icon', name === 'narrow' ? 'edit' : '');
+
+    const boxes = await page.evaluate(() =>
+      ['backButton', 'viewModeButton', 'saveStatus', 'versionsButton', 'exportButton', 'deleteButton', 'editorMoreButton']
+        .map((id) => ({ id, rect: document.getElementById(id)!.getBoundingClientRect() }))
+        .filter(({ rect }) => rect.width > 0 && rect.height > 0)
+        .map(({ id, rect }) => ({ id, left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom })),
+    );
+    expect(boxes.length).toBeGreaterThanOrEqual(5);
+    for (const [i, a] of boxes.entries()) {
+      for (const b of boxes.slice(i + 1)) {
+        const overlaps = a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5;
+        expect(overlaps, `${a.id} overlaps ${b.id}`).toBe(false);
+      }
+    }
+  });
+}

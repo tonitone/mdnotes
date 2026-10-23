@@ -166,6 +166,21 @@ test.describe('export and import', () => {
     expect(exports.at(-1)).toMatchObject({ format: 'markdown', fileName: 'sprint-planung.md' });
   });
 
+  test('copy the file name through the More actions menu', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await openApp(page);
+    await openNote(page, 'Sprint-Planung');
+    await expect(page.locator('#fileName')).toHaveCount(0);
+
+    await page.locator('#editorMoreButton').click();
+    await menuItem(page, 'editorMoreMenu', 'Dateiname kopieren');
+    const copied = await page.evaluate(() => navigator.clipboard.readText());
+    expect(copied).toMatch(/^sprint-planung--[0-9a-z]{6}\.md$/);
+    await expect(page.locator('#editorColumn')).toHaveAttribute('data-file-name', copied);
+    await expect(page.locator('#announcer')).toHaveText('Dateiname kopiert.');
+    await expect(page.locator('#toast')).toHaveText('Dateiname kopiert.');
+  });
+
   test('import Markdown files with the file chooser', async ({ page }) => {
     await openApp(page);
     await page.locator('#moreButton').click();
