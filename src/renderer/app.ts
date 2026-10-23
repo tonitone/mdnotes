@@ -111,6 +111,8 @@ export class App {
     noteActions: $('noteActions'),
     exportButton: $('exportButton'),
     exportMenu: $('exportMenu'),
+    editorMoreButton: $('editorMoreButton'),
+    editorMoreMenu: $('editorMoreMenu'),
     deleteButton: $('deleteButton'),
     trashActions: $('trashActions'),
     restoreButton: $('restoreButton'),
@@ -232,6 +234,14 @@ export class App {
       if (action === 'copy-wiki') void this.copyCurrent('wiki');
       if (action === 'copy-markdown') void this.copyCurrent('markdown');
       if (format) void this.exportCurrent(format as ExportFormat);
+    });
+    els.editorMoreButton.addEventListener('click', () => {
+      els.editorMoreMenu.opener = els.editorMoreButton;
+      els.editorMoreMenu.open = true;
+    });
+    els.editorMoreMenu.addEventListener('item-click', (event: Event) => {
+      const action = (event as CustomEvent<{ item: HTMLElement }>).detail.item.dataset.action;
+      if (action === 'copy-file-name') void this.copyFileName();
     });
     els.deleteButton.addEventListener('click', () => void this.trashCurrent());
     els.restoreButton.addEventListener('click', () => void this.restoreCurrentTrash());
@@ -892,6 +902,16 @@ export class App {
     try {
       await navigator.clipboard.writeText(format === 'wiki' ? markdownToWiki(body) : body);
       announce(format === 'wiki' ? t('announce.wikiCopied') : t('announce.markdownCopied'));
+    } catch (err) {
+      this.showError(t('error.copy'), err);
+    }
+  }
+
+  private async copyFileName(): Promise<void> {
+    if (!this.currentId || !this.fileName) return;
+    try {
+      await navigator.clipboard.writeText(this.fileName);
+      announce(t('announce.fileNameCopied'));
     } catch (err) {
       this.showError(t('error.copy'), err);
     }
