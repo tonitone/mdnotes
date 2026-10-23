@@ -255,6 +255,9 @@ export class App {
     });
     // Fired on resize and user interaction, not when the app sets the layout.
     els.fcl.addEventListener('layout-change', () => this.updateColumnButtons());
+    // A column layout chosen in a narrow window must not outlive the window size.
+    narrowQuery.addEventListener('change', () => this.syncLayoutToWidth());
+    this.syncLayoutToWidth();
 
     els.viewModeButton.addEventListener('selection-change', (event: Event) => {
       const item = (event as CustomEvent<{ selectedItems: HTMLElement[] }>).detail.selectedItems?.[0];
@@ -361,6 +364,12 @@ export class App {
     this.els.fcl.layout = layout;
     // Column visibility is known after UI5 has rendered the new layout.
     requestAnimationFrame(() => this.updateColumnButtons());
+  }
+
+  /** Wide: all columns. Narrow: keep an open entry, otherwise show the list instead of the empty editor. */
+  private syncLayoutToWidth(): void {
+    if (!narrowQuery.matches) this.setLayout('ThreeColumnsEndExpanded');
+    else if (this.currentId === null && this.currentTrash === null) this.setLayout('TwoColumnsMidExpanded');
   }
 
   /** In narrow windows, back buttons lead to the hidden columns. */
