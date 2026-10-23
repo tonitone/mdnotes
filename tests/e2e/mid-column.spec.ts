@@ -68,15 +68,16 @@ test('wide middle column: icon and text, no overlap, axe', async ({ page }) => {
   await expectNoSeriousViolations(page, 'wide middle column');
 });
 
+// Label names are limited to 40 characters.
 test('long label name: the title is cut off before the buttons', async ({ page }) => {
   await openWithNote(page, 350);
   await page.locator('#labelList ui5-li', { hasText: 'arbeit' }).click();
   await page.locator('#renameLabelButton').click();
   const input = page.locator('ui5-dialog ui5-input input');
-  await input.fill('Ein sehr langer Labelname fuer das Projekt Sommerfest');
+  await input.fill('Sommerfest Planung und Einkaufsliste');
   await input.press('Enter');
   const title = page.locator('#notesTitle');
-  await expect(title).toHaveText('Label: Ein sehr langer Labelname fuer das Projekt Sommerfest');
+  await expect(title).toHaveText('Label: Sommerfest Planung und Einkaufsliste');
 
   const box = (await title.boundingBox())!;
   const first = (await page.locator('.header-actions ui5-button:not([hidden])').first().boundingBox())!;
