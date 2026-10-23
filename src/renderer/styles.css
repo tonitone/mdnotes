@@ -358,6 +358,11 @@ ui5-illustrated-message {
   min-width: 8rem;
 }
 
+/* The fence line contains its floated tools, so the next code line never sits under them. */
+.cm-md-codeblock-tools {
+  display: flow-root;
+}
+
 /* Versions dialog */
 
 .versions-layout {
