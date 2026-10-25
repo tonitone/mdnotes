@@ -100,6 +100,23 @@ ui5-flexible-column-layout {
   white-space: nowrap;
 }
 
+/* Format toolbar: its own row above the editor; the buttons wrap in a narrow column. */
+.format-toolbar {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.25rem 1rem;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--sapGroup_TitleBorderColor);
+}
+
+.format-toolbar[hidden] {
+  display: none;
+}
+
 .editor-area {
   display: flex;
   flex: 1;
