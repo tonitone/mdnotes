@@ -55,6 +55,20 @@ test.describe('labels', () => {
     await expect(page.locator('#labelList ui5-li', { hasText: 'arbeit' })).toHaveCount(0);
     await expect(listItems(page)).toHaveCount(1);
   });
+
+  test('rename a label to a name over 40 characters keeps the label view', async ({ page }) => {
+    await openApp(page);
+    await page.locator('#labelList ui5-li', { hasText: 'arbeit' }).click();
+    await page.locator('#renameLabelButton').click();
+    const input = page.locator('ui5-dialog ui5-input input');
+    await input.fill('x'.repeat(45));
+    await input.press('Enter');
+    const stored = 'x'.repeat(40);
+    await expect(page.locator('#notesTitle')).toHaveText(`Label: ${stored}`);
+    await expect(page.locator('#labelList ui5-li', { hasText: stored })).toHaveCount(1);
+    await expect(page.locator('#renameLabelButton')).toBeVisible();
+    await expect(listItems(page)).toHaveCount(1);
+  });
 });
 
 test.describe('backup', () => {
