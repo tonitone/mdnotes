@@ -66,13 +66,17 @@ Bei jedem Punkt: Was wird angesagt? Stimmt es mit dem überein, was man sieht?
 
 Kürzel im Editor (Cmd statt Strg auf dem Mac): Strg+B fett, Strg+I kursiv, Strg+K Link,
 Strg+Umschalt+X durchgestrichen. Strg+I belegt damit „Übergeordnete Syntax wählen“ von
-CodeMirror. Weitere Aktionen gibt es in der Formatleiste (Überschrift, Liste, Aufgabe,
-Tabelle, Code, Link); fett, kursiv und durchgestrichen gibt es nur als Kürzel.
+CodeMirror. Weitere Aktionen gibt es in der Formatleiste (`ui5-toolbar`: Überschrift, Liste,
+Aufgabe, Tabelle, Code, Link); fett, kursiv und durchgestrichen auch im Menü
+„Weitere Aktionen“ > „Format“, dort mit dem Kürzel.
 
 - [ ] Strg+B, Strg+I, Strg+K, Strg+Umschalt+X: „Fett an/aus“ usw. wird angesagt.
 - [ ] Die Formatleiste hat den Namen „Formatierung“, jeder Knopf einen Namen (Tooltip nennt das Kürzel).
-- [ ] Nach einem Knopf der Leiste steht der Fokus wieder im Editor.
-- [ ] Bei schmalem Fenster brechen die Knöpfe der Leiste in weitere Zeilen um und bleiben bedienbar.
+- [ ] In der Leiste wechseln Pfeiltasten, Pos1 und Ende zwischen den Knöpfen.
+- [ ] Nach einem Knopf der Leiste oder einem Eintrag im Menü „Format“ steht der Fokus wieder im Editor.
+- [ ] Bei sehr schmalem Fenster wandern die letzten Knöpfe in das Überlaufmenü der Leiste und
+      bleiben dort mit Maus und Tastatur bedienbar.
+- [ ] Im Menü „Format“ wird das Kürzel eines Eintrags angesagt (`aria-keyshortcuts`).
 
 ### Labels
 
