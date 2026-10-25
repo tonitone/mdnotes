@@ -71,51 +71,106 @@ const CODE_LANGUAGES: Array<[string, string]> = [
   ['yaml', 'YAML'],
 ];
 
-/** Language picker and copy button at the end of a code block's opening fence. */
+type SyntaxNode = ReturnType<ReturnType<typeof syntaxTree>['resolveInner']>;
+
+interface FenceDetails {
+  lang: string;
+  /** Where the language (info string) is, or an empty range right after the fence. */
+  infoFrom: number;
+  infoTo: number;
+  code: string;
+}
+
+/** Language, info range and code of a `FencedCode` node. */
+function fenceDetails(state: EditorState, node: SyntaxNode): FenceDetails {
+  const first = state.doc.lineAt(node.from);
+  const last = state.doc.lineAt(node.to);
+  const info = node.getChild('CodeInfo');
+  const fence = node.getChild('CodeMark');
+  const closed = last.number > first.number && /^\s*(`{3,}|~{3,})\s*$/.test(last.text);
+  const codeFrom = Math.min(first.to + 1, node.to);
+  const codeTo = closed ? Math.max(codeFrom, last.from - 1) : node.to;
+  const infoFrom = info?.from ?? fence?.to ?? first.from + 3;
+  return {
+    lang: info ? state.doc.sliceString(info.from, info.to) : '',
+    infoFrom,
+    infoTo: info?.to ?? infoFrom,
+    code: state.doc.sliceString(codeFrom, codeTo),
+  };
+}
+
+/** The code block whose opening fence line ends at `pos` (where the tools widget sits). */
+function fencedCodeAt(state: EditorState, pos: number): SyntaxNode | null {
+  for (let node: SyntaxNode | null = syntaxTree(state).resolveInner(pos, -1); node; node = node.parent) {
+    if (node.name === 'FencedCode') return node;
+  }
+  return null;
+}
+
+/**
+ * Language picker and copy button at the end of a code block's opening fence.
+ *
+ * The widget only knows the language. CodeMirror keeps the existing DOM when
+ * `eq()` is true, so typing in or above a block does not recreate the UI5
+ * components. The block is therefore looked up when an event fires, never
+ * captured at construction time.
+ */
 class CodeToolsWidget extends WidgetType {
-  constructor(
-    readonly lang: string,
-    /** Where the language (info string) is, or an empty range right after the fence. */
-    readonly infoFrom: number,
-    readonly infoTo: number,
-    readonly code: string,
-  ) {
+  constructor(readonly lang: string) {
     super();
   }
   eq(other: CodeToolsWidget): boolean {
-    return other.lang === this.lang && other.infoFrom === this.infoFrom && other.infoTo === this.infoTo && other.code === this.code;
+    return other.lang === this.lang;
   }
   toDOM(view: EditorView): HTMLElement {
     const wrap = document.createElement('span');
     wrap.className = 'cm-md-codetools';
+    // UI5 compact density for this subtree (set on a container, UI5 itself stays untouched).
+    wrap.classList.add('ui5-content-density-compact');
+    wrap.setAttribute('data-ui5-compact-size', '');
 
-    const select = document.createElement('select');
-    select.setAttribute('aria-label', t('code.language'));
+    /** The block this widget currently belongs to, resolved at event time. */
+    const current = (): { from: number; details: FenceDetails } | null => {
+      const node = fencedCodeAt(view.state, view.posAtDOM(wrap));
+      return node ? { from: node.from, details: fenceDetails(view.state, node) } : null;
+    };
+
+    // UI5 components (registered in main.ts). The widget ignores all editor events.
+    const select = document.createElement('ui5-select') as HTMLElement & { value: string };
+    select.setAttribute('accessible-name', t('code.language'));
     const known: Array<[string, string]> = [['', t('code.noLanguage')], ...CODE_LANGUAGES];
     const options = known.some(([v]) => v === this.lang) ? known : [...known, [this.lang, this.lang]];
     for (const [value, label] of options) {
-      const option = document.createElement('option');
-      option.value = value;
+      const option = document.createElement('ui5-option');
+      option.setAttribute('value', value);
       option.textContent = label;
-      option.selected = value === this.lang;
+      if (value === this.lang) option.setAttribute('selected', '');
       select.append(option);
     }
-    select.addEventListener('change', () => {
-      view.dispatch({ changes: { from: this.infoFrom, to: this.infoTo, insert: select.value } });
+    select.addEventListener('change', (e) => {
+      const chosen = (e as CustomEvent<{ selectedOption: HTMLElement & { value: string } }>).detail.selectedOption;
+      const block = current();
+      if (!block) return;
+      view.dispatch({ changes: { from: block.details.infoFrom, to: block.details.infoTo, insert: chosen.value } });
+      // The widget is replaced by the new language; hand focus back to the editor.
+      view.focus();
     });
 
-    const copy = document.createElement('button');
-    copy.type = 'button';
-    copy.className = 'cm-md-copy';
-    copy.textContent = t('code.copy');
-    copy.setAttribute('aria-label', t('code.copyLabel'));
+    const copy = document.createElement('ui5-button');
+    copy.setAttribute('icon', 'copy');
+    copy.setAttribute('design', 'Transparent');
+    copy.setAttribute('tooltip', t('code.copyLabel'));
+    copy.setAttribute('accessible-name', t('code.copyLabel'));
     copy.addEventListener('click', async () => {
+      const block = current();
+      if (!block) return;
       try {
-        await navigator.clipboard.writeText(this.code);
+        await navigator.clipboard.writeText(block.details.code);
         announce(copy, t('code.copied'));
       } catch {
         announce(copy, t('code.copyFailed'));
       }
+      // The widget is not recreated, so the button keeps focus.
     });
 
     wrap.append(select, copy);
@@ -261,20 +316,19 @@ function buildDecorations(view: EditorView): DecorationSet {
           }
           case 'FencedCode': {
             const first = state.doc.lineAt(node.from);
-            const last = state.doc.lineAt(node.to);
+            let tools = false;
             if (!isActive(node.from) && !state.readOnly) {
-              const info = node.node.getChild('CodeInfo');
-              const fence = node.node.getChild('CodeMark');
-              const closed = last.number > first.number && /^\s*(`{3,}|~{3,})\s*$/.test(last.text);
-              const codeFrom = Math.min(first.to + 1, node.to);
-              const codeTo = closed ? Math.max(codeFrom, last.from - 1) : node.to;
-              const lang = info ? state.doc.sliceString(info.from, info.to) : '';
-              const infoFrom = info?.from ?? fence?.to ?? first.from + 3;
-              const widget = new CodeToolsWidget(lang, infoFrom, info?.to ?? infoFrom, state.doc.sliceString(codeFrom, codeTo));
+              tools = true;
+              const widget = new CodeToolsWidget(fenceDetails(state, node.node).lang);
               ranges.push(Decoration.widget({ widget, side: 1 }).range(first.to));
             }
             eachLine(state, node.from, node.to, (lineFrom, first, last) => {
-              const cls = ['cm-md-codeblock', first ? 'cm-md-codeblock-first' : '', last ? 'cm-md-codeblock-last' : '']
+              const cls = [
+                'cm-md-codeblock',
+                first ? 'cm-md-codeblock-first' : '',
+                first && tools ? 'cm-md-codeblock-tools' : '',
+                last ? 'cm-md-codeblock-last' : '',
+              ]
                 .filter(Boolean)
                 .join(' ');
               ranges.push(line(cls).range(lineFrom));
