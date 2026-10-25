@@ -15,12 +15,14 @@ import { markdownToHtml } from '../shared/markdown/html';
 import { markdownToWiki } from '../shared/markdown/wiki';
 import { openBackupDialog } from './backup-dialog';
 import { createEditor, type NoteEditor } from './editor/editor';
+import { FORMAT_SHORTCUTS } from './editor/format-commands';
+import { shortcutLabel, type FormatKind, type FormatOutcome } from './editor/format';
 import { THEME_CHOICES, getDensity, getThemeChoice, setDensity, setThemeChoice, themeLabel, type ThemeChoice } from './theme';
 import { announce, confirmDialog, el, infoDialog, promptDialog, type Ui5Element } from './ui';
 import { observeCompact } from './compact';
 import { openVersionDialog } from './versions';
 import { formatModified, formatTime, formatVersionTime } from './format';
-import { LANGUAGE_CHOICES, isLanguageChoice, t, tp, type LanguageChoice } from '../shared/i18n';
+import { LANGUAGE_CHOICES, isLanguageChoice, t, tp, type LanguageChoice, type MessageKey } from '../shared/i18n';
 
 /** Delay after the last keystroke before saving. */
 const SAVE_DELAY_MS = 700;
@@ -91,6 +93,7 @@ export class App {
   private searchHits: SearchHit[] | null = null;
   private viewMode: ViewMode = readViewMode();
   private previewTimer: number | undefined;
+  private currentView: 'editor' | 'trashEntry' | 'noSelection' | 'noWorkspace' = 'noSelection';
 
   private readonly els = {
     fcl: $('fcl'),
@@ -124,6 +127,7 @@ export class App {
     exportMenu: $('exportMenu'),
     editorMoreButton: $('editorMoreButton'),
     editorMoreMenu: $('editorMoreMenu'),
+    formatToolbar: $('formatToolbar'),
     deleteButton: $('deleteButton'),
     trashActions: $('trashActions'),
     restoreButton: $('restoreButton'),
@@ -160,12 +164,14 @@ export class App {
       resolveAsset: (src) => this.api.assetUrl(src),
       saveImages: (files) => this.saveImages(files),
       onImagesInserted: (inserted) => void this.askForAltTexts(inserted),
+      onFormat: (outcome) => this.announceFormat(outcome),
     });
     // Expose the editor to e2e tests in browser mode only.
     if (__BROWSER_MODE__) (window as unknown as { __editorView: unknown }).__editorView = this.editor.view;
     this.buildThemeMenu();
     this.buildLanguageMenu();
     this.bindEvents();
+    this.labelFormatShortcuts();
     this.observeMiddleColumn();
     this.applyViewMode();
 
@@ -255,6 +261,9 @@ export class App {
       const action = (event as CustomEvent<{ item: HTMLElement }>).detail.item.dataset.action;
       if (action === 'copy-file-name') void this.copyFileName();
     });
+    for (const button of els.formatToolbar.querySelectorAll<HTMLElement>('[data-format]')) {
+      button.addEventListener('click', () => this.runFormat(button.dataset.format as FormatKind));
+    }
     els.deleteButton.addEventListener('click', () => void this.trashCurrent());
     els.restoreButton.addEventListener('click', () => void this.restoreCurrentTrash());
     els.deleteForeverButton.addEventListener('click', () => void this.deleteCurrentTrashForever());
@@ -465,6 +474,41 @@ export class App {
     }
   }
 
+  /** Runs a format on the editor and puts the focus back into it. */
+  private runFormat(kind: FormatKind): void {
+    if (!this.editor || this.viewMode === 'preview' || this.currentView !== 'editor') return;
+    this.editor.format(kind);
+    this.editor.focus();
+  }
+
+  /** Quiet announcement (no toast): what a shortcut did is otherwise invisible to screen readers. */
+  private announceFormat({ kind, on, level }: FormatOutcome): void {
+    if (kind === 'table') return;
+    const name = t(`format.${kind}` as MessageKey);
+    const message = kind === 'heading' && level ? t('format.announceHeading', { level: String(level) }) : t(on ? 'format.announceOn' : 'format.announceOff', { name });
+    announce(message, { toast: false });
+  }
+
+  /** Tooltips name the shortcut of their action. */
+  private labelFormatShortcuts(): void {
+    const mac = /mac|iphone|ipad/i.test(navigator.platform);
+    const names = { ctrl: t('format.keyCtrl'), shift: t('format.keyShift') };
+    const label = (kind: FormatKind): string | null => {
+      const shortcut = FORMAT_SHORTCUTS[kind];
+      return shortcut ? shortcutLabel(shortcut.key, { mac, shift: shortcut.shift, names }) : null;
+    };
+    for (const button of this.els.formatToolbar.querySelectorAll<HTMLElement>('[data-format]')) {
+      const kind = button.dataset.format as FormatKind;
+      const keys = label(kind);
+      if (keys) button.setAttribute('tooltip', t('format.withShortcut', { name: t(`format.${kind}` as MessageKey), shortcut: keys }));
+    }
+  }
+
+  /** The toolbar only works on an editable source, not in the preview or the trash. */
+  private updateFormatUi(): void {
+    this.els.formatToolbar.hidden = this.currentView !== 'editor' || this.viewMode === 'preview';
+  }
+
   private applyViewMode(): void {
     const mode = this.viewMode;
     this.els.editorArea.dataset.mode = mode;
@@ -473,6 +517,7 @@ export class App {
     // Next to the preview the editor shows plain source.
     this.editor?.setLivePreview(mode === 'edit');
     for (const item of this.els.viewModeButton.children as HTMLCollectionOf<Ui5Element>) item.selected = item.dataset.mode === mode;
+    this.updateFormatUi();
     this.renderPreview();
   }
 
@@ -651,6 +696,8 @@ export class App {
   }
 
   private showView(view: 'editor' | 'trashEntry' | 'noSelection' | 'noWorkspace'): void {
+    this.currentView = view;
+    this.updateFormatUi();
     const editing = view === 'editor' || view === 'trashEntry';
     this.els.editorArea.hidden = !editing;
     this.els.viewModeButton.hidden = !editing;

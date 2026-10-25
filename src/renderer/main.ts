@@ -64,6 +64,12 @@ import '@ui5/webcomponents-icons/dist/palette.js';
 import '@ui5/webcomponents-icons/dist/search.js';
 import '@ui5/webcomponents-icons/dist/screen-split-two.js';
 import '@ui5/webcomponents-icons/dist/show.js';
+import '@ui5/webcomponents-icons/dist/header.js';
+import '@ui5/webcomponents-icons/dist/list.js';
+import '@ui5/webcomponents-icons/dist/task.js';
+import '@ui5/webcomponents-icons/dist/table-view.js';
+import '@ui5/webcomponents-icons/dist/source-code.js';
+import '@ui5/webcomponents-icons/dist/chain-link.js';
 
 import './styles.css';
 import { t } from '../shared/i18n';

@@ -103,6 +103,15 @@
         </div>
         <div id="noticeRegion"></div>
         <div id="errorRegion" role="alert" aria-live="assertive"></div>
+        <!-- Plain container with UI5 buttons: wrapping instead of an overflow menu keeps every action visible. -->
+        <div id="formatToolbar" class="format-toolbar" role="toolbar" aria-label="Formatierung" data-i18n-attr="aria-label:format.toolbar" hidden>
+          <ui5-button design="Transparent" data-format="heading" icon="header" tooltip="Überschrift" accessible-name="Überschrift" data-i18n-attr="tooltip:format.heading; accessible-name:format.heading"></ui5-button>
+          <ui5-button design="Transparent" data-format="list" icon="list" tooltip="Liste" accessible-name="Liste" data-i18n-attr="tooltip:format.list; accessible-name:format.list"></ui5-button>
+          <ui5-button design="Transparent" data-format="task" icon="task" tooltip="Aufgabe" accessible-name="Aufgabe" data-i18n-attr="tooltip:format.task; accessible-name:format.task"></ui5-button>
+          <ui5-button design="Transparent" data-format="table" icon="table-view" tooltip="Tabelle" accessible-name="Tabelle" data-i18n-attr="tooltip:format.table; accessible-name:format.table"></ui5-button>
+          <ui5-button design="Transparent" data-format="code" icon="source-code" tooltip="Code" accessible-name="Code" data-i18n-attr="tooltip:format.code; accessible-name:format.code"></ui5-button>
+          <ui5-button design="Transparent" data-format="link" icon="chain-link" tooltip="Link" accessible-name="Link" data-i18n-attr="tooltip:format.link; accessible-name:format.link"></ui5-button>
+        </div>
         <div id="editorArea" class="editor-area" data-mode="edit" hidden>
           <div id="editor-host" class="editor-host" tabindex="-1"></div>
           <div id="previewPane" class="preview" tabindex="0" role="region" aria-label="Vorschau" data-i18n-attr="aria-label:view.previewLabel" hidden></div>
