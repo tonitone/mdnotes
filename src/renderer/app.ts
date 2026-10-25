@@ -94,6 +94,8 @@ export class App {
   private viewMode: ViewMode = readViewMode();
   private previewTimer: number | undefined;
   private currentView: 'editor' | 'trashEntry' | 'noSelection' | 'noWorkspace' = 'noSelection';
+  /** A format chosen in the Format menu runs once the menu has closed and given the focus back. */
+  private pendingFormat: FormatKind | null = null;
 
   private readonly els = {
     fcl: $('fcl'),
@@ -129,6 +131,7 @@ export class App {
     editorMoreMenu: $('editorMoreMenu'),
     formatToolbarRow: $('formatToolbarRow'),
     formatToolbar: $('formatToolbar'),
+    formatMenuItem: $('formatMenuItem'),
     deleteButton: $('deleteButton'),
     trashActions: $('trashActions'),
     restoreButton: $('restoreButton'),
@@ -259,8 +262,17 @@ export class App {
       els.editorMoreMenu.open = true;
     });
     els.editorMoreMenu.addEventListener('item-click', (event: Event) => {
-      const action = (event as CustomEvent<{ item: HTMLElement }>).detail.item.dataset.action;
+      const { action, format } = (event as CustomEvent<{ item: HTMLElement }>).detail.item.dataset;
       if (action === 'copy-file-name') void this.copyFileName();
+      if (format) this.pendingFormat = format as FormatKind;
+    });
+    els.editorMoreMenu.addEventListener('close', (event: Event) => {
+      // The submenu fires its own close event; only the whole menu closing counts.
+      if (event.target !== els.editorMoreMenu) return;
+      const kind = this.pendingFormat;
+      this.pendingFormat = null;
+      // The menu gives the focus back to its button; wait for that, then move on to the editor.
+      if (kind) requestAnimationFrame(() => this.runFormat(kind));
     });
     for (const button of els.formatToolbar.querySelectorAll<HTMLElement>('[data-format]')) {
       button.addEventListener('click', () => this.runFormat(button.dataset.format as FormatKind));
@@ -494,7 +506,7 @@ export class App {
     announce(message, { toast: false });
   }
 
-  /** Tooltips name the shortcut of their action. */
+  /** Tooltips and Format menu entries name the shortcut of their action. */
   private labelFormatShortcuts(): void {
     const mac = /mac|iphone|ipad/i.test(navigator.platform);
     const names = { ctrl: t('format.keyCtrl'), shift: t('format.keyShift') };
@@ -507,14 +519,25 @@ export class App {
       const keys = label(kind);
       if (keys) button.setAttribute('tooltip', t('format.withShortcut', { name: t(`format.${kind}` as MessageKey), shortcut: keys }));
     }
+    for (const item of this.els.formatMenuItem.querySelectorAll<Ui5Element>('[data-format]')) {
+      const shortcut = FORMAT_SHORTCUTS[item.dataset.format as FormatKind];
+      if (!shortcut) continue;
+      item.additionalText = label(item.dataset.format as FormatKind);
+      // Screen readers get the shortcut from aria-keyshortcuts; UI5 then hides the visible text from them.
+      const aria = [mac ? 'Meta' : 'Control', shortcut.shift ? 'Shift' : '', shortcut.key.toUpperCase()].filter(Boolean).join('+');
+      item.accessibilityAttributes = { ariaKeyShortcuts: aria };
+    }
   }
 
   /**
-   * The toolbar only works on an editable source, not in the preview or the trash. Hiding the row
-   * is enough: the toolbar lays itself out again through its own resize handler once it is shown.
+   * The toolbar and the Format menu only work on an editable source, not in the preview or the
+   * trash. Hiding the row is enough: the toolbar lays itself out again through its own resize
+   * handler once it is shown.
    */
   private updateFormatUi(): void {
-    this.els.formatToolbarRow.hidden = this.currentView !== 'editor' || this.viewMode === 'preview';
+    const editable = this.currentView === 'editor' && this.viewMode !== 'preview';
+    this.els.formatToolbarRow.hidden = !editable;
+    this.els.formatMenuItem.disabled = !editable;
   }
 
   private applyViewMode(): void {
