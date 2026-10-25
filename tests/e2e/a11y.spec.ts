@@ -314,7 +314,7 @@ for (const theme of ['light', 'hcb'] as const) {
   });
 }
 
-test('format toolbar at 320 CSS pixels: no horizontal scrolling, buttons wrap', async ({ page }) => {
+test('format toolbar at 320 CSS pixels: no horizontal scrolling', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 });
   await openApp(page);
   await openNote(page, 'Willkommen');
@@ -323,13 +323,6 @@ test('format toolbar at 320 CSS pixels: no horizontal scrolling, buttons wrap', 
   const box = (await toolbar.boundingBox())!;
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(320.5);
-  // The buttons wrap into more rows; all of them stay visible and inside the viewport.
-  const buttons = toolbar.getByRole('button');
-  await expect(buttons).toHaveCount(6);
-  for (const rect of await buttons.evaluateAll((nodes) => nodes.map((n) => n.getBoundingClientRect().toJSON()))) {
-    expect(rect.width).toBeGreaterThan(0);
-    expect(rect.right).toBeLessThanOrEqual(320.5);
-  }
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
   await expectNoSeriousViolations(page, 'format toolbar 320');

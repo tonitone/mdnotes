@@ -127,6 +127,7 @@ export class App {
     exportMenu: $('exportMenu'),
     editorMoreButton: $('editorMoreButton'),
     editorMoreMenu: $('editorMoreMenu'),
+    formatToolbarRow: $('formatToolbarRow'),
     formatToolbar: $('formatToolbar'),
     deleteButton: $('deleteButton'),
     trashActions: $('trashActions'),
@@ -474,11 +475,15 @@ export class App {
     }
   }
 
-  /** Runs a format on the editor and puts the focus back into it. */
+  /**
+   * Runs a format on the editor and puts the focus back into it. A button in the toolbar's
+   * overflow menu closes that menu right after its click event, and the menu gives the focus back
+   * to the overflow button; so the editor takes the focus once the click has been handled.
+   */
   private runFormat(kind: FormatKind): void {
     if (!this.editor || this.viewMode === 'preview' || this.currentView !== 'editor') return;
     this.editor.format(kind);
-    this.editor.focus();
+    queueMicrotask(() => this.editor?.focus());
   }
 
   /** Quiet announcement (no toast): what a shortcut did is otherwise invisible to screen readers. */
@@ -504,9 +509,12 @@ export class App {
     }
   }
 
-  /** The toolbar only works on an editable source, not in the preview or the trash. */
+  /**
+   * The toolbar only works on an editable source, not in the preview or the trash. Hiding the row
+   * is enough: the toolbar lays itself out again through its own resize handler once it is shown.
+   */
   private updateFormatUi(): void {
-    this.els.formatToolbar.hidden = this.currentView !== 'editor' || this.viewMode === 'preview';
+    this.els.formatToolbarRow.hidden = this.currentView !== 'editor' || this.viewMode === 'preview';
   }
 
   private applyViewMode(): void {
