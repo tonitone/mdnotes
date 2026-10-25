@@ -210,7 +210,6 @@ export const en: Messages = {
 
   'code.noLanguage': 'No language',
   'code.language': 'Code block language',
-  'code.copy': 'Copy',
   'code.copyLabel': 'Copy code',
   'code.copied': 'Code copied',
   'code.copyFailed': 'Copying not possible',
