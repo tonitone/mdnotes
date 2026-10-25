@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, it } from 'node:test';
 import { NodeFs } from '../../src/main/node-fs';
 import { MemoryFs, type FsPort } from '../../src/shared/fs-port';
 import { parseNote } from '../../src/shared/note';
-import { NoteStore } from '../../src/shared/note-store';
+import { NoteStore, normalizeLabels } from '../../src/shared/note-store';
 
 /** The same tests run against memory and against the real file system. */
 const backends: Array<{ name: string; setup: () => Promise<{ fs: FsPort; cleanup: () => Promise<void>; dir?: string }> }> = [
@@ -167,6 +167,14 @@ for (const backend of backends) {
       ]);
     });
 
+    it('stores a renamed label shortened to the maximum length', async () => {
+      const a = await store.create();
+      await store.setLabels(a.id, ['alt']);
+      const changed = await store.renameLabel('alt', 'n'.repeat(45));
+      assert.deepEqual(changed[0].labels, ['n'.repeat(40)]);
+      assert.deepEqual(store.labels(), [{ label: 'n'.repeat(40), count: 1 }]);
+    });
+
     it('searches title and body, ignoring case and diacritics', async () => {
       const a = await store.create();
       const b = await store.create();
@@ -278,6 +286,13 @@ for (const backend of backends) {
     });
   });
 }
+
+describe('normalizeLabels', () => {
+  it('shortens labels to 40 characters and trims the result', () => {
+    assert.deepEqual(normalizeLabels(['a'.repeat(45)]), ['a'.repeat(40)]);
+    assert.deepEqual(normalizeLabels([`${'a'.repeat(39)} bbbb`]), ['a'.repeat(39)]);
+  });
+});
 
 describe('NodeFs safety', () => {
   let dir: string;
