@@ -50,6 +50,12 @@ Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand
 - Gesprächssprache Deutsch, kurz und konkret. Pro Thema ein PR, erst bei grüner CI melden. Bugs vor Features.
   Bei größeren, mehrdeutigen Aufgaben vorher kurz fragen.
 - Design: Standard-Horizon. Eigene Looks wurden abgelehnt (PR #9). UI5-Komponenten nie verändern.
+- UI5-Komponenten auch nicht von außen umstylen: kein `display`, `width`, `flex` oder `padding` auf dem Host.
+  Autoren-CSS schlägt `:host`-Regeln und zerstört das innere Layout (Beispiel: `display: block` auf `ui5-toolbar`
+  ließ jeden Knopf in voller Breite messen, alles landete im Überlauf).
+- Scheint eine UI5-Komponente nicht zu funktionieren, zuerst die eigene Seite prüfen (CSS am Host, fehlende Imports,
+  falsche Kinder im Slot, versteckter Container beim ersten Rendern, Testannahmen). Ersatz oder Weglassen nur mit
+  belegter Ursache im UI5-Quelltext der gepinnten Version (Datei und Zeile) in der PR-Beschreibung.
 - Bedienelemente (Knopf, Auswahl, Checkbox, Eingabe, Menü, Dialog, Liste) sind immer UI5-Komponenten.
   Inhalt (Markdown in Editor und Vorschau) bleibt semantisches HTML und CodeMirror. Die Code-Werkzeuge
   (`ui5-select`, `ui5-button`) in `live-preview.ts` sind UI5. Das Aufgaben-Kästchen bleibt das native
