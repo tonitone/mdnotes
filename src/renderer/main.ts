@@ -31,6 +31,8 @@ import '@ui5/webcomponents/dist/MenuItem.js';
 import '@ui5/webcomponents/dist/MenuSeparator.js';
 import '@ui5/webcomponents/dist/MessageStrip.js';
 import '@ui5/webcomponents/dist/Title.js';
+import '@ui5/webcomponents/dist/Toolbar.js';
+import '@ui5/webcomponents/dist/ToolbarButton.js';
 import '@ui5/webcomponents-fiori/dist/FlexibleColumnLayout.js';
 import '@ui5/webcomponents-fiori/dist/IllustratedMessage.js';
 import '@ui5/webcomponents-fiori/dist/ShellBar.js';

@@ -14,6 +14,7 @@ const editor = (page: Page) => page.locator('.cm-content');
 const listItems = (page: Page) => page.locator('#notesList ui5-li');
 const toolbar = (page: Page) => page.locator('#formatToolbar');
 const toolbarButton = (page: Page, name: string) => toolbar(page).getByRole('button', { name, exact: true });
+const toolbarItem = (page: Page, format: string) => page.locator(`#formatToolbar ui5-toolbar-button[data-format="${format}"]`);
 
 async function openNote(page: Page, url = '/') {
   await page.goto(url);
@@ -182,7 +183,7 @@ test.describe('toolbar', () => {
   });
 
   test('the link tooltip names the shortcut', async ({ page }) => {
-    await expect(page.locator('#formatToolbar ui5-button[data-format="link"]')).toHaveAttribute('tooltip', 'Link (Strg+K)');
+    await expect(toolbarItem(page, 'link')).toHaveAttribute('tooltip', 'Link (Strg+K)');
   });
 
   test('the link button wraps the selection, selects the url and returns the focus to the editor', async ({ page }) => {
@@ -235,7 +236,7 @@ test.describe('toolbar', () => {
     await setText(page, TEXT, ...WELT);
     await page.keyboard.press('Escape');
     await page.keyboard.press('Shift+Tab');
-    await expect(page.locator('#formatToolbar ui5-button[data-format="link"]')).toBeFocused();
+    await expect(toolbarItem(page, 'link')).toBeFocused();
     await page.keyboard.press('Enter');
     expect(await docText(page)).toBe('Titel\n\nHallo [Welt](url)');
     await expect(editor(page)).toBeFocused();
@@ -258,9 +259,9 @@ test.describe('toolbar', () => {
 test('English: names and the shortcut in the tooltip follow the language', async ({ page }) => {
   await openNote(page, '/?lang=en');
   // The note is called "Willkommen" in every language, the UI around it is English.
-  await expect(toolbar(page)).toHaveAttribute('aria-label', 'Formatting');
+  await expect(page.getByRole('toolbar', { name: 'Formatting' })).toBeVisible();
   await expect(toolbarButton(page, 'Heading')).toBeVisible();
-  await expect(page.locator('#formatToolbar ui5-button[data-format="link"]')).toHaveAttribute('tooltip', 'Link (Ctrl+K)');
+  await expect(toolbarItem(page, 'link')).toHaveAttribute('tooltip', 'Link (Ctrl+K)');
   await setText(page, TEXT, ...WELT);
   await page.keyboard.press('ControlOrMeta+b');
   await expect(page.locator('#announcer')).toHaveText('Bold on');
