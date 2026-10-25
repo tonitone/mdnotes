@@ -19,8 +19,11 @@ export function el<T extends Ui5Element = Ui5Element>(tag: string, props: Record
   return node;
 }
 
-/** Shows a short message as toast and announces it to screen readers. */
-export function announce(message: string): void {
+/**
+ * Announces a message to screen readers and shows it as toast.
+ * `toast: false` only uses the live region, for frequent status changes.
+ */
+export function announce(message: string, options: { toast?: boolean } = {}): void {
   const region = document.getElementById('announcer');
   if (region) {
     // Clear first so the same message is announced again.
@@ -28,7 +31,7 @@ export function announce(message: string): void {
     window.setTimeout(() => (region.textContent = message), 50);
   }
   const toast = document.getElementById('toast') as Ui5Element | null;
-  if (toast) {
+  if (toast && options.toast !== false) {
     toast.textContent = message;
     toast.open = true;
   }
