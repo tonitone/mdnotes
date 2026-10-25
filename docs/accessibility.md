@@ -62,6 +62,18 @@ Bei jedem Punkt: Was wird angesagt? Stimmt es mit dem überein, was man sieht?
       ohne das Tippen zu unterbrechen.
 - [ ] Esc, danach Tab verlässt den Editor (keine Tastaturfalle).
 
+### Formatierung
+
+Kürzel im Editor (Cmd statt Strg auf dem Mac): Strg+B fett, Strg+I kursiv, Strg+K Link,
+Strg+Umschalt+X durchgestrichen. Strg+I belegt damit „Übergeordnete Syntax wählen“ von
+CodeMirror. Weitere Aktionen gibt es in der Formatleiste (Überschrift, Liste, Aufgabe,
+Tabelle, Code, Link); fett, kursiv und durchgestrichen gibt es nur als Kürzel.
+
+- [ ] Strg+B, Strg+I, Strg+K, Strg+Umschalt+X: „Fett an/aus“ usw. wird angesagt.
+- [ ] Die Formatleiste hat den Namen „Formatierung“, jeder Knopf einen Namen (Tooltip nennt das Kürzel).
+- [ ] Nach einem Knopf der Leiste steht der Fokus wieder im Editor.
+- [ ] Bei schmalem Fenster brechen die Knöpfe der Leiste in weitere Zeilen um und bleiben bedienbar.
+
 ### Labels
 
 - [ ] Das Label-Feld heißt „Labels der Notiz“. Vorschläge werden angesagt.

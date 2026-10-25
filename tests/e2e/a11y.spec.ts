@@ -298,3 +298,39 @@ test('More actions menu: keyboard opens and copies, focus returns to the button'
   expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(/^sprint-planung--[0-9a-z]{6}\.md$/);
   await expect(button).toBeFocused();
 });
+
+// ---------------------------------------------------------------------------
+// Format toolbar and Format menu
+// ---------------------------------------------------------------------------
+
+for (const theme of ['light', 'hcb'] as const) {
+  test(`format toolbar: theme ${theme}`, async ({ page }) => {
+    await page.addInitScript((value) => localStorage.setItem('mdnotes.theme', value), theme);
+    await openApp(page);
+    await openNote(page, 'Willkommen');
+    await expect(page.locator('#formatToolbar')).toBeVisible();
+    await expect(page.locator('#formatToolbar').getByRole('button', { name: 'Link', exact: true })).toBeVisible();
+    await expectNoSeriousViolations(page, `format toolbar ${theme}`);
+  });
+}
+
+test('format toolbar at 320 CSS pixels: no horizontal scrolling, buttons wrap', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await openApp(page);
+  await openNote(page, 'Willkommen');
+  const toolbar = page.locator('#formatToolbar');
+  await expect(toolbar).toBeVisible();
+  const box = (await toolbar.boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(320.5);
+  // The buttons wrap into more rows; all of them stay visible and inside the viewport.
+  const buttons = toolbar.getByRole('button');
+  await expect(buttons).toHaveCount(6);
+  for (const rect of await buttons.evaluateAll((nodes) => nodes.map((n) => n.getBoundingClientRect().toJSON()))) {
+    expect(rect.width).toBeGreaterThan(0);
+    expect(rect.right).toBeLessThanOrEqual(320.5);
+  }
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+  await expectNoSeriousViolations(page, 'format toolbar 320');
+});
