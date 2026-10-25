@@ -1147,7 +1147,7 @@ export class App {
     const to = await promptDialog(t('label.renameTitle'), t('label.newName'), t('label.renameHint'), from, t('dialog.cancel'));
     // Compare with the name the store will actually keep (trimmed, shortened).
     const [target] = normalizeLabels([to ?? '']);
-    if (!target || target === from) return;
+    if (to === null || !target || target === from) return;
     try {
       const changed = await this.api.renameLabel(from, to);
       this.notes = await this.api.listNotes();
