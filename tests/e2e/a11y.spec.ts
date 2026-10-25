@@ -328,3 +328,16 @@ test('format toolbar at 320 CSS pixels: no horizontal scrolling', async ({ page 
   expect(overflow).toBeLessThanOrEqual(0);
   await expectNoSeriousViolations(page, 'format toolbar 320');
 });
+
+test('More actions with the Format menu: axe with the menu and with the submenu open', async ({ page }) => {
+  await openApp(page, '/?lang=en');
+  await openNote(page, 'Willkommen');
+  await page.locator('#editorMoreButton').click();
+  await expect(page.locator('#editorMoreMenu')).toHaveJSProperty('open', true);
+  await expect(page.locator('#formatMenuItem')).toBeVisible();
+  await expectNoSeriousViolations(page, 'more actions menu');
+  await page.locator('#formatMenuItem').click();
+  await expect(page.locator('#formatMenuItem ui5-menu-item[data-format="bold"]')).toBeVisible();
+  // One finding inside UI5 is listed in KNOWN_UI5_ISSUES (tests/e2e/axe.ts).
+  await expectNoSeriousViolations(page, 'format submenu');
+});

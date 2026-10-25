@@ -8,16 +8,27 @@ export const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'
  * Violations inside UI5 components that the app cannot fix. Keep this list
  * short, name the UI5 version and remove entries once UI5 fixes them.
  */
-const KNOWN_UI5_ISSUES: Array<{ rule: string; target: string; reason: string }> = [
+const KNOWN_UI5_ISSUES: Array<{ rule: string; target: string; summary?: string; reason: string }> = [
   {
     rule: 'nested-interactive',
     target: '.ui5-fcl-separator',
     reason: 'UI5 2.27.2: the FCL column separator (role=separator) contains its focusable resize grip.',
   },
+  {
+    rule: 'aria-required-children',
+    target: '#editorMoreMenu',
+    summary: 'ui5-responsive-popover[tabindex]',
+    reason:
+      'UI5 2.27.2: an open submenu. ui5-menu-item renders the submenu popover next to its menu item in its own ' +
+      'shadow root (MenuItemTemplate.tsx, listItemPostContent), so it ends up inside the parent ul[role=menu]; ' +
+      'Popup.onEnterDOM sets tabIndex = -1 on it (Popup.ts:291), so axe counts it as a focusable non-menuitem child.',
+  },
 ];
 
-function isKnownUi5Issue(rule: string, target: string): boolean {
-  return KNOWN_UI5_ISSUES.some((issue) => issue.rule === rule && target.includes(issue.target));
+function isKnownUi5Issue(rule: string, target: string, summary = ''): boolean {
+  return KNOWN_UI5_ISSUES.some(
+    (issue) => issue.rule === rule && target.includes(issue.target) && (!issue.summary || summary.includes(issue.summary)),
+  );
 }
 
 /**
@@ -39,7 +50,7 @@ export async function expectNoSeriousViolations(page: Page, context = ''): Promi
     .filter((v) => v.impact === 'serious' || v.impact === 'critical')
     .flatMap((v) =>
       v.nodes
-        .filter((n) => !isKnownUi5Issue(v.id, n.target.join(' > ')))
+        .filter((n) => !isKnownUi5Issue(v.id, n.target.join(' > '), n.failureSummary))
         .map((n) => `${context ? `[${context}] ` : ''}${v.id}: ${n.target.join(' > ')} | ${n.failureSummary?.replace(/\s+/g, ' ')} | ${n.html.slice(0, 160)}`),
     );
   expect(report).toEqual([]);

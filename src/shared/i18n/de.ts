@@ -51,6 +51,7 @@ export const de = {
   'editor.placeholder': 'Die erste Zeile wird der Titel …',
   'editor.contentLabel': 'Notizinhalt',
   'format.toolbar': 'Formatierung',
+  'format.menu': 'Format',
   'format.bold': 'Fett',
   'format.italic': 'Kursiv',
   'format.strike': 'Durchgestrichen',

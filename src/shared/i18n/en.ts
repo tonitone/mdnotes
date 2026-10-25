@@ -44,6 +44,7 @@ export const en: Messages = {
   'editor.placeholder': 'The first line becomes the title …',
   'editor.contentLabel': 'Note content',
   'format.toolbar': 'Formatting',
+  'format.menu': 'Format',
   'format.bold': 'Bold',
   'format.italic': 'Italic',
   'format.strike': 'Strikethrough',

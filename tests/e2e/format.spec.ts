@@ -397,6 +397,61 @@ test('English: names and the shortcut in the tooltip follow the language', async
   await expect(page.locator('#announcer')).toHaveText('Bold on');
 });
 
+test.describe('Format menu in More actions', () => {
+  const menu = (page: Page) => page.locator('#editorMoreMenu');
+  const item = (page: Page, format: string) => page.locator(`#formatMenuItem ui5-menu-item[data-format="${format}"]`);
+
+  test.beforeEach(async ({ page }) => {
+    await openNote(page);
+  });
+
+  test('applies bold with the mouse and returns the focus to the editor', async ({ page }) => {
+    await setText(page, TEXT, ...WELT);
+    await page.locator('#editorMoreButton').click();
+    await expect(menu(page)).toHaveJSProperty('open', true);
+    await page.locator('#formatMenuItem').click();
+    await expect(item(page, 'bold')).toBeVisible();
+    await item(page, 'bold').click();
+    await expect(menu(page)).toHaveJSProperty('open', false);
+    await expect(editor(page)).toBeFocused();
+    expect(await docText(page)).toBe('Titel\n\nHallo **Welt**');
+  });
+
+  test('names the shortcuts', async ({ page }) => {
+    await expect(item(page, 'bold')).toHaveJSProperty('additionalText', 'Strg+B');
+    await expect(item(page, 'italic')).toHaveJSProperty('additionalText', 'Strg+I');
+    await expect(item(page, 'strike')).toHaveJSProperty('additionalText', 'Strg+Umschalt+X');
+    await expect(item(page, 'strike')).toHaveJSProperty('accessibilityAttributes', { ariaKeyShortcuts: 'Control+Shift+X' });
+  });
+
+  test('is operated with the keyboard', async ({ page }) => {
+    await setText(page, TEXT, ...WELT);
+    await page.locator('#editorMoreButton').focus();
+    await page.keyboard.press('Enter');
+    await expect(menu(page)).toHaveJSProperty('open', true);
+    // The menu focuses its first entry ("Copy file name"); "Format" is the second.
+    await expect(page.locator('#editorMoreMenu ui5-menu-item[data-action="copy-file-name"]')).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(page.locator('#formatMenuItem')).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect(item(page, 'bold')).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(item(page, 'italic')).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(menu(page)).toHaveJSProperty('open', false);
+    await expect(editor(page)).toBeFocused();
+    expect(await docText(page)).toBe('Titel\n\nHallo *Welt*');
+  });
+
+  test('is disabled in the preview', async ({ page }) => {
+    await expect(page.locator('#formatMenuItem')).toHaveJSProperty('disabled', false);
+    await page.locator('#viewModeButton ui5-segmented-button-item[data-mode="preview"]').click();
+    await expect(page.locator('#formatMenuItem')).toHaveJSProperty('disabled', true);
+    await page.locator('#viewModeButton ui5-segmented-button-item[data-mode="edit"]').click();
+    await expect(page.locator('#formatMenuItem')).toHaveJSProperty('disabled', false);
+  });
+});
+
 test('axe: toolbar with a selection that the actions changed', async ({ page }) => {
   await openNote(page);
   await setText(page, TEXT, ...WELT);
