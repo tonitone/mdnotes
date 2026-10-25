@@ -15,6 +15,7 @@ const listItems = (page: Page) => page.locator('#notesList ui5-li');
 const toolbar = (page: Page) => page.locator('#formatToolbar');
 const toolbarButton = (page: Page, name: string) => toolbar(page).getByRole('button', { name, exact: true });
 const toolbarItem = (page: Page, format: string) => page.locator(`#formatToolbar ui5-toolbar-button[data-format="${format}"]`);
+const overflowButton = (page: Page) => toolbar(page).locator('.ui5-tb-overflow-btn');
 
 async function openNote(page: Page, url = '/') {
   await page.goto(url);
@@ -242,6 +243,31 @@ test.describe('toolbar', () => {
     await expect(editor(page)).toBeFocused();
   });
 
+  test('arrow keys, Home and End move between the buttons; Space runs the action', async ({ page }) => {
+    await setText(page, TEXT, ...WELT);
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Shift+Tab');
+    await expect(toolbarItem(page, 'link')).toBeFocused();
+    await page.keyboard.press('ArrowLeft');
+    await expect(toolbarItem(page, 'code')).toBeFocused();
+    await page.keyboard.press('Home');
+    await expect(toolbarItem(page, 'heading')).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect(toolbarItem(page, 'list')).toBeFocused();
+    await page.keyboard.press('End');
+    await expect(toolbarItem(page, 'link')).toBeFocused();
+    await page.keyboard.press('Home');
+    await expect(toolbarItem(page, 'heading')).toBeFocused();
+    // Tab leaves the toolbar backwards and comes back in on the same button.
+    await page.keyboard.press('Shift+Tab');
+    await expect(toolbarItem(page, 'heading')).not.toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(toolbarItem(page, 'heading')).toBeFocused();
+    await page.keyboard.press('Space');
+    expect(await docText(page)).toBe('Titel\n\n# Hallo Welt');
+    await expect(editor(page)).toBeFocused();
+  });
+
   for (const density of ['compact', 'cozy'] as const) {
     test(`every button is at least 24 x 24 px: density ${density}`, async ({ page }) => {
       await page.addInitScript((value) => localStorage.setItem('mdnotes.density', value), density);
@@ -254,6 +280,110 @@ test.describe('toolbar', () => {
       }
     });
   }
+});
+
+/** Formats whose toolbar button sits in the overflow menu. */
+const overflowedFormats = (page: Page) =>
+  page.locator('#formatToolbar ui5-toolbar-button').evaluateAll((nodes) =>
+    nodes.filter((n) => (n as HTMLElement & { isOverflowed: boolean }).isOverflowed).map((n) => (n as HTMLElement).dataset.format),
+  );
+
+/** Asserts that all six buttons sit in the toolbar row and the overflow button is hidden. */
+async function expectAllButtonsInRow(page: Page) {
+  await expect(overflowButton(page)).toBeHidden();
+  await expect.poll(() => overflowedFormats(page)).toEqual([]);
+  const bar = (await toolbar(page).boundingBox())!;
+  const buttons = toolbar(page).getByRole('button');
+  await expect(buttons).toHaveCount(6);
+  for (const [i, box] of (await buttons.evaluateAll((nodes) => nodes.map((n) => n.getBoundingClientRect().toJSON()))).entries()) {
+    expect(box.width, `button ${i} width`).toBeGreaterThan(0);
+    expect(box.left, `button ${i} left`).toBeGreaterThanOrEqual(bar.x - 0.5);
+    expect(box.right, `button ${i} right`).toBeLessThanOrEqual(bar.x + bar.width + 0.5);
+    expect(box.top, `button ${i} top`).toBeGreaterThanOrEqual(bar.y - 0.5);
+    expect(box.bottom, `button ${i} bottom`).toBeLessThanOrEqual(bar.y + bar.height + 0.5);
+  }
+}
+
+test.describe('toolbar overflow', () => {
+  test('at normal width every button is in the row, also after the toolbar was hidden and shown again', async ({ page }) => {
+    // The toolbar starts hidden (no note open) and is measured only once it gets a width.
+    await openNote(page);
+    await expectAllButtonsInRow(page);
+    await page.locator('#viewModeButton ui5-segmented-button-item[data-mode="preview"]').click();
+    await expect(toolbar(page)).toBeHidden();
+    await page.locator('#viewModeButton ui5-segmented-button-item[data-mode="edit"]').click();
+    await expect(toolbar(page)).toBeVisible();
+    await expectAllButtonsInRow(page);
+  });
+
+  test('at 320 CSS pixels: no horizontal scrolling, every button is in the row or in the overflow menu', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await openNote(page);
+    await expect(toolbar(page)).toBeVisible();
+    const bar = (await toolbar(page).boundingBox())!;
+    expect(bar.x).toBeGreaterThanOrEqual(0);
+    expect(bar.x + bar.width).toBeLessThanOrEqual(320.5);
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
+    const overflowed = await overflowedFormats(page);
+    if (overflowed.length === 0) await expectAllButtonsInRow(page);
+    else await expect(overflowButton(page)).toBeVisible();
+  });
+
+  test.describe('in a very narrow window', () => {
+    test.beforeEach(async ({ page }) => {
+      // Narrower than 320 px so that the six buttons cannot fit in either density.
+      await page.setViewportSize({ width: 200, height: 640 });
+      await openNote(page);
+      await expect(toolbar(page)).toBeVisible();
+      await expect(overflowButton(page)).toBeVisible();
+      await expect.poll(async () => (await overflowedFormats(page)).length).toBeGreaterThan(0);
+    });
+
+    test('the last buttons move into the overflow menu and work from there with the mouse', async ({ page }) => {
+      const overflowed = await overflowedFormats(page);
+      // UI5 moves items out from the end of the row.
+      expect(overflowed.at(-1)).toBe('link');
+      await setText(page, TEXT, ...WELT);
+      await overflowButton(page).click();
+      const link = toolbarItem(page, 'link');
+      await expect(link).toBeVisible();
+      await link.click();
+      expect(await docText(page)).toBe('Titel\n\nHallo [Welt](url)');
+      expect(await selectedText(page)).toBe('url');
+      await expect(link).toBeHidden();
+      await expect(editor(page)).toBeFocused();
+    });
+
+    test('the overflow menu is operated with the keyboard', async ({ page }) => {
+      const first = (await overflowedFormats(page))[0]!;
+      await setText(page, TEXT, ...WELT);
+      await page.keyboard.press('Escape');
+      // The overflow button is the last stop of the toolbar.
+      await page.keyboard.press('Shift+Tab');
+      await expect(overflowButton(page)).toBeFocused();
+      await page.keyboard.press('Enter');
+      // Opening moves the focus to the first item in the menu.
+      await expect(toolbarItem(page, first)).toBeFocused();
+      await page.keyboard.press('Escape');
+      await expect(toolbarItem(page, first)).toBeHidden();
+      await expect(overflowButton(page)).toBeFocused();
+      // Open again and run the item with Enter.
+      await page.keyboard.press('Enter');
+      await expect(toolbarItem(page, first)).toBeFocused();
+      const before = await docText(page);
+      await page.keyboard.press('Enter');
+      await expect(toolbarItem(page, first)).toBeHidden();
+      await expect(editor(page)).toBeFocused();
+      expect(await docText(page)).not.toBe(before);
+    });
+
+    test('axe with the overflow menu open', async ({ page }) => {
+      await overflowButton(page).click();
+      await expect(toolbarItem(page, 'link')).toBeVisible();
+      await expectNoSeriousViolations(page, 'toolbar overflow open');
+    });
+  });
 });
 
 test('English: names and the shortcut in the tooltip follow the language', async ({ page }) => {
