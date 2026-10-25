@@ -11,6 +11,7 @@ import type {
   TrashEntry,
 } from '../shared/api';
 import { MAX_ASSET_BYTES, isImageMime } from '../shared/assets';
+import { normalizeLabels } from '../shared/note-store';
 import { markdownToHtml } from '../shared/markdown/html';
 import { markdownToWiki } from '../shared/markdown/wiki';
 import { openBackupDialog } from './backup-dialog';
@@ -1144,11 +1145,13 @@ export class App {
     if (this.view.kind !== 'label') return;
     const from = this.view.label;
     const to = await promptDialog(t('label.renameTitle'), t('label.newName'), t('label.renameHint'), from, t('dialog.cancel'));
-    if (!to || !to.trim() || to.trim() === from) return;
+    // Compare with the name the store will actually keep (trimmed, shortened).
+    const [target] = normalizeLabels([to ?? '']);
+    if (!target || target === from) return;
     try {
       const changed = await this.api.renameLabel(from, to);
       this.notes = await this.api.listNotes();
-      const renamed = changed[0]?.labels.find((l) => sameLabel(l, to.trim())) ?? to.trim();
+      const renamed = changed[0]?.labels.find((l) => sameLabel(l, target)) ?? target;
       this.view = { kind: 'label', label: renamed };
       const current = this.notes.find((n) => n.id === this.currentId);
       if (current) this.renderTokens(current.labels);
