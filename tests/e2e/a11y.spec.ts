@@ -288,10 +288,11 @@ test('More actions menu: keyboard opens and copies, focus returns to the button'
   await expect(menu).toHaveJSProperty('open', false);
   await expect(button).toBeFocused();
 
-  // Open again and choose the first entry with the keyboard.
+  // Open again and choose the first entry with the keyboard. The menu focuses its first
+  // entry when it opens, so no arrow key is needed (one would move on to the next entry).
   await page.keyboard.press('Enter');
   await expect(menu).toHaveJSProperty('open', true);
-  await page.keyboard.press('ArrowDown');
+  await expect(menu.locator('ui5-menu-item[data-action="copy-file-name"]')).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(menu).toHaveJSProperty('open', false);
   await expect(page.locator('#toast')).toHaveText('Dateiname kopiert.');
