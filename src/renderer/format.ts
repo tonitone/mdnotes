@@ -1,4 +1,5 @@
 import { getLocale, t } from '../shared/i18n';
+import type { DateGroup } from '../shared/note-list';
 
 /**
  * Date, time and number formats for the current UI language. Formatters are
@@ -26,6 +27,9 @@ const time = () => cached('time', (tag) => new Intl.DateTimeFormat(tag, { hour: 
 const date = () => cached('date', (tag) => new Intl.DateTimeFormat(tag, { day: '2-digit', month: '2-digit', year: 'numeric' }));
 const dateTime = () => cached('dateTime', (tag) => new Intl.DateTimeFormat(tag, { dateStyle: 'medium', timeStyle: 'short' }));
 const oneDecimal = () => cached('oneDecimal', (tag) => new Intl.NumberFormat(tag, { maximumFractionDigits: 1, minimumFractionDigits: 1 }));
+// Month and year groups name a calendar month or year, so they are formatted in UTC from a UTC date.
+const monthName = () => cached('month', (tag) => new Intl.DateTimeFormat(tag, { month: 'long', timeZone: 'UTC' }));
+const yearName = () => cached('year', (tag) => new Intl.DateTimeFormat(tag, { year: 'numeric', timeZone: 'UTC' }));
 const integer = () => cached('integer', (tag) => new Intl.NumberFormat(tag, { maximumFractionDigits: 0 }));
 
 export function formatTime(ms: number): string {
@@ -52,4 +56,29 @@ export function formatSize(bytes: number): string {
   if (bytes < 1024) return `${integer().format(bytes)} B`;
   if (bytes < 1024 * 1024) return `${integer().format(bytes / 1024)} KB`;
   return `${oneDecimal().format(bytes / 1024 / 1024)} MB`;
+}
+
+/** Header of a date group in the note list: "Today", "October", "2025" in the UI language. */
+export function groupTitle(group: DateGroup): string {
+  switch (group.kind) {
+    case 'pinned':
+      return t('groups.pinned');
+    case 'today':
+      return t('groups.today');
+    case 'yesterday':
+      return t('groups.yesterday');
+    case 'previous7':
+      return t('groups.previous7');
+    case 'previous30':
+      return t('groups.previous30');
+    case 'month':
+      return monthName().format(Date.UTC(group.year, group.month - 1, 15));
+    case 'year':
+      return yearName().format(Date.UTC(group.year, 6, 1));
+  }
+}
+
+/** Locale for comparing titles, the same one used for dates. */
+export function collationLocale(): string {
+  return formatTag();
 }
