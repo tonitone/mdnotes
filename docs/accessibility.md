@@ -9,8 +9,9 @@ Ziel: WCAG 2.2 AA, wie sie EN 301 549 (Kapitel 11, Software) verlangt.
 - **axe (WCAG 2.2 AA)** auf der Hauptansicht in allen vier Themes (Hell, Dunkel,
   Hoher Kontrast schwarz und weiß) und auf Englisch.
 - **Alle Zustände:** keine Notiz gewählt, keine Treffer, Label-Ansicht, Papierkorb mit
-  schreibgeschützter Notiz, Hinweis bei Änderung von außen.
-- **Alle Menüs und Dialoge:** Darstellung, Sprache, Weitere Aktionen, Export, Versionen mit Diff,
+  schreibgeschützter Notiz, Hinweis bei Änderung von außen, Notizliste mit Datumsgruppen und
+  angehefteter Notiz (Hell und Hoher Kontrast schwarz).
+- **Alle Menüs und Dialoge:** Darstellung, Sprache, Weitere Aktionen, Sortieren, Kontextmenü einer Notiz, Export, Versionen mit Diff,
   Backup mit Aktionsmenü, Notizauswahl, Bestätigung „Endgültig löschen“, Eingabedialog.
 - **Tastatur:** Skip-Link als erster Tab-Stopp, F6/Shift+F6 zwischen den drei Bereichen,
   Esc und danach Tab verlässt den Editor, Fokus kehrt nach dem Schließen eines Dialogs zum
@@ -48,6 +49,17 @@ Bei jedem Punkt: Was wird angesagt? Stimmt es mit dem überein, was man sieht?
 - [ ] Die offene Notiz ist als aktuelle erkennbar („aktiv“ bzw. „navigated“).
 - [ ] Die Suche hat einen Namen („Notizen durchsuchen“). Bei keinem Treffer wird
       „Keine Treffer“ vorgelesen.
+- [ ] Datumsgruppen (`ui5-li-group`): Beim Wechsel in eine Gruppe wird ihr Name angesagt
+      („Angeheftet“, „Heute“, „Gestern“, „Vorherige 7 Tage“, „Vorherige 30 Tage“, Monat, Jahr).
+      Die Gruppenköpfe sind mit den Pfeiltasten erreichbar, VoiceOver nennt die Gruppe als Liste.
+- [ ] Eine angeheftete Notiz sagt „angeheftet“ nach dem Titel an, auch ohne Gruppe
+      (Sortierung nach Titel, Suche, Papierkorb).
+- [ ] Kontextmenü einer Notiz mit Shift+F10 oder der Kontextmenütaste: „Anheften“ bzw.
+      „Loslösen“. Nach der Auswahl steht der Fokus wieder auf derselben Notiz, die Änderung
+      wird angesagt („„Einkauf“ angeheftet.“). Im Papierkorb gibt es kein Kontextmenü.
+- [ ] Knopf „Sortieren: Änderungsdatum“ öffnet das Menü „Sortieren nach“ mit drei
+      Auswahlpunkten (Änderungsdatum, Erstelldatum, Titel); der gewählte ist als ausgewählt
+      angesagt. Die neue Sortierung wird angesagt („Sortiert nach Titel.“).
 
 ### Editor
 
@@ -101,7 +113,7 @@ Aufgabe, Tabelle, Code, Link); fett, kursiv und durchgestrichen auch im Menü
 
 ## Manuell ohne Screenreader
 
-- [ ] **Nur Tastatur:** Alles von Neue Notiz über Labels, Export und Backup bis zum
+- [ ] **Nur Tastatur:** Alles von Neue Notiz über Labels, Anheften, Sortieren, Export und Backup bis zum
       Wiederherstellen aus dem Papierkorb geht ohne Maus. Der Fokus ist immer sichtbar.
 - [ ] **Zoom 200 % und 400 %** (Cmd/Strg und +): Nichts überlappt. Bei 400 % zeigt das
       Layout eine Spalte, der Zurück-Knopf führt zur Liste.
