@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 32 32">
+  <!-- mdnotes mark: a note sheet with a folded corner and a Markdown heading sign. -->
+  <rect x="1" y="1" width="30" height="30" rx="7" fill="#0064d9"/>
+  <path d="M8.5 5H19l5.5 5.5V27h-16z" fill="#fff"/>
+  <path d="M19 5v5.5h5.5z" fill="#a9cdf5"/>
+  <path d="M14.5 13.5l-1.25 10M19 13.5l-1.25 10M11.25 16.75h9.5M10.75 20.5h9.5" fill="none" stroke="#0064d9" stroke-width="2" stroke-linecap="round"/>
+</svg>
