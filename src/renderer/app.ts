@@ -161,7 +161,9 @@ export class App {
       midColumn: { role: 'region', name: t('notes.title') },
       endColumn: { role: 'main', name: t('editor.region') },
     };
-    // The title area is a link; its accessible name must contain the visible text.
+    // The logo area (logo plus title, or the logo alone in narrow windows) is a
+    // link; its accessible name must contain the visible title. The logo image
+    // itself has alt="", so the name is announced once.
     this.els.shell.accessibilityAttributes = { logo: { name: 'mdnotes' } };
     this.els.browserModeStrip.hidden = this.api.mode !== 'browser';
     this.editor = createEditor(this.els.editorHost, {
@@ -198,6 +200,10 @@ export class App {
     els.chooseWorkspaceButton.addEventListener('click', () => void this.chooseWorkspace());
     els.workspaceItem.addEventListener('click', () => void this.chooseWorkspace());
     els.backupItem.addEventListener('click', () => void this.openBackup());
+    // The logo is the home link: back to all notes (UI5 fires this on click, Enter and Space).
+    els.shell.addEventListener('logo-click', () => {
+      if (this.currentView !== 'noWorkspace') void this.setView({ kind: 'all' });
+    });
     els.versionsButton.addEventListener('click', () => void this.openVersions());
     els.renameLabelButton.addEventListener('click', () => void this.renameCurrentLabel());
 
