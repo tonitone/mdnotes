@@ -100,6 +100,20 @@ ui5-flexible-column-layout {
   white-space: nowrap;
 }
 
+/*
+ * Format toolbar row. Only the wrapper is styled: ui5-toolbar lays out its items from its own
+ * :host rules (display: flex) and draws its bottom border; overriding display or width on the
+ * host breaks its overflow measurement.
+ */
+.format-toolbar-row {
+  flex: none;
+  min-width: 0;
+}
+
+.format-toolbar-row[hidden] {
+  display: none;
+}
+
 .editor-area {
   display: flex;
   flex: 1;

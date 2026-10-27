@@ -9,6 +9,8 @@ import { tags } from '@lezer/highlight';
 import { assetResolver, livePreview, tablePreview } from './live-preview';
 import { getLocale, t } from '../../shared/i18n';
 import { cspNonce } from './csp';
+import { formatCommand, formatKeymap, type FormatHooks } from './format-commands';
+import type { FormatKind, FormatOutcome } from './format';
 
 /**
  * CodeMirror editor with live preview. All colors and fonts come from the
@@ -64,6 +66,8 @@ export interface NoteEditor {
   focus(): void;
   /** Live preview on (rendered Markdown) or off (plain source, e.g. next to the preview pane). */
   setLivePreview(on: boolean): void;
+  /** Applies a Markdown format to the selection. Returns false when the editor is read-only. */
+  format(kind: FormatKind): boolean;
 }
 
 export interface EditorOptions {
@@ -74,6 +78,8 @@ export interface EditorOptions {
   saveImages: (files: File[]) => Promise<string[]>;
   /** Called after images were inserted, with the position of each `![` and its path. */
   onImagesInserted: (inserted: Array<{ from: number; path: string }>) => void;
+  /** Called after a shortcut or toolbar action changed the text. */
+  onFormat: (outcome: FormatOutcome) => void;
 }
 
 function imageFiles(data: DataTransfer | null): File[] {
@@ -104,6 +110,10 @@ async function insertImages(view: EditorView, files: File[], pos: number, option
 }
 
 export function createEditor(parent: HTMLElement, options: EditorOptions): NoteEditor {
+  const formatHooks: FormatHooks = {
+    labels: () => ({ tableColumn: t('format.tableColumn') }),
+    onFormat: options.onFormat,
+  };
   const preview = new Compartment();
   let previewOn = true;
   const previewExtension = () => (previewOn ? [livePreview, tablePreview] : []);
@@ -132,6 +142,8 @@ export function createEditor(parent: HTMLElement, options: EditorOptions): NoteE
           return false;
         },
       },
+      // Before the default keymap, which binds Mod-i.
+      ...formatKeymap(formatHooks),
       ...defaultKeymap,
       ...historyKeymap,
       ...searchKeymap,
@@ -178,6 +190,7 @@ export function createEditor(parent: HTMLElement, options: EditorOptions): NoteE
     },
     getDoc: () => view.state.doc.toString(),
     focus: () => view.focus(),
+    format: (kind) => formatCommand(kind, formatHooks)(view),
     setLivePreview(on) {
       if (on === previewOn) return;
       previewOn = on;
