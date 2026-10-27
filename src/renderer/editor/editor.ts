@@ -150,6 +150,13 @@ export function createEditor(parent: HTMLElement, options: EditorOptions): NoteE
       indentWithTab,
     ]),
     EditorView.contentAttributes.of({
+      // Makes the scrolling `.cm-scroller` keyboard reachable for axe (scrollable-region-focusable, WCAG 2.1.1).
+      // The rule passes when the scroller has a tabbable descendant, and axe-core (getTabbableElements ->
+      // isFocusable -> isNativelyFocusable) counts only native controls and elements with a tabindex there;
+      // contenteditable is checked only on the scroller itself. Browsers already put `.cm-content` in the tab
+      // order, so this adds no tab stop; a read-only note (contenteditable=false) becomes focusable, so its
+      // text can be scrolled with the keyboard as well. CodeMirror sets no tabindex of its own here.
+      tabindex: '0',
       'aria-label': t('editor.contentLabel'),
       'aria-describedby': 'editor-help',
       spellcheck: 'true',
