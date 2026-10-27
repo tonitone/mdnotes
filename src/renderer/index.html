@@ -46,6 +46,7 @@
           </div>
           <div class="header-actions">
             <ui5-button id="renameLabelButton" design="Transparent" icon="edit" tooltip="Label umbenennen" accessible-name="Label umbenennen" data-i18n-attr="tooltip:notes.renameLabel; accessible-name:notes.renameLabel" hidden></ui5-button>
+            <ui5-button id="sortButton" design="Transparent" icon="sort" tooltip="Sortieren" accessible-name="Sortieren" data-i18n-attr="tooltip:notes.sort; accessible-name:notes.sort" disabled></ui5-button>
             <ui5-button id="newNoteButton" design="Emphasized" icon="add" tooltip="Neue Notiz" accessible-name="Neue Notiz" disabled data-i18n="notes.new" data-i18n-attr="tooltip:notes.new; accessible-name:notes.new">Neue Notiz</ui5-button>
             <ui5-button id="moreButton" design="Transparent" icon="overflow" tooltip="Weitere Aktionen" accessible-name="Weitere Aktionen" data-i18n-attr="tooltip:notes.more; accessible-name:notes.more" disabled></ui5-button>
           </div>
@@ -53,6 +54,17 @@
         <ui5-menu id="moreMenu">
           <ui5-menu-item text="Importieren …" icon="upload" data-action="import" data-i18n-attr="text:notes.import"></ui5-menu-item>
           <ui5-menu-item text="Alle Notizen exportieren …" icon="download" data-action="export-all" data-i18n-attr="text:notes.exportAll"></ui5-menu-item>
+        </ui5-menu>
+        <ui5-menu id="sortMenu" header-text="Sortieren nach" data-i18n-attr="header-text:sort.menu">
+          <ui5-menu-item-group check-mode="Single">
+            <ui5-menu-item text="Änderungsdatum" data-sort="modified" data-i18n-attr="text:sort.modified" checked></ui5-menu-item>
+            <ui5-menu-item text="Erstelldatum" data-sort="created" data-i18n-attr="text:sort.created"></ui5-menu-item>
+            <ui5-menu-item text="Titel" data-sort="title" data-i18n-attr="text:sort.title"></ui5-menu-item>
+          </ui5-menu-item-group>
+        </ui5-menu>
+        <!-- Opened on a note in the list with the context menu key, Shift+F10 or a right click. -->
+        <ui5-menu id="noteContextMenu" header-text="Aktionen für die Notiz" data-i18n-attr="header-text:notes.itemActions">
+          <ui5-menu-item id="contextPinItem" text="Anheften" icon="pushpin-on" data-action="toggle-pin" data-i18n-attr="text:notes.pin"></ui5-menu-item>
         </ui5-menu>
         <div class="search-row">
           <ui5-input id="searchInput" type="Search" placeholder="Suchen" accessible-name="Notizen durchsuchen" data-i18n-attr="placeholder:search.placeholder; accessible-name:search.label" show-clear-icon disabled>
@@ -97,6 +109,7 @@
         </ui5-menu>
         <ui5-menu id="editorMoreMenu">
           <ui5-menu-item text="Dateiname kopieren" icon="copy" data-action="copy-file-name" data-i18n-attr="text:editor.copyFileName"></ui5-menu-item>
+          <ui5-menu-item id="pinMenuItem" text="Anheften" icon="pushpin-on" data-action="toggle-pin" data-i18n-attr="text:notes.pin"></ui5-menu-item>
           <ui5-menu-item id="formatMenuItem" text="Format" data-i18n-attr="text:format.menu">
             <ui5-menu-item text="Fett" data-format="bold" data-i18n-attr="text:format.bold"></ui5-menu-item>
             <ui5-menu-item text="Kursiv" data-format="italic" data-i18n-attr="text:format.italic"></ui5-menu-item>
