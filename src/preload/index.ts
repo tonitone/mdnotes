@@ -28,6 +28,7 @@ const api: NotesApi = {
   saveNote: (id, body) => ipcRenderer.invoke('notes:save', id, body),
   finalizeNote: (id) => ipcRenderer.invoke('notes:finalize', id),
   setLabels: (id, labels) => ipcRenderer.invoke('notes:setLabels', id, labels),
+  setPinned: (id, pinned) => ipcRenderer.invoke('notes:setPinned', id, pinned),
   searchNotes: (query) => ipcRenderer.invoke('notes:search', query),
 
   trashNote: (id) => ipcRenderer.invoke('trash:move', id),
@@ -64,6 +65,8 @@ const api: NotesApi = {
   listRecovery: () => ipcRenderer.invoke('recovery:list'),
   getLanguage: () => ipcRenderer.invoke('language:get'),
   setLanguage: (choice) => ipcRenderer.invoke('language:set', choice),
+  getNoteSort: () => ipcRenderer.invoke('settings:getNoteSort'),
+  setNoteSort: (sort) => ipcRenderer.invoke('settings:setNoteSort', sort),
 
   onMenuCommand: (callback) => subscribe<MenuCommand>('menu:command', callback),
   onNotesChanged: (callback) => subscribe<NotesChangedEvent>('notes:changed', callback),
