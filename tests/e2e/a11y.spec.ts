@@ -60,6 +60,41 @@ for (const theme of ['light', 'hcb'] as const) {
   });
 }
 
+// A long note makes the editor scroll, in split mode in the stacked layout (scrollable-region-focusable)
+for (const mode of ['edit', 'split'] as const) {
+  test(`long note in ${mode} mode: the scrolling editor is keyboard reachable`, async ({ page }) => {
+    await page.setViewportSize({ width: 1200, height: 700 });
+    await openApp(page);
+    await openNote(page, 'Einkauf');
+    await page.locator(`#viewModeButton ui5-segmented-button-item[data-mode="${mode}"]`).click();
+    await expect(page.locator('#editorArea')).toHaveAttribute('data-mode', mode);
+    if (mode === 'split') {
+      await expect.poll(() => page.locator('#editorArea').evaluate((el) => getComputedStyle(el).flexDirection)).toBe('column');
+    }
+    await editor(page).click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.insertText(Array.from({ length: 80 }, (_, i) => `\nZeile ${i + 1}`).join(''));
+    const scroller = page.locator('.cm-scroller');
+    expect(await scroller.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+    await expectNoSeriousViolations(page, `long note ${mode}`);
+
+    // Back to the top; CodeMirror keeps a small scroll margin there, so the position is not exactly 0.
+    const scrollTop = () => scroller.evaluate((el) => el.scrollTop);
+    await page.keyboard.press('Control+Home');
+    await expect.poll(scrollTop).toBeLessThan(100);
+    const top = await scrollTop();
+    // Leave the editor (Esc, Shift+Tab); a single Tab brings focus back to the content, no extra stop.
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Shift+Tab');
+    await expect(editor(page)).not.toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(editor(page)).toBeFocused();
+    // Page Down scrolls the region.
+    await page.keyboard.press('PageDown');
+    await expect.poll(scrollTop).toBeGreaterThan(top + 50);
+  });
+}
+
 test('main view in English', async ({ page }) => {
   await openApp(page, '/?lang=en');
   await openNote(page, 'Willkommen');
