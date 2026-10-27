@@ -41,8 +41,9 @@ async function titleTextRight(page: Page): Promise<number> {
 async function checkHeader(page: Page, compact: boolean) {
   const rem = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
   expect(rem).toBe(16);
-  // Guards the premise of the test: the column has the expected width.
-  expect((await columnWidth(page)) < 17 * rem).toBe(compact);
+  // Guards the premise of the test: the column has the expected width. The threshold is
+  // NEW_NOTE_COMPACT_REM plus room for the sort button (SORT_BUTTON_REM) in app.ts.
+  expect((await columnWidth(page)) < 19.75 * rem).toBe(compact);
 
   const button = page.locator('#newNoteButton');
   await expect(button).toHaveAttribute('accessible-name', 'Neue Notiz');
@@ -66,6 +67,12 @@ test('wide middle column: icon and text, no overlap, axe', async ({ page }) => {
   await openWithNote(page, 350);
   await checkHeader(page, false);
   await expectNoSeriousViolations(page, 'wide middle column');
+});
+
+test('just above the threshold (320 px): text button, sort button and title fit', async ({ page }) => {
+  await openWithNote(page, 320);
+  await expect(page.locator('#sortButton')).toBeVisible();
+  await checkHeader(page, false);
 });
 
 test('long label name: the title is cut off before the buttons', async ({ page }) => {
@@ -94,8 +101,8 @@ test('long label name: the title is cut off before the buttons', async ({ page }
 });
 
 test('label view just above its threshold: text button and the whole title fit', async ({ page }) => {
-  // The rename button needs room: the label view switches to the icon below 22 rem (352 px).
-  await openWithNote(page, 360);
+  // The rename and sort buttons need room: the label view switches to the icon below 24.75 rem (396 px).
+  await openWithNote(page, 400);
   await page.locator('#labelList ui5-li', { hasText: 'arbeit' }).click();
   await expect(page.locator('#renameLabelButton')).toBeVisible();
   await expect(page.locator('#newNoteButton')).toHaveText('Neue Notiz');
