@@ -288,13 +288,56 @@ test('More actions menu: keyboard opens and copies, focus returns to the button'
   await expect(menu).toHaveJSProperty('open', false);
   await expect(button).toBeFocused();
 
-  // Open again and choose the first entry with the keyboard.
+  // Open again and choose the first entry with the keyboard. The menu focuses its first
+  // entry when it opens, so no arrow key is needed (one would move on to the next entry).
   await page.keyboard.press('Enter');
   await expect(menu).toHaveJSProperty('open', true);
-  await page.keyboard.press('ArrowDown');
+  await expect(menu.locator('ui5-menu-item[data-action="copy-file-name"]')).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(menu).toHaveJSProperty('open', false);
   await expect(page.locator('#toast')).toHaveText('Dateiname kopiert.');
   expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(/^sprint-planung--[0-9a-z]{6}\.md$/);
   await expect(button).toBeFocused();
+});
+
+// ---------------------------------------------------------------------------
+// Format toolbar and Format menu
+// ---------------------------------------------------------------------------
+
+for (const theme of ['light', 'hcb'] as const) {
+  test(`format toolbar: theme ${theme}`, async ({ page }) => {
+    await page.addInitScript((value) => localStorage.setItem('mdnotes.theme', value), theme);
+    await openApp(page);
+    await openNote(page, 'Willkommen');
+    await expect(page.locator('#formatToolbar')).toBeVisible();
+    await expect(page.locator('#formatToolbar').getByRole('button', { name: 'Link', exact: true })).toBeVisible();
+    await expectNoSeriousViolations(page, `format toolbar ${theme}`);
+  });
+}
+
+test('format toolbar at 320 CSS pixels: no horizontal scrolling', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await openApp(page);
+  await openNote(page, 'Willkommen');
+  const toolbar = page.locator('#formatToolbar');
+  await expect(toolbar).toBeVisible();
+  const box = (await toolbar.boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(320.5);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+  await expectNoSeriousViolations(page, 'format toolbar 320');
+});
+
+test('More actions with the Format menu: axe with the menu and with the submenu open', async ({ page }) => {
+  await openApp(page, '/?lang=en');
+  await openNote(page, 'Willkommen');
+  await page.locator('#editorMoreButton').click();
+  await expect(page.locator('#editorMoreMenu')).toHaveJSProperty('open', true);
+  await expect(page.locator('#formatMenuItem')).toBeVisible();
+  await expectNoSeriousViolations(page, 'more actions menu');
+  await page.locator('#formatMenuItem').click();
+  await expect(page.locator('#formatMenuItem ui5-menu-item[data-format="bold"]')).toBeVisible();
+  // One finding inside UI5 is listed in KNOWN_UI5_ISSUES (tests/e2e/axe.ts).
+  await expectNoSeriousViolations(page, 'format submenu');
 });

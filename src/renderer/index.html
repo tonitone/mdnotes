@@ -97,12 +97,28 @@
         </ui5-menu>
         <ui5-menu id="editorMoreMenu">
           <ui5-menu-item text="Dateiname kopieren" icon="copy" data-action="copy-file-name" data-i18n-attr="text:editor.copyFileName"></ui5-menu-item>
+          <ui5-menu-item id="formatMenuItem" text="Format" data-i18n-attr="text:format.menu">
+            <ui5-menu-item text="Fett" data-format="bold" data-i18n-attr="text:format.bold"></ui5-menu-item>
+            <ui5-menu-item text="Kursiv" data-format="italic" data-i18n-attr="text:format.italic"></ui5-menu-item>
+            <ui5-menu-item text="Durchgestrichen" data-format="strike" data-i18n-attr="text:format.strike"></ui5-menu-item>
+          </ui5-menu-item>
         </ui5-menu>
         <div id="labelRow" class="label-row" hidden>
           <ui5-multi-input id="labelInput" placeholder="Label hinzufügen" accessible-name="Labels der Notiz" data-i18n-attr="placeholder:labels.add; accessible-name:labels.ofNote" show-suggestions></ui5-multi-input>
         </div>
         <div id="noticeRegion"></div>
         <div id="errorRegion" role="alert" aria-live="assertive"></div>
+        <!-- The row only places the toolbar; the toolbar itself keeps its own UI5 layout and overflow menu. -->
+        <div id="formatToolbarRow" class="format-toolbar-row" hidden>
+          <ui5-toolbar id="formatToolbar" design="Transparent" align-content="Start" accessible-name="Formatierung" data-i18n-attr="accessible-name:format.toolbar">
+            <ui5-toolbar-button data-format="heading" icon="header" tooltip="Überschrift" accessible-name="Überschrift" data-i18n-attr="tooltip:format.heading; accessible-name:format.heading"></ui5-toolbar-button>
+            <ui5-toolbar-button data-format="list" icon="list" tooltip="Liste" accessible-name="Liste" data-i18n-attr="tooltip:format.list; accessible-name:format.list"></ui5-toolbar-button>
+            <ui5-toolbar-button data-format="task" icon="task" tooltip="Aufgabe" accessible-name="Aufgabe" data-i18n-attr="tooltip:format.task; accessible-name:format.task"></ui5-toolbar-button>
+            <ui5-toolbar-button data-format="table" icon="table-view" tooltip="Tabelle" accessible-name="Tabelle" data-i18n-attr="tooltip:format.table; accessible-name:format.table"></ui5-toolbar-button>
+            <ui5-toolbar-button data-format="code" icon="source-code" tooltip="Code" accessible-name="Code" data-i18n-attr="tooltip:format.code; accessible-name:format.code"></ui5-toolbar-button>
+            <ui5-toolbar-button data-format="link" icon="chain-link" tooltip="Link" accessible-name="Link" data-i18n-attr="tooltip:format.link; accessible-name:format.link"></ui5-toolbar-button>
+          </ui5-toolbar>
+        </div>
         <div id="editorArea" class="editor-area" data-mode="edit" hidden>
           <div id="editor-host" class="editor-host" tabindex="-1"></div>
           <div id="previewPane" class="preview" tabindex="0" role="region" aria-label="Vorschau" data-i18n-attr="aria-label:view.previewLabel" hidden></div>
