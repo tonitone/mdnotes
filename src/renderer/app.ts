@@ -10,9 +10,10 @@ import type {
   SearchHit,
   TrashEntry,
 } from '../shared/api';
+import { renderFinished } from '@ui5/webcomponents-base/dist/Render.js';
 import { MAX_ASSET_BYTES, isImageMime } from '../shared/assets';
 import { normalizeLabels } from '../shared/note-store';
-import { DEFAULT_NOTE_SORT, NOTE_SORTS, createdTime, groupNotes, isNoteSort, sortNotes, type NoteSort } from '../shared/note-list';
+import { DEFAULT_NOTE_SORT, createdTime, groupNotes, isNoteSort, sortNotes, type NoteSort } from '../shared/note-list';
 import { markdownToHtml } from '../shared/markdown/html';
 import { markdownToWiki } from '../shared/markdown/wiki';
 import { openBackupDialog } from './backup-dialog';
@@ -842,7 +843,11 @@ export class App {
       const note = this.notes.find((n) => n.id === id);
       if (note) Object.assign(note, summary);
       this.renderList();
-      if (options.focusListItem) this.listItems().find((item) => item.dataset.id === id)?.focus();
+      if (options.focusListItem) {
+        // A new entry inside a new ui5-li-group is only focusable once the group has rendered its slot.
+        await renderFinished();
+        this.listItems().find((item) => item.dataset.id === id)?.focus();
+      }
       announce(t(pinned ? 'announce.pinned' : 'announce.unpinned', { title: summary.title }));
     } catch (err) {
       this.showError(t('error.pin'), err);
@@ -857,7 +862,7 @@ export class App {
   }
 
   private async changeSort(sort: NoteSort): Promise<void> {
-    if (sort === this.sort || !NOTE_SORTS.includes(sort)) return;
+    if (sort === this.sort) return;
     this.sort = sort;
     this.updateSortUi();
     this.renderList();
