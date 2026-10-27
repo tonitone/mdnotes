@@ -104,6 +104,28 @@ test('notice strip after an outside change', async ({ page }) => {
   await expectNoSeriousViolations(page, 'conflict notice');
 });
 
+// Note list with a pinned note and date groups (ui5-li-group), its sort menu and the context menu of a note
+for (const theme of ['light', 'hcb'] as const) {
+  test(`note list with groups, sort menu and note context menu: theme ${theme}`, async ({ page }) => {
+    await page.addInitScript((value) => localStorage.setItem('mdnotes.theme', value), theme);
+    await openApp(page);
+    await listItems(page).filter({ hasText: 'Sprint-Planung' }).first().click({ button: 'right' });
+    await expect(page.locator('#noteContextMenu')).toHaveJSProperty('open', true);
+    await expectNoSeriousViolations(page, `note context menu ${theme}`);
+    await page.locator('#contextPinItem').click();
+    await expect(page.locator('#notesList ui5-li-group[header-text="Angeheftet"]')).toBeVisible();
+    await expect(page.locator('#notesList ui5-li-group[header-text="Heute"]')).toBeVisible();
+    await expectNoSeriousViolations(page, `groups ${theme}`);
+
+    await page.locator('#sortButton').click();
+    await expect(page.locator('#sortMenu')).toHaveJSProperty('open', true);
+    await expectNoSeriousViolations(page, `sort menu ${theme}`);
+    await page.locator('#sortMenu ui5-menu-item[data-sort="title"]').click();
+    await expect(page.locator('#notesList ui5-li-group')).toHaveCount(0);
+    await expectNoSeriousViolations(page, `title order with a pinned note ${theme}`);
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Menus and dialogs
 // ---------------------------------------------------------------------------
