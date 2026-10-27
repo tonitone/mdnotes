@@ -389,6 +389,8 @@ test('shell bar logo: each theme family has its own file', async ({ page }) => {
   for (const theme of ['light', 'dark', 'hcb', 'hcw']) {
     await page.evaluate((value) => localStorage.setItem('mdnotes.theme', value), theme);
     await page.reload();
+    // The theme is applied once the language is loaded; only then the logo gets its file.
+    await expect(page.locator('html')).toHaveAttribute('data-theme', `sap_horizon${theme === 'light' ? '' : `_${theme}`}`);
     await expectLogoLoaded(page);
     sources.add(await shellLogo(page).getAttribute('src'));
   }
