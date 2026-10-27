@@ -126,6 +126,93 @@ for (const backend of backends) {
       assert.match(text, /tags: \[x\]/);
     });
 
+    it('pins and unpins a note through its front matter, body untouched', async () => {
+      const note = await store.create();
+      await store.save(note.id, '# Wichtig\n\nText');
+      const pinned = await store.setPinned(note.id, true);
+      assert.equal(pinned.pinned, true);
+      const text = await fs.read(note.fileName);
+      assert.match(text, /\npinned: true\n/);
+      assert.equal(parseNote(text).body, '# Wichtig\n\nText');
+      assert.equal(store.summaries()[0].pinned, true);
+      assert.equal(store.read(note.id).pinned, true);
+
+      const unpinned = await store.setPinned(note.id, false);
+      assert.equal(unpinned.pinned, false);
+      assert.doesNotMatch(await fs.read(note.fileName), /pinned/);
+    });
+
+    it('does not write when the pin state does not change', async () => {
+      const note = await store.create();
+      const before = await fs.read(note.fileName);
+      const mtime = await fs.mtime(note.fileName);
+      await store.setPinned(note.id, false);
+      assert.equal(await fs.read(note.fileName), before);
+      assert.equal(await fs.mtime(note.fileName), mtime);
+    });
+
+    it('keeps the pin across save, rename, labels, rescan and versions', async () => {
+      const note = await store.create();
+      await store.setPinned(note.id, true);
+      await store.save(note.id, '# Neuer Titel');
+      const final = await store.finalize(note.id);
+      assert.match(final.fileName, /^neuer-titel--/);
+      await store.setLabels(note.id, ['arbeit']);
+      assert.match(await fs.read(final.fileName), /\npinned: true\n/);
+      const [rescanned] = await store.scan();
+      assert.equal(rescanned.pinned, true);
+
+      await store.save(note.id, '# Neuer Titel\n\nmehr');
+      await store.finalize(note.id);
+      const versions = await store.listVersions(note.id);
+      const restored = await store.restoreVersion(note.id, versions[versions.length - 1].name);
+      assert.equal(restored.pinned, true);
+      // Versions hold the body only, never the front matter.
+      for (const v of versions) assert.doesNotMatch(await store.readVersion(note.id, v.name), /pinned/);
+    });
+
+    it('keeps foreign lines when pinning and replaces an unreadable pinned line', async () => {
+      await fs.create('hand.md', '---\nauthor: Toni\npinned: vielleicht\n---\n# Hand');
+      const [summary] = await store.scan();
+      assert.equal(summary.pinned, false);
+      await store.setLabels(summary.id, ['x']);
+      assert.match(await fs.read('hand.md'), /pinned: vielleicht/, 'kept while the user does not pin');
+
+      await store.setPinned(summary.id, true);
+      const text = await fs.read('hand.md');
+      assert.match(text, /author: Toni/);
+      assert.doesNotMatch(text, /vielleicht/);
+      assert.equal(text.match(/^pinned:/gm)?.length, 1);
+    });
+
+    it('reads a hand-written `pinned: yes` as pinned', async () => {
+      await fs.create('ja.md', '---\npinned: yes\n---\n# Ja');
+      const [summary] = await store.scan();
+      assert.equal(summary.pinned, true);
+    });
+
+    it('shows the pin in the trash and keeps it on restore and import', async () => {
+      const note = await store.create();
+      await store.save(note.id, '# Angeheftet');
+      await store.setPinned(note.id, true);
+      const fileText = store.fileText(note.id);
+      assert.match(fileText, /\npinned: true\n/, 'exports and backups carry the pin');
+      await store.trash(note.id);
+      const [entry] = await store.listTrash();
+      assert.equal(entry.pinned, true);
+      const restored = await store.restore(entry.trashName);
+      assert.equal(restored.pinned, true);
+
+      await store.trash(restored.id);
+      const imported = await store.importNote(fileText, 'backup.zip');
+      assert.equal(imported?.pinned, true);
+    });
+
+    it('reports the created date in the summary', async () => {
+      const note = await store.create(new Date(Date.UTC(2026, 0, 2, 3, 4, 5)));
+      assert.equal(store.summaries().find((n) => n.id === note.id)?.created, '2026-01-02T03:04:05.000Z');
+    });
+
     it('ignores hidden and temp files', async () => {
       await fs.create('.versteckt.md', 'x');
       await fs.create('notiz.txt', 'x');

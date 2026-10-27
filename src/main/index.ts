@@ -8,6 +8,7 @@ import { ASSET_DIR, MAX_ASSET_BYTES, MIME_BY_EXT, assetNameFor, isAssetName, isI
 import { VERSION_NAME_RE } from '../shared/history';
 import { isLanguageChoice, resolveLocale, setLocale, t, type LanguageChoice } from '../shared/i18n';
 import { isNoteId } from '../shared/note';
+import { DEFAULT_NOTE_SORT, isNoteSort, type NoteSort } from '../shared/note-list';
 import {
   assertBackupFolder,
   backupNotes,
@@ -42,17 +43,18 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 // ---------------------------------------------------------------------------
-// Config (workspace path and backup settings), stored in the app's user data folder.
+// Config (workspace path, backup settings, language, list order), stored in the app's user data folder.
 // ---------------------------------------------------------------------------
 
 interface AppConfig {
   workspace?: string;
   backup: BackupSettings;
   language: LanguageChoice;
+  noteSort: NoteSort;
 }
 
 const DEFAULT_BACKUP: BackupSettings = { folder: null, auto: 'off', includeHistory: false, keep: 10 };
-let config: AppConfig = { backup: { ...DEFAULT_BACKUP }, language: 'system' };
+let config: AppConfig = { backup: { ...DEFAULT_BACKUP }, language: 'system', noteSort: DEFAULT_NOTE_SORT };
 let recovery: RecoveryStore | null = null;
 
 const configPath = () => path.join(app.getPath('userData'), 'config.json');
@@ -64,9 +66,10 @@ async function loadConfig(): Promise<AppConfig> {
       workspace: raw.workspace,
       backup: { ...DEFAULT_BACKUP, ...(raw.backup ?? {}) },
       language: isLanguageChoice(raw.language) ? raw.language : 'system',
+      noteSort: isNoteSort(raw.noteSort) ? raw.noteSort : DEFAULT_NOTE_SORT,
     };
   } catch {
-    return { backup: { ...DEFAULT_BACKUP }, language: 'system' };
+    return { backup: { ...DEFAULT_BACKUP }, language: 'system', noteSort: DEFAULT_NOTE_SORT };
   }
 }
 
@@ -221,6 +224,11 @@ function requireLabels(labels: unknown): string[] {
   return labels;
 }
 
+function requireBoolean(value: unknown): boolean {
+  if (typeof value !== 'boolean') throw new Error('Invalid value.');
+  return value;
+}
+
 function requireTrashName(name: unknown): string {
   if (typeof name !== 'string' || !/^\d{10,}--[^/\\]+\.md$/i.test(name)) throw new Error('Invalid trash entry.');
   return name;
@@ -302,6 +310,7 @@ function registerIpc(): void {
   handle('notes:save', (id, body) => requireWorkspace().store.save(requireId(id), requireText(body)));
   handle('notes:finalize', (id) => requireWorkspace().store.finalize(requireId(id)));
   handle('notes:setLabels', (id, labels) => requireWorkspace().store.setLabels(requireId(id), requireLabels(labels)));
+  handle('notes:setPinned', (id, pinned) => requireWorkspace().store.setPinned(requireId(id), requireBoolean(pinned)));
   handle('notes:search', (query) => requireWorkspace().store.search(requireText(query, 500)));
 
   handle('trash:move', (id) => requireWorkspace().store.trash(requireId(id)));
@@ -393,6 +402,14 @@ function registerIpc(): void {
     await saveConfig();
     applyLanguage();
     return currentLanguage();
+  });
+
+  handle('settings:getNoteSort', () => config.noteSort);
+  handle('settings:setNoteSort', async (sort) => {
+    if (!isNoteSort(sort)) throw new Error('Invalid sort order.');
+    config.noteSort = sort;
+    await saveConfig();
+    return config.noteSort;
   });
 
   handle('recovery:list', () => (recovery && workspace ? recovery.list(workspace.store) : []));

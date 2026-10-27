@@ -8,6 +8,7 @@
  */
 
 import type { LanguageChoice, Locale } from './i18n';
+import type { NoteSort } from './note-list';
 
 export interface NoteSummary {
   id: string;
@@ -17,11 +18,14 @@ export interface NoteSummary {
   labels: string[];
   /** Last modification, milliseconds since the epoch. */
   modified: number;
+  /** Creation date from the front matter (ISO), as written in the file. */
+  created: string;
+  /** `pinned: true` in the front matter. */
+  pinned: boolean;
 }
 
 export interface NoteDoc extends NoteSummary {
   body: string;
-  created: string;
 }
 
 export interface SaveResult {
@@ -44,6 +48,8 @@ export interface TrashEntry {
   preview: string;
   /** When the note was deleted, milliseconds since the epoch. */
   trashedAt: number;
+  /** The note was pinned when it was deleted (shown, not changeable in the trash). */
+  pinned: boolean;
 }
 
 export interface ImportReport {
@@ -128,6 +134,8 @@ export interface NotesApi {
   /** Renames the file after the current title, if needed. */
   finalizeNote(id: string): Promise<SaveResult>;
   setLabels(id: string, labels: string[]): Promise<NoteSummary>;
+  /** Pins or unpins a note (`pinned: true` in its front matter). The body stays as it is. */
+  setPinned(id: string, pinned: boolean): Promise<NoteSummary>;
   /** Full-text search; every word must occur in title or body. */
   searchNotes(query: string): Promise<SearchHit[]>;
 
@@ -181,6 +189,9 @@ export interface NotesApi {
   getLanguage(): Promise<LanguageInfo>;
   /** Saves the language setting. The UI reloads afterwards to apply it. */
   setLanguage(choice: LanguageChoice): Promise<LanguageInfo>;
+  /** Order of the note list, an app setting (not stored in the notes). */
+  getNoteSort(): Promise<NoteSort>;
+  setNoteSort(sort: NoteSort): Promise<NoteSort>;
 
   /** Commands from the native menu. Returns an unsubscribe function. */
   onMenuCommand(callback: (command: MenuCommand) => void): () => void;

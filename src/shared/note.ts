@@ -18,6 +18,8 @@ export interface NoteMeta {
   id: string;
   labels: string[];
   created: string;
+  /** Written as `pinned: true` only when set; absent means not pinned. */
+  pinned?: boolean;
 }
 
 export interface ParsedNote {
@@ -132,12 +134,26 @@ export function previewFromBody(body: string, max = 140): string {
 }
 
 // ---------------------------------------------------------------------------
-// Front matter. The app only reads and writes `id`, `labels` and `created`.
-// All other lines are kept character for character, so foreign YAML is
-// never reformatted.
+// Front matter. The app only reads and writes `id`, `labels`, `created` and
+// `pinned`. All other lines are kept character for character, so foreign YAML
+// is never reformatted.
 // ---------------------------------------------------------------------------
 
-const OWN_KEYS = new Set(['id', 'labels', 'created']);
+const OWN_KEYS = new Set(['id', 'labels', 'created', 'pinned']);
+
+/** Matches a `pinned:` front matter line, whatever its value. */
+export const PINNED_LINE_RE = /^pinned:/;
+
+/**
+ * YAML booleans as people write them by hand (YAML 1.1 also knows yes/no and
+ * on/off). Returns `null` for anything else, so the caller can keep the line.
+ */
+function parseBoolean(value: string): boolean | null {
+  const v = unquote(value).toLowerCase();
+  if (v === 'true' || v === 'yes' || v === 'on') return true;
+  if (v === 'false' || v === 'no' || v === 'off') return false;
+  return null;
+}
 
 export function normalizeText(text: string): string {
   return text.replace(/^﻿/, '').replace(/\r\n?/g, '\n');
@@ -188,6 +204,12 @@ export function parseNote(raw: string): ParsedNote {
       if (isNoteId(id)) meta.id = id;
     } else if (key === 'created') {
       meta.created = unquote(rest);
+    } else if (key === 'pinned') {
+      // An unreadable value (e.g. `pinned: maybe`) means "not pinned" and the
+      // line stays as written; it is only replaced when the user pins the note.
+      const pinned = parseBoolean(rest);
+      if (pinned === null) extra.push(line);
+      else meta.pinned = pinned;
     } else if (key === 'labels') {
       if (rest.trim().startsWith('[')) {
         meta.labels = parseFlowList(rest);
@@ -218,6 +240,7 @@ export function serializeNote(meta: NoteMeta, body: string, extraFrontMatter: st
     `id: ${meta.id}`,
     `labels: [${labels}]`,
     `created: ${meta.created}`,
+    ...(meta.pinned ? ['pinned: true'] : []),
     ...extraFrontMatter.filter((l, i, all) => !(i === all.length - 1 && l.trim() === '')),
     '---',
   ];
