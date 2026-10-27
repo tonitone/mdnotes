@@ -62,9 +62,6 @@ test('preview mode renders the note and hides the editor', async ({ page }) => {
 });
 
 test('split mode shows the source next to a live preview', async ({ page }) => {
-  // Tall enough that the stacked editor half does not scroll: axe flags a scrolling .cm-scroller
-  // (scrollable-region-focusable), which also happens for long notes in this layout.
-  await page.setViewportSize({ width: 1400, height: 1100 });
   await openNote(page, 'Einkauf');
   await chooseMode(page, 'split');
   await expect(page.locator('#editor-host')).toBeVisible();
