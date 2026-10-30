@@ -1,5 +1,6 @@
 import { setTheme } from '@ui5/webcomponents-base/dist/config/Theme.js';
 import { t } from '../shared/i18n';
+import { updateShellLogo } from './logo';
 
 /**
  * Appearance: SAP Horizon light, dark and two high-contrast variants.
@@ -56,6 +57,7 @@ function applyTheme(): void {
   const theme = resolveTheme(themeChoice);
   void setTheme(theme);
   document.documentElement.dataset.theme = theme;
+  updateShellLogo(theme);
   document.documentElement.style.colorScheme = theme.includes('dark') || theme.endsWith('hcb') ? 'dark' : 'light';
 }
 
