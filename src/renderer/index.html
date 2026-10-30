@@ -10,6 +10,9 @@
     <a class="skip-link" href="#editor-host" data-i18n="page.skipToEditor">Zum Editor springen</a>
 
     <ui5-shellbar id="shell" primary-title="mdnotes" data-sap-ui-fastnavgroup="true">
+      <!-- Decorative: the shell bar names the logo area (accessibilityAttributes.logo.name).
+           The theme sets src (src/renderer/logo.ts), so a dark theme never flashes the light file. -->
+      <img id="shellLogo" slot="logo" alt="" width="28" height="28" />
       <ui5-shellbar-item id="backupItem" icon="save" text="Backup" data-i18n-attr="text:shell.backup"></ui5-shellbar-item>
       <ui5-shellbar-item id="themeItem" icon="palette" text="Darstellung" data-i18n-attr="text:shell.appearance"></ui5-shellbar-item>
       <ui5-shellbar-item id="languageItem" icon="globe" text="Sprache" data-i18n-attr="text:language.title"></ui5-shellbar-item>

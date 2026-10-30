@@ -341,3 +341,84 @@ test('More actions with the Format menu: axe with the menu and with the submenu 
   // One finding inside UI5 is listed in KNOWN_UI5_ISSUES (tests/e2e/axe.ts).
   await expectNoSeriousViolations(page, 'format submenu');
 });
+
+// ---------------------------------------------------------------------------
+// Shell bar logo: carries the app name when the title is hidden (issue #38)
+// ---------------------------------------------------------------------------
+
+const shellLink = (page: Page) => page.locator('#shell').getByRole('link', { name: 'mdnotes', exact: true });
+const shellTitle = (page: Page) => page.locator('#shell .ui5-shellbar-title');
+const shellLogo = (page: Page) => page.locator('#shellLogo');
+
+async function expectLogoLoaded(page: Page) {
+  await expect(shellLogo(page)).toBeVisible();
+  await expect
+    .poll(() => shellLogo(page).evaluate((img: HTMLImageElement) => (img.complete ? img.naturalWidth : 0)))
+    .toBeGreaterThan(0);
+}
+
+for (const theme of ['light', 'hcb'] as const) {
+  for (const [name, width] of [
+    ['narrow', 500],
+    ['wide', 1400],
+  ] as const) {
+    test(`shell bar logo in a ${name} window: theme ${theme}`, async ({ page }) => {
+      await page.addInitScript((value) => localStorage.setItem('mdnotes.theme', value), theme);
+      await page.setViewportSize({ width, height: 800 });
+      await openApp(page);
+      await expectLogoLoaded(page);
+      // One link named "mdnotes"; the image itself is decorative, so the name is not read twice.
+      await expect(shellLink(page)).toHaveCount(1);
+      await expect(shellLink(page)).toBeVisible();
+      await expect(shellLogo(page)).toHaveAttribute('alt', '');
+      if (name === 'narrow') {
+        // At size S UI5 drops the title and keeps the logo.
+        await expect(shellTitle(page)).toHaveCount(0);
+      } else {
+        await expect(shellTitle(page)).toBeVisible();
+        await expect(shellTitle(page)).toHaveText('mdnotes');
+      }
+      await expectNoSeriousViolations(page, `shell bar logo ${name} ${theme}`);
+    });
+  }
+}
+
+test('shell bar logo: each theme family has its own file', async ({ page }) => {
+  const sources = new Set<string | null>();
+  await page.goto('/');
+  for (const theme of ['light', 'dark', 'hcb', 'hcw']) {
+    await page.evaluate((value) => localStorage.setItem('mdnotes.theme', value), theme);
+    await page.reload();
+    // The theme is applied once the language is loaded; only then the logo gets its file.
+    await expect(page.locator('html')).toHaveAttribute('data-theme', `sap_horizon${theme === 'light' ? '' : `_${theme}`}`);
+    await expectLogoLoaded(page);
+    sources.add(await shellLogo(page).getAttribute('src'));
+  }
+  expect(sources.size).toBe(4);
+});
+
+test('shell bar logo leads back to all notes, by mouse and keyboard', async ({ page }) => {
+  await page.setViewportSize({ width: 1400, height: 800 });
+  await openApp(page);
+  await openNote(page, 'Willkommen');
+  await shellLink(page).click();
+  await expect(page.locator('#noSelection')).toBeVisible();
+  await expect(page.locator('#allNotesItem')).toHaveJSProperty('navigated', true);
+
+  // From a label view with Enter.
+  await page.locator('#labelList ui5-li').first().click();
+  await expect(page.locator('#notesTitle')).not.toHaveText('Notizen');
+  await shellLink(page).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#notesTitle')).toHaveText('Notizen');
+  await expect(page.locator('#allNotesItem')).toHaveJSProperty('navigated', true);
+
+  // In a narrow window with Space: the editor gives way to the note list.
+  await page.setViewportSize({ width: 500, height: 800 });
+  await openNote(page, 'Willkommen');
+  await expect(listItems(page).first()).toBeHidden();
+  await shellLink(page).focus();
+  await page.keyboard.press('Space');
+  await expect(listItems(page).first()).toBeVisible();
+  await expect(editor(page)).toBeHidden();
+});
