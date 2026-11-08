@@ -201,9 +201,7 @@ export class App {
     els.workspaceItem.addEventListener('click', () => void this.chooseWorkspace());
     els.backupItem.addEventListener('click', () => void this.openBackup());
     // The logo is the home link: back to all notes (UI5 fires this on click, Enter and Space).
-    els.shell.addEventListener('logo-click', () => {
-      if (this.currentView !== 'noWorkspace') void this.setView({ kind: 'all' });
-    });
+    els.shell.addEventListener('logo-click', () => void this.goHome());
     els.versionsButton.addEventListener('click', () => void this.openVersions());
     els.renameLabelButton.addEventListener('click', () => void this.renameCurrentLabel());
 
@@ -609,13 +607,27 @@ export class App {
     await this.checkRecovery();
   }
 
-  private async setView(view: View): Promise<void> {
+  private async setView(view: View, options: { keepEditor?: boolean } = {}): Promise<void> {
     await this.flush();
     this.view = view;
-    this.closeEditor();
+    if (!options.keepEditor) this.closeEditor();
     if (view.kind === 'trash') this.trash = await this.api.listTrash();
     this.renderLibrary();
     await this.runSearch();
+  }
+
+  /**
+   * Home is the "All notes" list. An open note stays open (every note is part of "All notes"),
+   * a trash entry is not, so it is closed. In a narrow window the list replaces the editor column.
+   */
+  private async goHome(): Promise<void> {
+    if (this.currentView === 'noWorkspace') return;
+    const keepEditor = this.currentView === 'editor' && this.currentId !== null;
+    await this.setView({ kind: 'all' }, { keepEditor });
+    if (!keepEditor) return;
+    this.setLayout(narrowQuery.matches ? 'TwoColumnsMidExpanded' : 'ThreeColumnsEndExpanded');
+    const target = this.els.notesList.querySelector('[navigated]') ?? this.els.notesList.querySelector('ui5-li');
+    (target as HTMLElement | null)?.focus();
   }
 
   private renderLibrary(): void {
