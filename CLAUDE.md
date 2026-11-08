@@ -73,6 +73,8 @@ Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand
 - CodeMirror braucht `root: document` (Fokus im UI5-Slot). Mehrzeilige Ersetzungen nur über ein `StateField`.
 - UI5-Theme erst nach der Sprache setzen, sonst bleibt die App mit dunklem Theme leer.
 - FCL feuert `layout-change` nicht bei programmatischem Layout: immer `setLayout()` nutzen.
+  `setLayout()` hält die Bibliothek zu (`ThreeColumnsStartHiddenEndExpanded`), solange der Nutzer sie im breiten Fenster
+  eingeklappt hat (`libraryCollapsed`, nur für die Sitzung).
 - UI5-Listeneinträge enthalten unsichtbaren Zusatztext: in Tests `toContainText` statt `toHaveText`.
 - UI5 2.27.2 hat einen Render-Loop-Fehler im `ui5-tokenizer` (behoben ab 2.28.0). Betrifft das Label-Feld bei sehr vielen Labels.
 - Die Schrift 72 kopiert `scripts/copy-fonts.mjs` aus node_modules. Pfade prüfen, falls die Konsole warnt.
