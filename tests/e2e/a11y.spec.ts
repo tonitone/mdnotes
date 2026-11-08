@@ -401,11 +401,17 @@ test('shell bar logo leads back to all notes, by mouse and keyboard', async ({ p
   await page.setViewportSize({ width: 1400, height: 800 });
   await openApp(page);
   await openNote(page, 'Willkommen');
-  await shellLink(page).click();
-  await expect(page.locator('#noSelection')).toBeVisible();
-  await expect(page.locator('#allNotesItem')).toHaveJSProperty('navigated', true);
+  await expect(editor(page)).toContainText('Willkommen');
 
-  // From a label view with Enter.
+  // Wide window: the list switches to all notes and gets the focus, the open note stays (issue #54).
+  await shellLink(page).click();
+  await expect(page.locator('#allNotesItem')).toHaveJSProperty('navigated', true);
+  await expect(editor(page)).toBeVisible();
+  await expect(editor(page)).toContainText('Willkommen');
+  await expect(page.locator('#noSelection')).toBeHidden();
+  await expect(page.locator('#notesList ui5-li[navigated]')).toBeFocused();
+
+  // From a label view with Enter: back to all notes, the note stays open.
   await page.locator('#labelList ui5-li').first().click();
   await expect(page.locator('#notesTitle')).not.toHaveText('Notizen');
   await shellLink(page).focus();
@@ -413,7 +419,23 @@ test('shell bar logo leads back to all notes, by mouse and keyboard', async ({ p
   await expect(page.locator('#notesTitle')).toHaveText('Notizen');
   await expect(page.locator('#allNotesItem')).toHaveJSProperty('navigated', true);
 
-  // In a narrow window with Space: the editor gives way to the note list.
+  // With no note open the editor column shows its empty state, as before.
+  await page.locator('#labelList ui5-li').first().click();
+  await shellLink(page).click();
+  await expect(page.locator('#allNotesItem')).toHaveJSProperty('navigated', true);
+  await expect(listItems(page).first()).toBeVisible();
+
+  // A trash entry is not part of all notes: it is closed.
+  await openNote(page, 'Einkauf');
+  await page.locator('#deleteButton').click();
+  await page.locator('#trashItem').click();
+  await listItems(page).first().click();
+  await expect(page.locator('#deleteForeverButton')).toBeVisible();
+  await shellLink(page).click();
+  await expect(page.locator('#noSelection')).toBeVisible();
+  await expect(page.locator('#allNotesItem')).toHaveJSProperty('navigated', true);
+
+  // In a narrow window with Space: the list replaces the editor, the note stays open behind it.
   await page.setViewportSize({ width: 500, height: 800 });
   await openNote(page, 'Willkommen');
   await expect(listItems(page).first()).toBeHidden();
@@ -421,4 +443,7 @@ test('shell bar logo leads back to all notes, by mouse and keyboard', async ({ p
   await page.keyboard.press('Space');
   await expect(listItems(page).first()).toBeVisible();
   await expect(editor(page)).toBeHidden();
+  await listItems(page).filter({ hasText: 'Willkommen' }).first().click();
+  await expect(editor(page)).toBeVisible();
+  await expect(editor(page)).toContainText('Willkommen');
 });

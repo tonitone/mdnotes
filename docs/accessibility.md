@@ -42,7 +42,9 @@ Bei jedem Punkt: Was wird angesagt? Stimmt es mit dem überein, was man sieht?
       ohne offene Notiz, in die Notizliste.
 - [ ] F6 und Shift+F6 springen zwischen Shellbar, Bibliothek, Notizliste und Editor.
 - [ ] Das Logo in der Shellbar wird als Link „mdnotes“ angesagt, im breiten und im schmalen
-      Fenster (unter etwa 700 px) und nur einmal. Enter oder Leertaste führt zu „Alle Notizen“.
+      Fenster (unter etwa 700 px) und nur einmal. Enter oder Leertaste führt zu „Alle Notizen“:
+      Der Fokus liegt in der Notizliste, eine offene Notiz bleibt offen (im schmalen Fenster
+      hinter der Liste), ein offener Papierkorb-Eintrag wird geschlossen.
 
 ### Notizliste
 
