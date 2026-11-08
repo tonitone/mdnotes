@@ -91,6 +91,8 @@ export class App {
   private query = '';
   private fileName = '';
   private compactViewSwitch = false;
+  /** The user collapsed the library column in a wide window; app-driven layouts must keep it hidden. */
+  private libraryCollapsed = false;
   private searchHits: SearchHit[] | null = null;
   private viewMode: ViewMode = readViewMode();
   private previewTimer: number | undefined;
@@ -301,12 +303,19 @@ export class App {
       (els.notesList.querySelector('[navigated]') as HTMLElement | null)?.focus();
     });
     els.libraryButton.addEventListener('click', () => {
-      this.setLayout('OneColumn');
+      // In a wide window the button reopens a collapsed column next to the others.
+      this.libraryCollapsed = false;
+      this.setLayout(narrowQuery.matches ? 'OneColumn' : 'ThreeColumnsEndExpanded');
       const current = (els.libraryList.querySelector('[navigated]') ?? els.labelList.querySelector('[navigated]')) as HTMLElement | null;
       (current ?? els.allNotesItem).focus();
     });
     // Fired on resize and user interaction, not when the app sets the layout.
-    els.fcl.addEventListener('layout-change', () => this.updateColumnButtons());
+    els.fcl.addEventListener('layout-change', (event: Event) => {
+      // Remember the user's choice for the library column; resizing must not change it.
+      const { resize } = (event as CustomEvent<{ resize?: boolean }>).detail ?? {};
+      if (!narrowQuery.matches && !resize) this.libraryCollapsed = !els.fcl.startColumnVisible;
+      this.updateColumnButtons();
+    });
     // A column layout chosen in a narrow window must not outlive the window size.
     narrowQuery.addEventListener('change', () => this.syncLayoutToWidth());
     this.syncLayoutToWidth();
@@ -440,7 +449,8 @@ export class App {
   }
 
   private setLayout(layout: 'OneColumn' | 'TwoColumnsMidExpanded' | 'ThreeColumnsEndExpanded'): void {
-    this.els.fcl.layout = layout;
+    const keepLibraryHidden = this.libraryCollapsed && !narrowQuery.matches && layout === 'ThreeColumnsEndExpanded';
+    this.els.fcl.layout = keepLibraryHidden ? 'ThreeColumnsStartHiddenEndExpanded' : layout;
     // Column visibility is known after UI5 has rendered the new layout.
     requestAnimationFrame(() => this.updateColumnButtons());
   }
