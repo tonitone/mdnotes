@@ -42,6 +42,8 @@ Bei jedem Punkt: Was wird angesagt? Stimmt es mit dem überein, was man sieht?
 - [ ] Der erste Tab-Stopp ist „Zum Editor springen“. Enter springt in den Editor oder,
       ohne offene Notiz, in die Notizliste.
 - [ ] F6 und Shift+F6 springen zwischen Shellbar, Bibliothek, Notizliste und Editor.
+- [ ] Das Logo in der Shellbar wird als Link „mdnotes“ angesagt, im breiten und im schmalen
+      Fenster (unter etwa 700 px) und nur einmal. Enter oder Leertaste führt zu „Alle Notizen“.
 
 ### Notizliste
 
