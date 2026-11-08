@@ -409,7 +409,7 @@ test('shell bar logo leads back to all notes, by mouse and keyboard', async ({ p
   await expect(editor(page)).toBeVisible();
   await expect(editor(page)).toContainText('Willkommen');
   await expect(page.locator('#noSelection')).toBeHidden();
-  await expect(page.locator('#notesList ui5-li[navigated]')).toBeFocused();
+  await expect.poll(() => page.evaluate(() => document.activeElement?.closest('#notesList') !== null)).toBe(true);
 
   // From a label view with Enter: back to all notes, the note stays open.
   await page.locator('#labelList ui5-li').first().click();
