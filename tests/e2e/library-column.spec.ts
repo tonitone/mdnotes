@@ -16,7 +16,7 @@ async function openApp(page: Page) {
 
 /**
  * Plays what UI5 does when the user collapses a column with the separator arrow:
- * the layout changes and the column layout fires `layout-change` without `resize`.
+ * the layout changes and the column layout fires `layout-change` with `resized: false`.
  */
 async function setLayoutAsUser(page: Page, layout: string) {
   await page.locator('#fcl').evaluate(async (fcl, next) => {
@@ -24,7 +24,7 @@ async function setLayoutAsUser(page: Page, layout: string) {
     element.layout = next;
     await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
     element.dispatchEvent(
-      new CustomEvent('layout-change', { detail: { layout: next, resize: false, arrowsUsed: true } }),
+      new CustomEvent('layout-change', { detail: { layout: next, resized: false, separatorsUsed: true } }),
     );
   }, layout);
 }
@@ -72,4 +72,24 @@ test('the library button reopens a collapsed column in a wide window', async ({ 
 
   await listItems(page).filter({ hasText: 'Willkommen' }).first().click();
   await expect(page.locator('#allNotesItem')).toBeVisible();
+});
+
+test('a layout change caused by resizing does not reopen or collapse the library column', async ({ page }) => {
+  await openApp(page);
+  await setLayoutAsUser(page, 'ThreeColumnsStartHiddenEndExpanded');
+  await expect(page.locator('#allNotesItem')).toBeHidden();
+
+  // UI5 reports its own width-driven changes with `resized: true`; the app must not take them as a user choice.
+  await page.locator('#fcl').evaluate(async (fcl) => {
+    const element = fcl as HTMLElement & { layout: string };
+    element.layout = 'ThreeColumnsEndExpanded';
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+    element.dispatchEvent(
+      new CustomEvent('layout-change', { detail: { layout: element.layout, resized: true, separatorsUsed: false } }),
+    );
+  });
+
+  await listItems(page).filter({ hasText: 'Willkommen' }).first().click();
+  await expect(editor(page)).toBeVisible();
+  await expect(page.locator('#allNotesItem')).toBeHidden();
 });
