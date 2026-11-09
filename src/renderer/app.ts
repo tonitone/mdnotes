@@ -312,8 +312,8 @@ export class App {
     // Fired on resize and user interaction, not when the app sets the layout.
     els.fcl.addEventListener('layout-change', (event: Event) => {
       // Remember the user's choice for the library column; resizing must not change it.
-      const { resize } = (event as CustomEvent<{ resize?: boolean }>).detail ?? {};
-      if (!narrowQuery.matches && !resize) this.libraryCollapsed = !els.fcl.startColumnVisible;
+      const { resized } = (event as CustomEvent<{ resized?: boolean }>).detail ?? {};
+      if (!narrowQuery.matches && !resized) this.libraryCollapsed = !els.fcl.startColumnVisible;
       this.updateColumnButtons();
     });
     // A column layout chosen in a narrow window must not outlive the window size.
