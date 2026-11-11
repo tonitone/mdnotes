@@ -7,6 +7,32 @@ Den Status zeigen die Issues und Meilensteine: Ein PR schließt sein Issue mit `
 Hintergrund und Begründungen stehen in den claude.ai Artifacts „Plan: Markdown-Editor“ (Backlog Phase 5)
 und „Plan: Design-Überarbeitung mdnotes“.
 
+## Stand (8. November 2026)
+
+Erledigt: #14 D1, #15 D3, #16 D7, #17 Formatierung und Leiste, #36, #37, #39, #45, #38 (Logo).
+Neue Issues werden auf Englisch geschrieben.
+
+**Als Nächstes, in dieser Reihenfolge:**
+
+1. PR #52 (#18 Anheften, Sortieren, Datumsgruppen) fertigstellen. Der Agent brach am Sitzungslimit ab,
+   der PR ist ein Entwurf. CI prüfen (zuletzt war der macOS-Job abgebrochen), Lücken schließen,
+   dann mit `POST repos/tonitone/mdnotes/pulls/52/ccr/ready_for_review` auf bereit setzen.
+2. PR #50 (#48 scrollender Editor, axe) ist bereit. Er wartet auf Review und Merge der stündlichen Aufgabe.
+   Offen: Der Eintrag zur Zielgröße von `ui5-select` in `KNOWN_UI5_ISSUES` wird bei #21 nachgemessen.
+3. #53 (Bug): Eine zugeklappte Bibliotheksspalte geht beim Öffnen einer Notiz oder beim Logo-Klick wieder auf.
+   Sie soll zu bleiben, bis Toni sie wieder öffnet.
+4. #54: Der Logo-Klick soll im breiten Fenster die offene Notiz nicht schließen, sondern nur die Liste auf
+   „Alle Notizen“ stellen.
+5. Danach #19, #20 (Phase 5.2), #21 und #22 (Phase 5.3), dann Phase 5.4.
+
+**Arbeitsweise:**
+
+- Pro Issue ein Agent mit Sonnet. Opus nur für Reviews und knifflige Entscheidungen.
+- Höchstens zwei Agenten gleichzeitig, große Issues teilen.
+- Fehlersuche höchstens zwei CI-Runden. Danach melden statt weiter probieren.
+- Die stündliche Aufgabe „mdnotes PR review and fix loop“ (werktags 11 bis 22 Uhr) reviewt, korrigiert
+  und mergt PRs mit `Closes #n`. Agenten setzen ihre PRs nach grüner CI selbst auf bereit.
+
 ## Meilenstein Phase 5.1: Design-Grundlage
 
 1. #14 **D1 Split-Ansicht nach Spaltenbreite.** `@container` auf `.editor-column` statt `@media` auf das Fenster.
