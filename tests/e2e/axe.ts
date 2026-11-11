@@ -23,6 +23,15 @@ const KNOWN_UI5_ISSUES: Array<{ rule: string; target: string; summary?: string; 
       'shadow root (MenuItemTemplate.tsx, listItemPostContent), so it ends up inside the parent ul[role=menu]; ' +
       'Popup.onEnterDOM sets tabIndex = -1 on it (Popup.ts:291), so axe counts it as a focusable non-menuitem child.',
   },
+  {
+    rule: 'target-size',
+    target: 'ui5-select,.ui5-select-label-root',
+    reason:
+      'UI5 2.27.2: axe measures the focusable role=combobox element of ui5-select, .ui5-select-label-root, which is ' +
+      'only one text line high (Select.css:35-38, align-self: center). The click target is the whole control, ' +
+      'height var(--_ui5_input_height) (Input.css:13), at least 24 px also in compact density. Shows up for the ' +
+      'code block tools, which sit inside the editor content (role=textbox), a neighbouring target for axe.',
+  },
 ];
 
 function isKnownUi5Issue(rule: string, target: string, summary = ''): boolean {
