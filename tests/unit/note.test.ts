@@ -136,4 +136,46 @@ describe('Front Matter', () => {
     const text = '---\nid: x\nkein Ende';
     assert.equal(parseNote(text).body, text);
   });
+
+  describe('pinned', () => {
+    const fm = (line: string) => `---\nid: ${id}\nlabels: []\ncreated: 2026-10-19T12:00:00.000Z\n${line}\nauthor: Toni\n---\n# Titel\n`;
+
+    it('writes `pinned: true` after `created` and nothing when not pinned', () => {
+      const base = { id, labels: [], created: '2026-10-19T12:00:00.000Z' };
+      const pinned = serializeNote({ ...base, pinned: true }, '# T', ['author: Toni']);
+      assert.equal(pinned, `---\nid: ${id}\nlabels: []\ncreated: 2026-10-19T12:00:00.000Z\npinned: true\nauthor: Toni\n---\n# T`);
+      assert.doesNotMatch(serializeNote({ ...base, pinned: false }, '# T'), /pinned/);
+      assert.doesNotMatch(serializeNote(base, '# T'), /pinned/);
+    });
+
+    it('round-trips a pinned note with foreign lines', () => {
+      const meta = { id, labels: ['a'], created: '2026-10-19T12:00:00.000Z', pinned: true };
+      const parsed = parseNote(serializeNote(meta, '# Titel\n', ['custom: 1']));
+      assert.deepEqual(parsed.meta, meta);
+      assert.deepEqual(parsed.extraFrontMatter, ['custom: 1']);
+      assert.equal(parsed.body, '# Titel\n');
+    });
+
+    it('reads hand-written YAML booleans, quoted or in any case', () => {
+      for (const value of ['true', 'True', 'yes', 'on', '"true"', "'yes'"]) {
+        const parsed = parseNote(fm(`pinned: ${value}`));
+        assert.equal(parsed.meta.pinned, true, value);
+        assert.deepEqual(parsed.extraFrontMatter, ['author: Toni'], value);
+      }
+      for (const value of ['false', 'no', 'OFF']) {
+        assert.equal(parseNote(fm(`pinned: ${value}`)).meta.pinned, false, value);
+      }
+    });
+
+    it('keeps an unreadable value verbatim and treats it as not pinned', () => {
+      for (const line of ['pinned: maybe', 'pinned:', 'pinned: [x]']) {
+        const parsed = parseNote(fm(line));
+        assert.equal(parsed.meta.pinned, undefined, line);
+        assert.deepEqual(parsed.extraFrontMatter, [line, 'author: Toni'], line);
+        // Writing the note again keeps the line where the parser found it among the foreign lines.
+        const again = serializeNote({ id, labels: [], created: '2026-10-19T12:00:00.000Z' }, parsed.body, parsed.extraFrontMatter);
+        assert.ok(again.includes(`\n${line}\nauthor: Toni\n`), line);
+      }
+    });
+  });
 });

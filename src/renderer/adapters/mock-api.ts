@@ -5,6 +5,7 @@ import { markdownToHtmlDocument } from '../../shared/markdown/html';
 import { markdownToWiki } from '../../shared/markdown/wiki';
 import { newId, parseNote, serializeNote, slugify, titleFromBody } from '../../shared/note';
 import { NoteStore } from '../../shared/note-store';
+import { DEFAULT_NOTE_SORT, isNoteSort } from '../../shared/note-list';
 import { isLanguageChoice, resolveLocale, t, type LanguageChoice } from '../../shared/i18n';
 
 /**
@@ -105,6 +106,8 @@ function pickFiles(): Promise<File[] | null> {
 }
 
 const LANGUAGE_KEY = 'mdnotes.language';
+/** Browser mode keeps the list order in localStorage; Electron keeps it in config.json. */
+const NOTE_SORT_KEY = 'mdnotes.noteSort';
 
 /** `?lang=en` in the URL wins (for tests), then the stored choice. */
 function readLanguage(): LanguageChoice {
@@ -175,6 +178,7 @@ export async function createMockApi(): Promise<NotesApi> {
     saveNote: (id, body) => store.save(id, body),
     finalizeNote: (id) => store.finalize(id),
     setLabels: (id, labels) => store.setLabels(id, labels),
+    setPinned: (id, pinned) => store.setPinned(id, pinned),
     searchNotes: async (query) => store.search(query),
 
     trashNote: (id) => store.trash(id),
@@ -283,6 +287,25 @@ export async function createMockApi(): Promise<NotesApi> {
         // No storage: the choice is lost on reload.
       }
       return { choice, locale: resolveLocale(choice, navigator.languages) };
+    },
+
+    async getNoteSort() {
+      try {
+        const stored = localStorage.getItem(NOTE_SORT_KEY);
+        if (isNoteSort(stored)) return stored;
+      } catch {
+        // Storage blocked.
+      }
+      return DEFAULT_NOTE_SORT;
+    },
+    async setNoteSort(sort) {
+      if (!isNoteSort(sort)) throw new Error('Invalid sort order.');
+      try {
+        localStorage.setItem(NOTE_SORT_KEY, sort);
+      } catch {
+        // No storage: the order only lasts for this session.
+      }
+      return sort;
     },
 
     onMenuCommand: noop,

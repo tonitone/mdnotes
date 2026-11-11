@@ -10,8 +10,10 @@ import type {
   SearchHit,
   TrashEntry,
 } from '../shared/api';
+import { renderFinished } from '@ui5/webcomponents-base/dist/Render.js';
 import { MAX_ASSET_BYTES, isImageMime } from '../shared/assets';
 import { normalizeLabels } from '../shared/note-store';
+import { DEFAULT_NOTE_SORT, createdTime, groupNotes, isNoteSort, sortNotes, type NoteSort } from '../shared/note-list';
 import { markdownToHtml } from '../shared/markdown/html';
 import { markdownToWiki } from '../shared/markdown/wiki';
 import { openBackupDialog } from './backup-dialog';
@@ -22,7 +24,7 @@ import { THEME_CHOICES, getDensity, getThemeChoice, setDensity, setThemeChoice, 
 import { announce, confirmDialog, el, infoDialog, promptDialog, type Ui5Element } from './ui';
 import { observeCompact } from './compact';
 import { openVersionDialog } from './versions';
-import { formatModified, formatTime, formatVersionTime } from './format';
+import { collationLocale, formatModified, formatTime, formatVersionTime, groupTitle } from './format';
 import { LANGUAGE_CHOICES, isLanguageChoice, t, tp, type LanguageChoice, type MessageKey } from '../shared/i18n';
 
 /** Delay after the last keystroke before saving. */
@@ -34,6 +36,8 @@ const SEARCH_DELAY_MS = 150;
 const NEW_NOTE_COMPACT_REM = 17;
 /** Extra room for each further icon button in the header (rename label, back to library). */
 const HEADER_BUTTON_REM = 5;
+/** Room for the sort button (2.25rem) and its gap, plus a little slack; part of every view except the trash. */
+const SORT_BUTTON_REM = 2.75;
 /** Unsaved text is written to the crash recovery store at most this often. */
 const RECOVERY_DELAY_MS = 2000;
 
@@ -97,6 +101,11 @@ export class App {
   private currentView: 'editor' | 'trashEntry' | 'noSelection' | 'noWorkspace' = 'noSelection';
   /** A format chosen in the Format menu runs once the menu has closed and given the focus back. */
   private pendingFormat: FormatKind | null = null;
+  private sort: NoteSort = DEFAULT_NOTE_SORT;
+  /** The note whose context menu is open in the list. */
+  private contextNoteId: string | null = null;
+  /** Pin toggle chosen in the list's context menu; runs once the menu has closed. */
+  private pendingContextPin = false;
 
   private readonly els = {
     fcl: $('fcl'),
@@ -121,6 +130,11 @@ export class App {
     newNoteButton: $('newNoteButton'),
     moreButton: $('moreButton'),
     moreMenu: $('moreMenu'),
+    sortButton: $('sortButton'),
+    sortMenu: $('sortMenu'),
+    noteContextMenu: $('noteContextMenu'),
+    contextPinItem: $('contextPinItem'),
+    pinMenuItem: $('pinMenuItem'),
     searchInput: $('searchInput'),
     backButton: $('backButton'),
     editorColumn: $('editorColumn'),
@@ -181,6 +195,12 @@ export class App {
     this.labelFormatShortcuts();
     this.observeMiddleColumn();
     this.applyViewMode();
+    try {
+      this.sort = await this.api.getNoteSort();
+    } catch (err) {
+      console.error(err);
+    }
+    this.updateSortUi();
 
     const workspace = await this.api.getWorkspace();
     if (workspace) {
@@ -252,6 +272,45 @@ export class App {
       if (action === 'export-all') void this.exportAll();
     });
 
+    els.sortButton.addEventListener('click', () => {
+      els.sortMenu.opener = els.sortButton;
+      els.sortMenu.open = true;
+    });
+    els.sortMenu.addEventListener('item-click', (event: Event) => {
+      const sort = (event as CustomEvent<{ item: HTMLElement }>).detail.item.dataset.sort;
+      if (isNoteSort(sort)) void this.changeSort(sort);
+      // UI5 toggles the clicked item right after this event; set the real state afterwards.
+      queueMicrotask(() => this.updateSortUi());
+    });
+
+    // Context menu of a note in the list: right click, the context menu key or Shift+F10.
+    els.notesList.addEventListener('contextmenu', (event: MouseEvent) => {
+      const item = this.noteItemFrom(event);
+      if (!item) return;
+      event.preventDefault();
+      this.openNoteContextMenu(item);
+    });
+    els.notesList.addEventListener('keydown', (event: KeyboardEvent) => {
+      if (event.key !== 'ContextMenu' && !(event.key === 'F10' && event.shiftKey)) return;
+      const item = this.noteItemFrom(event);
+      if (!item) return;
+      event.preventDefault();
+      this.openNoteContextMenu(item);
+    });
+    els.noteContextMenu.addEventListener('item-click', (event: Event) => {
+      const action = (event as CustomEvent<{ item: HTMLElement }>).detail.item.dataset.action;
+      if (action === 'toggle-pin') this.pendingContextPin = true;
+    });
+    els.noteContextMenu.addEventListener('close', () => {
+      const id = this.contextNoteId;
+      const run = this.pendingContextPin;
+      this.contextNoteId = null;
+      this.pendingContextPin = false;
+      const note = id ? this.notes.find((n) => n.id === id) : undefined;
+      // The list is rebuilt afterwards, so the focus moves to the note's new entry.
+      if (run && note) void this.setPinned(note.id, !note.pinned, { focusListItem: true });
+    });
+
     els.exportButton.addEventListener('click', () => {
       els.exportMenu.opener = els.exportButton;
       els.exportMenu.open = true;
@@ -263,12 +322,17 @@ export class App {
       if (format) void this.exportCurrent(format as ExportFormat);
     });
     els.editorMoreButton.addEventListener('click', () => {
+      this.updatePinItem(els.pinMenuItem, this.currentNote()?.pinned === true);
       els.editorMoreMenu.opener = els.editorMoreButton;
       els.editorMoreMenu.open = true;
     });
     els.editorMoreMenu.addEventListener('item-click', (event: Event) => {
       const { action, format } = (event as CustomEvent<{ item: HTMLElement }>).detail.item.dataset;
       if (action === 'copy-file-name') void this.copyFileName();
+      if (action === 'toggle-pin') {
+        const note = this.currentNote();
+        if (note) void this.setPinned(note.id, !note.pinned);
+      }
       if (format) this.pendingFormat = format as FormatKind;
     });
     els.editorMoreMenu.addEventListener('close', (event: Event) => {
@@ -415,7 +479,8 @@ export class App {
     const column = document.querySelector<HTMLElement>('section[slot="midColumn"]');
     if (!column) return;
     const extra = Number(!this.els.renameLabelButton.hidden) + Number(!this.els.libraryButton.hidden);
-    const thresholdRem = NEW_NOTE_COMPACT_REM + extra * HEADER_BUTTON_REM;
+    const sort = this.els.sortButton.hidden ? 0 : SORT_BUTTON_REM;
+    const thresholdRem = NEW_NOTE_COMPACT_REM + extra * HEADER_BUTTON_REM + sort;
     if (thresholdRem === this.compactThresholdRem) return;
     this.compactThresholdRem = thresholdRem;
     this.stopCompactObserver?.();
@@ -598,7 +663,7 @@ export class App {
   private async showWorkspace(workspace: string): Promise<void> {
     this.els.workspacePath.textContent = workspace;
     this.els.workspacePath.title = workspace;
-    for (const control of [this.els.newNoteButton, this.els.moreButton, this.els.searchInput]) control.disabled = false;
+    for (const control of [this.els.newNoteButton, this.els.moreButton, this.els.sortButton, this.els.searchInput]) control.disabled = false;
     this.closeEditor();
     this.notes = await this.api.listNotes();
     this.view = { kind: 'all' };
@@ -668,6 +733,8 @@ export class App {
           ? t('notes.labelTitle', { label: this.view.label })
           : t('notes.title');
     this.els.newNoteButton.hidden = this.view.kind === 'trash';
+    // The trash is always in the order of deletion.
+    this.els.sortButton.hidden = this.view.kind === 'trash';
     this.els.renameLabelButton.hidden = this.view.kind !== 'label';
     this.updateCompactObserver();
   }
@@ -678,10 +745,11 @@ export class App {
     this.renderList();
   }
 
+  /** Search results in the order of relevance; otherwise the notes in the chosen order, pinned first. */
   private visibleNotes(): Array<NoteSummary & { snippet?: string }> {
     const { view } = this;
     const inView = (n: NoteSummary) => view.kind !== 'label' || n.labels.some((l) => sameLabel(l, view.label));
-    if (!this.searchHits) return this.notes.filter(inView);
+    if (!this.searchHits) return sortNotes(this.notes.filter(inView), this.sort, collationLocale());
     const byId = new Map(this.notes.map((n) => [n.id, n]));
     return this.searchHits
       .map((hit) => ({ ...byId.get(hit.id)!, snippet: hit.snippet }))
@@ -695,37 +763,132 @@ export class App {
       const entries = this.trash.filter((e) => !q || `${e.title} ${e.preview}`.toLocaleLowerCase().includes(q));
       list.noDataText = q ? t('notes.noHits') : t('trash.empty');
       list.replaceChildren(
-        ...entries.map((e) =>
-          el('ui5-li', {
-            icon: 'document-text',
-            description: e.preview || t('notes.noText'),
-            additionalText: t('trash.deletedAt', { time: formatModified(e.trashedAt) }),
+        ...entries.map((e) => {
+          const description = e.preview || t('notes.noText');
+          const time = t('trash.deletedAt', { time: formatModified(e.trashedAt) });
+          // Pinned notes keep their pin in the trash; it can only be changed after restoring.
+          return el('ui5-li', {
+            icon: e.pinned ? 'pushpin-on' : 'document-text',
+            description,
+            additionalText: time,
             navigated: e.trashName === this.currentTrash,
+            ...(e.pinned ? { accessibleName: t('notes.pinnedItem', { title: e.title, description, time }) } : {}),
             'data-trash': e.trashName,
-          }, [e.title]),
-        ),
+          }, [e.title]);
+        }),
       );
       return;
     }
     list.noDataText = this.query ? t('notes.noHits') : t('notes.empty');
+    const notes = this.visibleNotes();
+    // Date groups only for a date order without a search, like Apple Notes.
+    const sort = this.sort;
+    if (this.searchHits || sort === 'title') {
+      list.replaceChildren(...notes.map((note) => this.noteItem(note)));
+      return;
+    }
     list.replaceChildren(
-      ...this.visibleNotes().map((note) =>
-        el('ui5-li', {
-          icon: 'document-text',
-          description: note.snippet ?? (note.preview || t('notes.noText')),
-          additionalText: formatModified(note.modified),
-          tooltip: note.fileName,
-          navigated: note.id === this.currentId,
-          'data-id': note.id,
-        }, [note.title]),
+      ...groupNotes(notes, sort, Date.now()).map(({ key, group, notes: members }) =>
+        el('ui5-li-group', { headerText: groupTitle(group), 'data-group': key }, members.map((note) => this.noteItem(note))),
       ),
     );
   }
 
+  private noteItem(note: NoteSummary & { snippet?: string }): Ui5Element {
+    const description = note.snippet ?? (note.preview || t('notes.noText'));
+    // The date shown is the one the list is sorted and grouped by.
+    const time = formatModified(this.sort === 'created' && !this.searchHits ? createdTime(note) : note.modified);
+    return el('ui5-li', {
+      // UI5 renders the icon as decorative, so a pinned entry also says so in its accessible name.
+      icon: note.pinned ? 'pushpin-on' : 'document-text',
+      description,
+      additionalText: time,
+      tooltip: note.fileName,
+      navigated: note.id === this.currentId,
+      ...(note.pinned ? { accessibleName: t('notes.pinnedItem', { title: note.title, description, time }) } : {}),
+      'data-id': note.id,
+    }, [note.title]);
+  }
+
+  /** All entries of the note list, also those inside date groups. */
+  private listItems(): Ui5Element[] {
+    return [...this.els.notesList.querySelectorAll<Ui5Element>('ui5-li')];
+  }
+
   /** Marks the current note without rebuilding the list (keeps focus). */
   private updateSelection(): void {
-    for (const item of this.els.notesList.children as HTMLCollectionOf<Ui5Element>) {
+    for (const item of this.listItems()) {
       item.navigated = item.dataset.id ? item.dataset.id === this.currentId : item.dataset.trash === this.currentTrash;
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Pinning and sorting
+  // -------------------------------------------------------------------------
+
+  private currentNote(): NoteSummary | undefined {
+    return this.currentId ? this.notes.find((n) => n.id === this.currentId) : undefined;
+  }
+
+  /** The note entry an event came from (the event target is retargeted, so walk the composed path). */
+  private noteItemFrom(event: Event): Ui5Element | null {
+    for (const node of event.composedPath()) {
+      if (node instanceof HTMLElement && node.localName === 'ui5-li' && node.dataset.id) return node as Ui5Element;
+      if (node === this.els.notesList) break;
+    }
+    return null;
+  }
+
+  private openNoteContextMenu(item: Ui5Element): void {
+    const note = this.notes.find((n) => n.id === item.dataset.id);
+    if (!note) return;
+    this.contextNoteId = note.id;
+    this.pendingContextPin = false;
+    this.updatePinItem(this.els.contextPinItem, note.pinned);
+    this.els.noteContextMenu.headerText = note.title;
+    this.els.noteContextMenu.opener = item;
+    this.els.noteContextMenu.open = true;
+  }
+
+  private updatePinItem(item: Ui5Element, pinned: boolean): void {
+    item.text = t(pinned ? 'notes.unpin' : 'notes.pin');
+    item.icon = pinned ? 'pushpin-off' : 'pushpin-on';
+  }
+
+  private async setPinned(id: string, pinned: boolean, options: { focusListItem?: boolean } = {}): Promise<void> {
+    try {
+      const summary = await this.api.setPinned(id, pinned);
+      const note = this.notes.find((n) => n.id === id);
+      if (note) Object.assign(note, summary);
+      this.renderList();
+      if (options.focusListItem) {
+        // A new entry inside a new ui5-li-group is only focusable once the group has rendered its slot.
+        await renderFinished();
+        this.listItems().find((item) => item.dataset.id === id)?.focus();
+      }
+      announce(t(pinned ? 'announce.pinned' : 'announce.unpinned', { title: summary.title }));
+    } catch (err) {
+      this.showError(t('error.pin'), err);
+    }
+  }
+
+  private updateSortUi(): void {
+    for (const item of this.els.sortMenu.querySelectorAll<Ui5Element>('ui5-menu-item')) item.checked = item.dataset.sort === this.sort;
+    const label = t('notes.sortCurrent', { order: t(`sort.${this.sort}`) });
+    this.els.sortButton.tooltip = label;
+    this.els.sortButton.accessibleName = label;
+  }
+
+  private async changeSort(sort: NoteSort): Promise<void> {
+    if (sort === this.sort) return;
+    this.sort = sort;
+    this.updateSortUi();
+    this.renderList();
+    announce(t('announce.sorted', { order: t(`sort.${sort}`) }), { toast: false });
+    try {
+      await this.api.setNoteSort(sort);
+    } catch (err) {
+      this.showError(t('error.sort'), err);
     }
   }
 
