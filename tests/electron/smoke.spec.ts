@@ -163,3 +163,26 @@ test('reports no Content Security Policy violations', async () => {
   const violations = await page.evaluate(() => window.__cspViolations ?? []);
   expect(violations).toEqual([]);
 });
+
+// Last, because it reloads the window.
+test('pins a note in its front matter and keeps the sort order in config.json, also after a reload', async () => {
+  await listItems().filter({ hasText: 'Hallo' }).click();
+  await expect(page.locator('.cm-content')).toContainText('Aufgabe');
+  await page.locator('#editorMoreButton').click();
+  await page.locator('#pinMenuItem').click();
+  const hallo = async () => {
+    const name = (await readdir(workspace)).find((f) => f.startsWith('hallo'));
+    return name ? readFile(path.join(workspace, name), 'utf8') : '';
+  };
+  await expect.poll(hallo, { timeout: 10_000 }).toMatch(/\npinned: true\n---\n# Hallo\n\n!\[Pixel\]/);
+
+  await page.locator('#sortButton').click();
+  await page.locator('#sortMenu ui5-menu-item[data-sort="title"]').click();
+  const config = path.join(root, 'profile', 'config.json');
+  await expect.poll(async () => JSON.parse(await readFile(config, 'utf8')).noteSort, { timeout: 10_000 }).toBe('title');
+
+  await page.reload();
+  await expect(listItems().filter({ hasText: 'Hallo' })).toHaveAttribute('icon', 'pushpin-on', { timeout: 20_000 });
+  await expect(page.locator('#sortMenu ui5-menu-item[data-sort="title"]')).toHaveJSProperty('checked', true);
+  await expect(page.locator('#notesList ui5-li-group')).toHaveCount(0);
+});

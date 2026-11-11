@@ -2,6 +2,7 @@ import type { NoteDoc, NoteSummary, NotesChangedEvent, SaveResult, SearchHit, Tr
 import { FileExistsError, type FsPort } from './fs-port';
 import { VersionStore, type VersionInfo } from './history';
 import {
+  PINNED_LINE_RE,
   fileNameFor,
   isNoteId,
   newId,
@@ -123,7 +124,12 @@ export class NoteStore {
       id,
       entry: {
         fileName,
-        meta: { id, labels: parsed.meta.labels ?? [], created: parsed.meta.created ?? new Date(modified).toISOString() },
+        meta: {
+          id,
+          labels: parsed.meta.labels ?? [],
+          created: parsed.meta.created ?? new Date(modified).toISOString(),
+          pinned: parsed.meta.pinned === true,
+        },
         extraFrontMatter: parsed.extraFrontMatter,
         body: parsed.body,
         title: titleFromBody(parsed.body),
@@ -207,7 +213,16 @@ export class NoteStore {
   }
 
   private summary(id: string, e: Entry): NoteSummary {
-    return { id, fileName: e.fileName, title: e.title, preview: e.preview, labels: e.meta.labels, modified: e.modified };
+    return {
+      id,
+      fileName: e.fileName,
+      title: e.title,
+      preview: e.preview,
+      labels: e.meta.labels,
+      modified: e.modified,
+      created: e.meta.created,
+      pinned: e.meta.pinned === true,
+    };
   }
 
   private entry(id: string): Entry {
@@ -222,7 +237,7 @@ export class NoteStore {
 
   read(id: string): NoteDoc {
     const e = this.entry(id);
-    return { ...this.summary(id, e), body: e.body, created: e.meta.created };
+    return { ...this.summary(id, e), body: e.body };
   }
 
   /** The complete file content (front matter and body), e.g. for exports. */
@@ -368,6 +383,23 @@ export class NoteStore {
   }
 
   /**
+   * Pins or unpins a note. Only the front matter changes, the body and its
+   * versions stay as they are. Like a label change this is a real write, so
+   * the file's modification time moves on (sync tools must see the change).
+   * Pinning replaces a hand-written `pinned:` line the parser could not read.
+   */
+  setPinned(id: string, pinned: boolean): Promise<NoteSummary> {
+    return this.serial(async () => {
+      const e = this.entry(id);
+      if ((e.meta.pinned === true) === pinned) return this.summary(id, e);
+      e.meta = { ...e.meta, pinned };
+      if (pinned) e.extraFrontMatter = e.extraFrontMatter.filter((line) => !PINNED_LINE_RE.test(line));
+      await this.write(id, e);
+      return this.summary(id, e);
+    });
+  }
+
+  /**
    * Renames a label in every note. If a note already has the new label, the
    * two are merged. Returns the changed notes.
    */
@@ -421,6 +453,7 @@ export class NoteStore {
         id,
         labels: normalizeLabels(parsed.meta.labels ?? []),
         created: parsed.meta.created ?? now.toISOString(),
+        pinned: parsed.meta.pinned === true,
       };
       const fileText = serializeNote(meta, body, extra);
       const title = titleFromBody(body);
@@ -459,8 +492,14 @@ export class NoteStore {
       for (const trashName of await this.fs.listTrash()) {
         const info = parseTrashName(trashName);
         if (!info) continue;
-        const { body } = parseNote(await this.fs.readTrash(trashName));
-        result.push({ trashName, title: titleFromBody(body), preview: previewFromBody(body), trashedAt: info.trashedAt });
+        const { body, meta } = parseNote(await this.fs.readTrash(trashName));
+        result.push({
+          trashName,
+          title: titleFromBody(body),
+          preview: previewFromBody(body),
+          trashedAt: info.trashedAt,
+          pinned: meta.pinned === true,
+        });
       }
       return result.sort((a, b) => b.trashedAt - a.trashedAt);
     });

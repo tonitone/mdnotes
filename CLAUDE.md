@@ -10,7 +10,8 @@ Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand
 - Plain `.md`-Dateien in einem wählbaren Workspace, alles lokal: kein Netzwerk, kein Account, keine Telemetrie.
 - Plattformen: macOS, Windows, Linux. Linux ist ein vollwertiges Ziel.
 - Identität einer Notiz = ULID im Front Matter. Dateiname `titel-slug--<letzte 6 Zeichen der ID>.md` folgt dem Titel.
-- Titel = erste Zeile. Front Matter enthält nur `id`, `labels`, `created`, fremde Zeilen bleiben unverändert.
+- Titel = erste Zeile. Front Matter enthält nur `id`, `labels`, `created` und `pinned` (nur als `pinned: true`,
+  sonst weggelassen), fremde Zeilen bleiben unverändert. Die Sortierung der Liste ist eine App-Einstellung (`config.json`).
 - Browser-Modus (`npm run dev:browser`) mit Mock-Adapter nur für Entwicklung und Tests, nie ausgeliefert.
 - Barrierefreiheit: WCAG 2.2 AA, EN 301 549. F6 zwischen Bereichen, Esc dann Tab verlässt den Editor.
 
