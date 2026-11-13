@@ -701,6 +701,8 @@ export class App {
     await this.setView({ kind: 'all' }, { keepEditor });
     if (!keepEditor) return;
     this.setLayout(narrowQuery.matches ? 'TwoColumnsMidExpanded' : 'ThreeColumnsEndExpanded');
+    // The list was just rebuilt; its entries are only focusable once UI5 has rendered them.
+    await renderFinished();
     const target = this.els.notesList.querySelector('[navigated]') ?? this.els.notesList.querySelector('ui5-li');
     (target as HTMLElement | null)?.focus();
   }
