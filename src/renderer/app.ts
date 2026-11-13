@@ -257,6 +257,9 @@ export class App {
       const item = (event as CustomEvent<{ item: HTMLElement }>).detail.item;
       if (item?.dataset.id && item.dataset.id !== this.currentId) void this.openNote(item.dataset.id);
       if (item?.dataset.trash && item.dataset.trash !== this.currentTrash) void this.openTrashEntry(item.dataset.trash);
+      // The open entry is still behind the list in a narrow window (e.g. after the logo click): show it again.
+      const isCurrent = item?.dataset.id ? item.dataset.id === this.currentId : item?.dataset.trash === this.currentTrash;
+      if (isCurrent && narrowQuery.matches) this.setLayout('ThreeColumnsEndExpanded');
     });
 
     els.searchInput.addEventListener('input', () => {
