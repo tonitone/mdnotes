@@ -111,6 +111,7 @@ export type MenuCommand =
   | 'export-all'
   | 'versions'
   | 'backup'
+  | 'shortcuts'
   | 'view-edit'
   | 'view-split'
   | 'view-preview';

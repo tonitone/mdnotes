@@ -515,6 +515,14 @@ ui5-illustrated-message {
   max-width: 100%;
 }
 
+/* Shortcut overview */
+
+.shortcuts-dialog {
+  max-width: 34rem;
+  max-height: 70vh;
+  overflow: auto;
+}
+
 /* Preview pane and tables in the live preview */
 
 .preview {
