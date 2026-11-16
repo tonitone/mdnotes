@@ -37,7 +37,10 @@ test('the overview follows the language', async ({ page }) => {
   await openApp(page);
   await page.locator('#languageItem').click();
   await page.locator('#languageMenu ui5-menu-item[data-language="en"]').click();
+  // The language change reloads the window: wait until the app is up again.
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page.locator('#newNoteButton')).toHaveText('New note');
+  await expect(listItems(page).first()).toBeVisible();
   await page.keyboard.press('Control+/');
   await expect(dialog(page)).toContainText('Keyboard shortcuts');
   await expect(dialog(page)).toContainText('Ctrl+Shift+X');
