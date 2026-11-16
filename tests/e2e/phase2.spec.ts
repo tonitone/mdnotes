@@ -239,6 +239,36 @@ test.describe('trash', () => {
   });
 });
 
+test.describe('undo after deleting', () => {
+  test('the Undo button brings the note back and opens it', async ({ page }) => {
+    await openApp(page);
+    await openNote(page, 'Einkauf');
+    await page.locator('#deleteButton').click();
+    await expect(listItems(page)).toHaveCount(2);
+    const undo = page.locator('#undoRegion ui5-button', { hasText: 'Rückgängig' });
+    await expect(undo).toBeVisible();
+    await expect(page.locator('#announcer')).toContainText('in den Papierkorb verschoben');
+
+    await undo.click();
+    await expect(page.locator('#undoRegion ui5-message-strip')).toHaveCount(0);
+    await expect(listItems(page)).toHaveCount(3);
+    await expect(page.locator('#announcer')).toContainText('wiederhergestellt');
+    await expect(editor(page)).toContainText('Einkauf');
+
+    await page.locator('#trashItem').click();
+    await expect(listItems(page)).toHaveCount(0);
+  });
+
+  test('a new deletion replaces the strip', async ({ page }) => {
+    await openApp(page);
+    await openNote(page, 'Einkauf');
+    await page.locator('#deleteButton').click();
+    await openNote(page, 'Sprint-Planung');
+    await page.locator('#deleteButton').click();
+    await expect(page.locator('#undoRegion ui5-message-strip')).toHaveCount(1);
+  });
+});
+
 test.describe('export and import', () => {
   test('copy wiki markup and save Markdown', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
