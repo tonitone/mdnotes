@@ -464,6 +464,8 @@ function buildMenu(): void {
       ],
     },
     { role: 'windowMenu', label: t('menu.window') },
+    // The shortcut itself (Cmd+/) is handled in the renderer; no accelerator here, or it would fire twice.
+    { label: t('menu.help'), submenu: [{ label: t('menu.shortcuts'), click: () => sendMenu('shortcuts') }] },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
