@@ -208,6 +208,16 @@ for (const backend of backends) {
       assert.equal(imported?.pinned, true);
     });
 
+    it('returns the trash entry name, so a deletion can be undone', async () => {
+      const note = await store.create();
+      await store.save(note.id, '# Zurück');
+      const trashName = await store.trash(note.id);
+      const [entry] = await store.listTrash();
+      assert.equal(entry.trashName, trashName);
+      const restored = await store.restore(trashName);
+      assert.equal(restored.title, 'Zurück');
+    });
+
     it('reports the created date in the summary', async () => {
       const note = await store.create(new Date(Date.UTC(2026, 0, 2, 3, 4, 5)));
       assert.equal(store.summaries().find((n) => n.id === note.id)?.created, '2026-01-02T03:04:05.000Z');

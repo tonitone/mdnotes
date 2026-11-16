@@ -478,11 +478,14 @@ export class NoteStore {
   // Trash
   // -------------------------------------------------------------------------
 
-  trash(id: string, now: Date = new Date()): Promise<void> {
+  /** Moves a note to the trash and returns the name of its trash entry (for "Undo"). */
+  trash(id: string, now: Date = new Date()): Promise<string> {
     return this.serial(async () => {
       const e = this.entry(id);
-      await this.fs.moveToTrash(e.fileName, `${now.getTime()}--${e.fileName}`);
+      const trashName = `${now.getTime()}--${e.fileName}`;
+      await this.fs.moveToTrash(e.fileName, trashName);
       this.entries.delete(id);
+      return trashName;
     });
   }
 

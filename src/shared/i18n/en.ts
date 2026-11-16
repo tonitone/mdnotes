@@ -82,6 +82,7 @@ export const en: Messages = {
   'view.preview': 'Preview',
   'view.previewLabel': 'Note preview',
   'trash.restore': 'Restore',
+  'trash.undo': 'Undo',
   'trash.deleteForever': 'Delete permanently',
   'trash.empty': 'The trash is empty',
   'trash.deletedAt': 'Deleted {time}',
