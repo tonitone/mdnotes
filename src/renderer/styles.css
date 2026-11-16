@@ -1,4 +1,4 @@
-/* All colors, spacing and fonts come from the SAP theme variables. */
+/* All colors, spacing, fonts and corner radii come from the SAP theme variables. */
 
 html,
 body {
@@ -222,7 +222,7 @@ ui5-illustrated-message {
   font-family: var(--sapContent_MonospaceFontFamily, monospace);
   font-size: 0.9em;
   padding: 0.1em 0.3em;
-  border-radius: 0.25rem;
+  border-radius: var(--sapElement_BorderCornerRadius, 0.25rem);
   background: var(--sapNeutralBackground, var(--sapList_AlternatingBackground));
 }
 
@@ -238,8 +238,8 @@ ui5-illustrated-message {
   padding-inline-start: 1rem !important;
 }
 
-.cm-md-codeblock-first { border-start-start-radius: 0.5rem; border-start-end-radius: 0.5rem; padding-top: 0.25rem; }
-.cm-md-codeblock-last { border-end-start-radius: 0.5rem; border-end-end-radius: 0.5rem; padding-bottom: 0.25rem; }
+.cm-md-codeblock-first { border-start-start-radius: calc(2 * var(--sapElement_BorderCornerRadius, 0.25rem)); border-start-end-radius: calc(2 * var(--sapElement_BorderCornerRadius, 0.25rem)); padding-top: 0.25rem; }
+.cm-md-codeblock-last { border-end-start-radius: calc(2 * var(--sapElement_BorderCornerRadius, 0.25rem)); border-end-end-radius: calc(2 * var(--sapElement_BorderCornerRadius, 0.25rem)); padding-bottom: 0.25rem; }
 
 .cm-md-quote {
   border-inline-start: 0.25rem solid var(--sapGroup_TitleBorderColor);
@@ -370,14 +370,14 @@ ui5-illustrated-message {
   max-width: 100%;
   max-height: 28rem;
   margin: 0.25rem 0;
-  border-radius: 0.25rem;
+  border-radius: var(--sapElement_BorderCornerRadius, 0.25rem);
 }
 
 .cm-md-image-missing {
   display: inline-block;
   padding: 0.125rem 0.5rem;
   border: 1px dashed var(--sapGroup_TitleBorderColor);
-  border-radius: 0.25rem;
+  border-radius: var(--sapElement_BorderCornerRadius, 0.25rem);
   color: var(--sapContent_LabelColor);
   font-style: italic;
 }
@@ -438,7 +438,7 @@ ui5-illustrated-message {
   min-height: 0;
   overflow: auto;
   border: 1px solid var(--sapGroup_TitleBorderColor);
-  border-radius: 0.25rem;
+  border-radius: var(--sapElement_BorderCornerRadius, 0.25rem);
   background: var(--sapBaseColor);
   color: var(--sapTextColor);
 }
@@ -555,7 +555,7 @@ ui5-illustrated-message {
   font-family: var(--sapContent_MonospaceFontFamily, monospace);
   font-size: 0.9em;
   background: var(--sapNeutralBackground, var(--sapList_AlternatingBackground));
-  border-radius: 0.25rem;
+  border-radius: var(--sapElement_BorderCornerRadius, 0.25rem);
 }
 
 .preview code { padding: 0.1em 0.3em; }
@@ -570,7 +570,7 @@ ui5-illustrated-message {
 }
 
 .preview a { color: var(--sapLinkColor); }
-.preview img { max-width: 100%; border-radius: 0.25rem; }
+.preview img { max-width: 100%; border-radius: var(--sapElement_BorderCornerRadius, 0.25rem); }
 .preview li.task { list-style: none; margin-inline-start: -1.25em; }
 .preview hr { border: none; border-top: 1px solid var(--sapGroup_TitleBorderColor); }
 
