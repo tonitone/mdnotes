@@ -263,7 +263,7 @@ test.describe('undo after deleting', () => {
     await openApp(page);
     await openNote(page, 'Einkauf');
     await page.locator('#deleteButton').click();
-    await openNote(page, 'Ideen');
+    await openNote(page, 'Sprint-Planung');
     await page.locator('#deleteButton').click();
     await expect(page.locator('#undoRegion ui5-message-strip')).toHaveCount(1);
   });
