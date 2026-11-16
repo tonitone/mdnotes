@@ -139,8 +139,8 @@ export interface NotesApi {
   /** Full-text search; every word must occur in title or body. */
   searchNotes(query: string): Promise<SearchHit[]>;
 
-  /** Moves a note to the trash. */
-  trashNote(id: string): Promise<void>;
+  /** Moves a note to the trash and returns the name of its trash entry. */
+  trashNote(id: string): Promise<string>;
   listTrash(): Promise<TrashEntry[]>;
   readTrash(trashName: string): Promise<string>;
   restoreFromTrash(trashName: string): Promise<NoteSummary>;

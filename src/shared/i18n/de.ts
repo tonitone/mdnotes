@@ -89,6 +89,7 @@ export const de = {
   'view.preview': 'Vorschau',
   'view.previewLabel': 'Vorschau der Notiz',
   'trash.restore': 'Wiederherstellen',
+  'trash.undo': 'Rückgängig',
   'trash.deleteForever': 'Endgültig löschen',
   'trash.empty': 'Der Papierkorb ist leer',
   'trash.deletedAt': 'Gelöscht {time}',

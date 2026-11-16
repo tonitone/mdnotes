@@ -125,6 +125,14 @@ test('label view and trash view with a read-only note', async ({ page }) => {
   await expectNoSeriousViolations(page, 'trash');
 });
 
+test('undo strip after moving a note to the trash', async ({ page }) => {
+  await openApp(page);
+  await openNote(page, 'Einkauf');
+  await page.locator('#deleteButton').click();
+  await expect(page.locator('#undoRegion ui5-button')).toBeVisible();
+  await expectNoSeriousViolations(page, 'undo strip');
+});
+
 test('notice strip after an outside change', async ({ page }) => {
   await openApp(page);
   await openNote(page, 'Einkauf');

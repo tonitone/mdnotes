@@ -41,6 +41,9 @@ const SORT_BUTTON_REM = 2.75;
 /** Unsaved text is written to the crash recovery store at most this often. */
 const RECOVERY_DELAY_MS = 2000;
 
+/** How long the "Undo" strip stays after a note was moved to the trash. */
+const UNDO_VISIBLE_MS = 10000;
+
 type View = { kind: 'all' } | { kind: 'trash' } | { kind: 'label'; label: string };
 
 /** Edit with live preview, source next to a rendered preview, or preview only. */
@@ -108,6 +111,7 @@ export class App {
   private contextNoteId: string | null = null;
   /** Pin toggle chosen in the list's context menu; runs once the menu has closed. */
   private pendingContextPin = false;
+  private undoTimer = 0;
 
   private readonly els = {
     fcl: $('fcl'),
@@ -156,6 +160,7 @@ export class App {
     labelRow: $('labelRow'),
     labelInput: $('labelInput'),
     noticeRegion: $('noticeRegion'),
+    undoRegion: $('undoRegion'),
     errorRegion: $('errorRegion'),
     editorHost: $('editor-host'),
     editorArea: $('editorArea'),
@@ -1156,14 +1161,49 @@ export class App {
     await this.flush();
     const title = this.notes.find((n) => n.id === id)?.title ?? '';
     try {
-      await this.api.trashNote(id);
+      const trashName = await this.api.trashNote(id);
       this.notes = this.notes.filter((n) => n.id !== id);
       this.closeEditor();
       this.renderLibrary();
       this.renderList();
-      announce(t('announce.trashed', { title }));
+      // The live region announces; the strip with its button replaces the toast.
+      announce(t('announce.trashed', { title }), { toast: false });
+      this.showUndo(t('announce.trashed', { title }), trashName);
     } catch (err) {
       this.showError(t('error.trash'), err);
+    }
+  }
+
+  /** Shows a strip with an "Undo" button for a few seconds after a note was moved to the trash. */
+  private showUndo(text: string, trashName: string): void {
+    window.clearTimeout(this.undoTimer);
+    const button = el('ui5-button', { design: 'Transparent' }, [t('trash.undo')]);
+    const strip = el('ui5-message-strip', { design: 'Information', hideCloseButton: true }, [
+      el('span', {}, [text]),
+      el('div', { className: 'notice-actions' }, [button]),
+    ]);
+    const dismiss = () => {
+      window.clearTimeout(this.undoTimer);
+      strip.remove();
+    };
+    button.addEventListener('click', () => {
+      dismiss();
+      void this.undoTrash(trashName);
+    });
+    this.els.undoRegion.replaceChildren(strip);
+    this.undoTimer = window.setTimeout(dismiss, UNDO_VISIBLE_MS);
+  }
+
+  private async undoTrash(trashName: string): Promise<void> {
+    try {
+      const summary = await this.api.restoreFromTrash(trashName);
+      this.notes = await this.api.listNotes();
+      this.trash = await this.api.listTrash();
+      await this.setView({ kind: 'all' });
+      announce(t('announce.restored', { title: summary.title }));
+      await this.openNote(summary.id);
+    } catch (err) {
+      this.showError(t('error.restore'), err);
     }
   }
 
