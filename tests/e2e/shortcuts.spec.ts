@@ -37,6 +37,7 @@ test('the overview follows the language', async ({ page }) => {
   await openApp(page);
   await page.locator('#languageItem').click();
   await page.locator('#languageMenu ui5-menu-item[data-language="en"]').click();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await page.keyboard.press('Control+/');
   await expect(dialog(page)).toContainText('Keyboard shortcuts');
   await expect(dialog(page)).toContainText('Ctrl+Shift+X');
