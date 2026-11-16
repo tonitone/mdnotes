@@ -17,6 +17,7 @@ import { DEFAULT_NOTE_SORT, createdTime, groupNotes, isNoteSort, sortNotes, type
 import { markdownToHtml } from '../shared/markdown/html';
 import { markdownToWiki } from '../shared/markdown/wiki';
 import { openBackupDialog } from './backup-dialog';
+import { isShortcutsDialogOpen, openShortcutsDialog } from './shortcuts-dialog';
 import { createEditor, type NoteEditor } from './editor/editor';
 import { FORMAT_SHORTCUTS } from './editor/format-commands';
 import { shortcutLabel, type FormatKind, type FormatOutcome } from './editor/format';
@@ -434,6 +435,18 @@ export class App {
       if (files.length > 0) void this.importDropped(files);
     });
 
+    // Cmd+/ (Ctrl+/ elsewhere). Capture phase, so the editor keymap does not take the key first.
+    document.addEventListener(
+      'keydown',
+      (event: KeyboardEvent) => {
+        if (event.key !== '/' || !(event.metaKey || event.ctrlKey) || event.altKey) return;
+        event.preventDefault();
+        event.stopPropagation();
+        void this.openShortcuts();
+      },
+      true,
+    );
+
     this.api.onMenuCommand((command: MenuCommand) => {
       if (command === 'new-note') void this.newNote();
       if (command === 'choose-workspace') void this.chooseWorkspace();
@@ -443,6 +456,7 @@ export class App {
       if (command === 'export-all') void this.exportAll();
       if (command === 'versions') void this.openVersions();
       if (command === 'backup') void this.openBackup();
+      if (command === 'shortcuts') void this.openShortcuts();
       if (command === 'view-edit') this.setViewMode('edit');
       if (command === 'view-split') this.setViewMode('split');
       if (command === 'view-preview') this.setViewMode('preview');
@@ -1440,6 +1454,15 @@ export class App {
       }
     } catch (err) {
       this.showError(t('error.versions'), err);
+    }
+  }
+
+  private async openShortcuts(): Promise<void> {
+    if (isShortcutsDialogOpen()) return;
+    try {
+      await openShortcutsDialog();
+    } catch (err) {
+      this.showError(t('error.shortcutsDialog'), err);
     }
   }
 

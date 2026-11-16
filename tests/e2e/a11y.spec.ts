@@ -228,6 +228,17 @@ test('backup dialog, its actions menu and the note picker', async ({ page }) => 
   await expectNoSeriousViolations(page, 'note picker');
 });
 
+for (const theme of ['light', 'hcb'] as const) {
+  test(`shortcut overview dialog: theme ${theme}`, async ({ page }) => {
+    await page.addInitScript((value) => localStorage.setItem('mdnotes.theme', value), theme);
+    await openApp(page);
+    await page.keyboard.press('Control+/');
+    await expect(dialog(page)).toBeVisible();
+    await expectNoSeriousViolations(page, `shortcut overview, ${theme}`);
+    await closeDialog(page);
+  });
+}
+
 test('confirm dialog for permanent deletion', async ({ page }) => {
   await openApp(page);
   await openNote(page, 'Einkauf');
