@@ -530,6 +530,20 @@ ui5-illustrated-message {
   overflow: auto;
 }
 
+/* Outline dialog: the indentation sits on our own span inside the item. */
+
+.outline-dialog {
+  min-width: min(24rem, 100%);
+  max-height: 70vh;
+  overflow: auto;
+}
+
+.outline-level-2 { margin-inline-start: 1rem; }
+.outline-level-3 { margin-inline-start: 2rem; }
+.outline-level-4 { margin-inline-start: 3rem; }
+.outline-level-5 { margin-inline-start: 4rem; }
+.outline-level-6 { margin-inline-start: 5rem; }
+
 /* Preview pane and tables in the live preview */
 
 .preview {
