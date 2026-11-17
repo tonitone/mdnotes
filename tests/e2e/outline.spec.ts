@@ -43,9 +43,13 @@ test('choosing a heading moves the cursor there and returns to the editor', asyn
 
 test('Esc closes the outline without moving the cursor', async ({ page }) => {
   await openWelcome(page);
+  const head = () =>
+    page.evaluate(() => (window as unknown as { __editorView: { state: { selection: { main: { head: number } } } } }).__editorView.state.selection.main.head);
+  const before = await head();
   await openOutline(page);
   await page.keyboard.press('Escape');
   await expect(dialog(page)).toHaveCount(0);
+  expect(await head()).toBe(before);
 });
 
 test('a note without headings shows an empty message', async ({ page }) => {
