@@ -17,12 +17,14 @@ export function openOutlineDialog(entries: OutlineEntry[]): Promise<OutlineEntry
   open = true;
   let chosen: OutlineEntry | null = null;
   // The indentation sits on our own span inside the item, never on the UI5 host.
-  const items = entries.map((entry, index) =>
+  const items = entries.length === 0
+    ? [el('ui5-li', { type: 'Inactive' }, [t('outline.empty')])]
+    : entries.map((entry, index) =>
     el('ui5-li', { type: 'Active', additionalText: t('outline.level', { level: entry.level }), 'data-index': String(index) }, [
       el('span', { className: `outline-entry outline-level-${entry.level}` }, [entry.text]),
     ]),
   );
-  const list = el<Ui5Element>('ui5-list', { accessibleName: t('outline.title'), noDataText: t('outline.empty'), className: 'outline-list' }, items);
+  const list = el<Ui5Element>('ui5-list', { accessibleName: t('outline.title'), className: 'outline-list' }, items);
   const close = el('ui5-button', { design: 'Emphasized' }, [t('dialog.close')]);
   const dialog = el<Ui5Element>('ui5-dialog', { headerText: t('outline.title'), accessibleName: t('outline.title') }, [
     el('div', { className: 'dialog-content outline-dialog' }, [list]),

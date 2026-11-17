@@ -33,7 +33,12 @@ test('choosing a heading moves the cursor there and returns to the editor', asyn
   await openOutline(page);
   await dialog(page).locator('ui5-li', { hasText: 'Live Preview' }).click();
   await expect(dialog(page)).toHaveCount(0);
-  await expect(page.locator('.cm-activeLine')).toContainText('Live Preview');
+  const activeLine = () =>
+    page.evaluate(() => {
+      const v = (window as unknown as { __editorView: { state: { doc: { lineAt(p: number): { text: string } }; selection: { main: { head: number } } } } }).__editorView;
+      return v.state.doc.lineAt(v.state.selection.main.head).text;
+    });
+  await expect.poll(activeLine).toBe('## Live Preview');
 });
 
 test('Esc closes the outline without moving the cursor', async ({ page }) => {
@@ -49,6 +54,5 @@ test('a note without headings shows an empty message', async ({ page }) => {
   await page.keyboard.press('Control+A');
   await page.keyboard.type('Nur Text');
   await openOutline(page);
-  await expect(dialog(page).locator('ui5-li')).toHaveCount(0);
   await expect(dialog(page)).toContainText('Diese Notiz hat keine Überschriften.');
 });
