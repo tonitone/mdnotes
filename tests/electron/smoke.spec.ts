@@ -62,7 +62,8 @@ const listItems = () => page.locator('#notesList ui5-li');
 
 test('starts with the configured workspace', async () => {
   // A cold start on CI runners can take longer than the default timeout.
-  await expect(page.locator('#workspacePath')).toHaveText(workspace, { timeout: 20_000 });
+  // The visible path is shortened; the full path is the tooltip.
+  await expect(page.locator('#workspacePath')).toHaveAttribute('title', workspace, { timeout: 20_000 });
   await expect(listItems().filter({ hasText: 'Hallo' })).toHaveCount(1);
 });
 
