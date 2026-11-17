@@ -26,7 +26,11 @@ test('the save status fades after a few seconds without changing its text', asyn
   await expect(status).toHaveText(/Gespeichert um/);
   await expect(status).not.toHaveClass(/save-status--idle/);
   const text = await status.textContent();
+  const colorOf = () => status.evaluate((node) => getComputedStyle(node).color);
+  const fullStrength = await colorOf();
   await expect(status).toHaveClass(/save-status--idle/, { timeout: 10_000 });
   await expect(status).toHaveText(text ?? '');
+  // The class alone proves nothing: the colour must really become calmer.
+  expect(await colorOf()).not.toBe(fullStrength);
   await expect(status).toHaveAttribute('role', 'status');
 });

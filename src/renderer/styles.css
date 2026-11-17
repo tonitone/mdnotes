@@ -98,6 +98,8 @@ ui5-flexible-column-layout {
 
 .save-status {
   white-space: nowrap;
+  /* Full strength by default; .editor-meta would otherwise pass on the calmer label colour. */
+  color: var(--sapTextColor);
 }
 
 /* Calmer colour after a successful save; the label colour keeps AA contrast in every theme. */
