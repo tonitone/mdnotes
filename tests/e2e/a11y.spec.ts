@@ -239,6 +239,19 @@ for (const theme of ['light', 'hcb'] as const) {
   });
 }
 
+for (const theme of ['light', 'hcb'] as const) {
+  test(`outline dialog: theme ${theme}`, async ({ page }) => {
+    await page.addInitScript((value) => localStorage.setItem('mdnotes.theme', value), theme);
+    await openApp(page);
+    await openNote(page, 'Willkommen');
+    await page.locator('#editorMoreButton').click();
+    await page.locator('#editorMoreMenu ui5-menu-item[data-action="outline"]').click();
+    await expect(dialog(page)).toBeVisible();
+    await expectNoSeriousViolations(page, `outline dialog, ${theme}`);
+    await closeDialog(page);
+  });
+}
+
 test('confirm dialog for permanent deletion', async ({ page }) => {
   await openApp(page);
   await openNote(page, 'Einkauf');
