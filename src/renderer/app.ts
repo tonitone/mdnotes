@@ -25,13 +25,15 @@ import { THEME_CHOICES, getDensity, getThemeChoice, setDensity, setThemeChoice, 
 import { announce, confirmDialog, el, infoDialog, promptDialog, type Ui5Element } from './ui';
 import { observeCompact } from './compact';
 import { openVersionDialog } from './versions';
-import { collationLocale, formatModified, formatTime, formatVersionTime, groupTitle } from './format';
+import { collationLocale, formatModified, formatTime, formatVersionTime, groupTitle, shortenPath } from './format';
 import { LANGUAGE_CHOICES, isLanguageChoice, t, tp, type LanguageChoice, type MessageKey } from '../shared/i18n';
 
 /** Delay after the last keystroke before saving. */
 const SAVE_DELAY_MS = 700;
 /** Delay before renaming the file after its title. */
 const FINALIZE_DELAY_MS = 4000;
+/** How long the "saved" status stays at full strength before it fades. */
+const STATUS_FADE_MS = 5000;
 const SEARCH_DELAY_MS = 150;
 /** Below this width of the middle column, "New note" shows only its icon. */
 const NEW_NOTE_COMPACT_REM = 17;
@@ -79,6 +81,7 @@ function sameLabel(a: string, b: string): boolean {
 
 export class App {
   private notes: NoteSummary[] = [];
+  private statusFadeTimer: number | undefined;
   private trash: TrashEntry[] = [];
   private view: View = { kind: 'all' };
   private currentId: string | null = null;
@@ -693,7 +696,8 @@ export class App {
   }
 
   private async showWorkspace(workspace: string): Promise<void> {
-    this.els.workspacePath.textContent = workspace;
+    this.els.workspacePath.textContent = shortenPath(workspace);
+    // The full path is available as tooltip.
     this.els.workspacePath.title = workspace;
     for (const control of [this.els.newNoteButton, this.els.moreButton, this.els.sortButton, this.els.searchInput]) control.disabled = false;
     this.closeEditor();
@@ -733,6 +737,7 @@ export class App {
     const { view } = this;
     this.els.allNotesItem.navigated = view.kind === 'all';
     this.els.trashItem.navigated = view.kind === 'trash';
+    this.els.allNotesItem.additionalText = String(this.notes.length);
 
     const counts = new Map<string, { label: string; count: number }>();
     for (const note of this.notes) {
@@ -1048,7 +1053,7 @@ export class App {
         this.applySaveResult(result);
         if (!this.dirty || id !== this.currentId) this.clearRecovery(id);
         if (id === this.currentId && !this.dirty) {
-          this.setStatus(t('status.savedAt', { time: formatTime(result.modified) }));
+          this.setStatus(t('status.savedAt', { time: formatTime(result.modified) }), true);
         }
       } catch (err) {
         this.dirty = true;
@@ -1449,7 +1454,7 @@ export class App {
         this.loadDoc(doc.body);
         this.dirty = false;
         this.applySaveResult(doc);
-        this.setStatus(t('status.savedAt', { time: formatTime(doc.modified) }));
+        this.setStatus(t('status.savedAt', { time: formatTime(doc.modified) }), true);
         announce(t('announce.versionRestored'));
       }
     } catch (err) {
@@ -1561,9 +1566,16 @@ export class App {
   // Feedback
   // -------------------------------------------------------------------------
 
-  private setStatus(text: string): void {
+  private setStatus(text: string, fade = false): void {
     // Only set on a real change, otherwise screen readers announce it twice.
     if (this.els.saveStatus.textContent !== text) this.els.saveStatus.textContent = text;
+    // After a successful save the status fades to a calmer colour. The text stays,
+    // so the live region is not touched. Every other status is shown at full strength.
+    window.clearTimeout(this.statusFadeTimer);
+    this.els.saveStatus.classList.remove('save-status--idle');
+    if (fade) {
+      this.statusFadeTimer = window.setTimeout(() => this.els.saveStatus.classList.add('save-status--idle'), STATUS_FADE_MS);
+    }
   }
 
   private showNotice(design: 'Information' | 'Critical', text: string, actions: Array<{ text: string; action: () => void }> = []): void {

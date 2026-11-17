@@ -82,3 +82,22 @@ export function groupTitle(group: DateGroup): string {
 export function collationLocale(): string {
   return formatTag();
 }
+
+/**
+ * Shortens a file system path from the front so the last folders stay visible
+ * ("/home/me/notes/work" becomes "…/notes/work"). Handles / and \ separators.
+ */
+export function shortenPath(path: string, max = 28): string {
+  if (path.length <= max) return path;
+  const parts = path.split(/[\\/]/).filter(Boolean);
+  const separator = path.includes('\\') && !path.includes('/') ? '\\' : '/';
+  let tail = '';
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const next = tail ? `${parts[i]}${separator}${tail}` : parts[i];
+    if (next.length + 2 > max) break;
+    tail = next;
+  }
+  // A single folder name longer than the limit is cut from the front.
+  if (!tail) tail = (parts[parts.length - 1] ?? path).slice(-(max - 2));
+  return `…${separator}${tail}`;
+}
