@@ -50,9 +50,10 @@ test('Esc closes the outline without moving the cursor', async ({ page }) => {
 
 test('a note without headings shows an empty message', async ({ page }) => {
   await openWelcome(page);
-  await page.locator('.cm-content').click();
-  await page.keyboard.press('Control+A');
-  await page.keyboard.type('Nur Text');
+  await page.evaluate(() => {
+    const v = (window as unknown as { __editorView: { state: { doc: { length: number } }; dispatch(spec: unknown): void } }).__editorView;
+    v.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: 'Nur Text' } });
+  });
   await openOutline(page);
   await expect(dialog(page)).toContainText('Diese Notiz hat keine Überschriften.');
 });
