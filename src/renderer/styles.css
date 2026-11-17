@@ -100,6 +100,11 @@ ui5-flexible-column-layout {
   white-space: nowrap;
 }
 
+/* Calmer colour after a successful save; the label colour keeps AA contrast in every theme. */
+.save-status--idle {
+  color: var(--sapContent_LabelColor);
+}
+
 /*
  * Format toolbar row. Only the wrapper is styled: ui5-toolbar lays out its items from its own
  * :host rules (display: flex) and draws its bottom border; overriding display or width on the
