@@ -50,5 +50,5 @@ test('the shortcut overview lists the outline', async ({ page }) => {
   await openApp(page);
   await page.keyboard.press('Control+/');
   await expect(dialog(page)).toContainText('Gliederung');
-  await expect(dialog(page)).toContainText('Strg+Alt+O');
+  await expect(dialog(page)).toContainText('Strg+Umschalt+O');
 });

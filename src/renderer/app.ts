@@ -1477,18 +1477,20 @@ export class App {
     try {
       const entries = extractOutline(this.editor.getDoc());
       const entry = await openOutlineDialog(entries);
-      if (entry) this.jumpToHeading(entry, entries.indexOf(entry));
+      if (entry) this.jumpToHeading(entry, entries);
     } catch (err) {
       this.showError(t('error.outline'), err);
     }
   }
 
-  private jumpToHeading(entry: OutlineEntry, index: number): void {
+  private jumpToHeading(entry: OutlineEntry, entries: OutlineEntry[]): void {
     const view = this.editor?.view;
     if (!view) return;
     if (this.viewMode === 'preview') {
-      // Only the rendered preview is visible: scroll to the heading with the same position.
-      const target = this.els.previewPane.querySelectorAll('h1, h2, h3, h4, h5, h6')[index];
+      // Only the rendered preview is visible. Match by text (and the n-th repeat of it), so headings
+      // the outline does not list, such as setext ones, cannot shift the position.
+      const repeat = entries.filter((e) => e.text === entry.text).indexOf(entry);
+      const target = [...this.els.previewPane.querySelectorAll('h1, h2, h3, h4, h5, h6')].filter((h) => h.textContent?.trim() === entry.text)[repeat];
       target?.scrollIntoView({ block: 'start' });
       (target as HTMLElement | undefined)?.setAttribute('tabindex', '-1');
       (target as HTMLElement | undefined)?.focus({ preventScroll: true });

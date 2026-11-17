@@ -61,7 +61,7 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
   {
     title: 'shortcuts.group.view',
     entries: [
-      { label: 'editor.outline', keys: [{ key: 'o', mod: true, alt: true }] },
+      { label: 'editor.outline', keys: [{ key: 'o', mod: true, shift: true }] },
       { label: 'view.edit', keys: [{ key: '1', mod: true }] },
       { label: 'view.split', keys: [{ key: '2', mod: true }] },
       { label: 'view.preview', keys: [{ key: '3', mod: true }] },
