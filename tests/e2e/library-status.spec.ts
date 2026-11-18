@@ -34,3 +34,23 @@ test('the save status fades after a few seconds without changing its text', asyn
   expect(await colorOf()).not.toBe(fullStrength);
   await expect(status).toHaveAttribute('role', 'status');
 });
+
+test('the editor header shows the word and character count and keeps it current', async ({ page }) => {
+  await page.goto('/');
+  await listItems(page).filter({ hasText: 'Willkommen' }).first().click();
+  const editor = page.locator('.cm-content');
+  await expect(editor).toBeVisible();
+  const count = page.locator('#textCount');
+  await expect(count).toBeVisible();
+  await expect(count).toHaveText(/^\d[\d.,]* Wörter · \d[\d.,]* Zeichen$/);
+  // Not a live region: it changes with every keystroke and would flood screen readers.
+  await expect(count).not.toHaveAttribute('role', /.+/);
+  await expect(count).not.toHaveAttribute('aria-live', /.+/);
+  const words = async () => Number(((await count.textContent()) ?? '').split(' ')[0].replace(/[.,]/g, ''));
+  const before = await words();
+  await editor.click();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.type(' alpha beta gamma');
+  await expect.poll(words).toBe(before + 3);
+  await expectNoSeriousViolations(page, 'editor header with text count');
+});

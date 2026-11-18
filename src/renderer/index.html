@@ -87,6 +87,8 @@
             <ui5-segmented-button-item data-mode="preview" data-i18n="view.preview">Vorschau</ui5-segmented-button-item>
           </ui5-segmented-button>
           <div class="editor-meta">
+            <!-- Not a live region: it changes with every keystroke. -->
+            <span id="textCount" class="text-count" hidden></span>
             <span id="saveStatus" class="save-status" role="status" aria-live="polite"></span>
           </div>
           <div class="header-actions" id="noteActions" hidden>
