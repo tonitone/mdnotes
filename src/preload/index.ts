@@ -25,6 +25,7 @@ const api: NotesApi = {
   listNotes: () => ipcRenderer.invoke('notes:list'),
   readNote: (id) => ipcRenderer.invoke('notes:read', id),
   createNote: () => ipcRenderer.invoke('notes:create'),
+  duplicateNote: (id) => ipcRenderer.invoke('notes:duplicate', id),
   saveNote: (id, body) => ipcRenderer.invoke('notes:save', id, body),
   finalizeNote: (id) => ipcRenderer.invoke('notes:finalize', id),
   setLabels: (id, labels) => ipcRenderer.invoke('notes:setLabels', id, labels),

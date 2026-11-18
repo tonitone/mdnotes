@@ -301,6 +301,18 @@ test.describe('export and import', () => {
     await expect(page.locator('#toast')).toHaveText('Dateiname kopiert.');
   });
 
+  test('duplicate a note through the More actions menu', async ({ page }) => {
+    await openApp(page);
+    await openNote(page, 'Sprint-Planung');
+    const before = await listItems(page).filter({ hasText: 'Sprint-Planung' }).count();
+
+    await page.locator('#editorMoreButton').click();
+    await menuItem(page, 'editorMoreMenu', 'Duplizieren');
+    await expect(listItems(page).filter({ hasText: 'Sprint-Planung' })).toHaveCount(before + 1);
+    await expect(page.locator('#announcer')).toHaveText('Notiz dupliziert. Die Kopie ist geöffnet.');
+    await expect(editor(page)).toContainText('Backlog sichten');
+  });
+
   test('a failing clipboard shows the copy error', async ({ page }) => {
     await openApp(page);
     await openNote(page, 'Sprint-Planung');

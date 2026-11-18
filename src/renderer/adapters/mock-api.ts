@@ -175,6 +175,7 @@ export async function createMockApi(): Promise<NotesApi> {
     listNotes: async () => store.summaries(),
     readNote: async (id) => store.read(id),
     createNote: () => store.create(),
+    duplicateNote: (id) => store.duplicate(id),
     saveNote: (id, body) => store.save(id, body),
     finalizeNote: (id) => store.finalize(id),
     setLabels: (id, labels) => store.setLabels(id, labels),

@@ -61,6 +61,7 @@ export const de = {
   'editor.export': 'Exportieren',
   'editor.more': 'Weitere Aktionen',
   'editor.copyFileName': 'Dateiname kopieren',
+  'editor.duplicate': 'Duplizieren',
   'editor.outline': 'Gliederung …',
   'outline.title': 'Gliederung',
   'outline.empty': 'Diese Notiz hat keine Überschriften.',
@@ -134,6 +135,7 @@ export const de = {
   // Errors and announcements in the main window
   'error.openFolder': 'Der Ordner konnte nicht geöffnet werden.',
   'error.openNote': 'Die Notiz konnte nicht geöffnet werden.',
+  'error.duplicate': 'Die Notiz konnte nicht dupliziert werden.',
   'error.createNote': 'Die Notiz konnte nicht angelegt werden.',
   'error.save': 'Speichern fehlgeschlagen. Deine Änderungen sind noch im Editor.',
   'error.rename': 'Die Datei konnte nicht umbenannt werden. Der Inhalt ist gespeichert.',
@@ -168,6 +170,7 @@ export const de = {
   'announce.deleted': '„{title}“ endgültig gelöscht.',
   'announce.wikiCopied': 'Wiki-Markup kopiert.',
   'announce.markdownCopied': 'Markdown kopiert.',
+  'announce.duplicated': 'Notiz dupliziert. Die Kopie ist geöffnet.',
   'announce.fileNameCopied': 'Dateiname kopiert.',
   'announce.exported': 'Exportiert: {target}',
   'announce.exportedAll': 'Alle Notizen exportiert nach {folder}',

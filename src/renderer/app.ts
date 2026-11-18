@@ -349,6 +349,7 @@ export class App {
     els.editorMoreMenu.addEventListener('item-click', (event: Event) => {
       const { action, format } = (event as CustomEvent<{ item: HTMLElement }>).detail.item.dataset;
       if (action === 'copy-file-name') void this.copyFileName();
+      if (action === 'duplicate') void this.duplicateCurrent();
       if (action === 'outline') this.pendingOutline = true;
       if (action === 'toggle-pin') {
         const note = this.currentNote();
@@ -1310,6 +1311,22 @@ export class App {
       announce(format === 'wiki' ? t('announce.wikiCopied') : t('announce.markdownCopied'));
     } catch (err) {
       this.showError(t('error.copy'), err);
+    }
+  }
+
+  private async duplicateCurrent(): Promise<void> {
+    const id = this.currentId;
+    if (!id) return;
+    // The copy must contain the latest text.
+    await this.flush();
+    try {
+      const doc = await this.api.duplicateNote(id);
+      this.notes = await this.api.listNotes();
+      this.renderLibrary();
+      await this.openNote(doc.id);
+      announce(t('announce.duplicated'));
+    } catch (err) {
+      this.showError(t('error.duplicate'), err);
     }
   }
 
