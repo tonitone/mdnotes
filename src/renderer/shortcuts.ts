@@ -74,6 +74,9 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { label: 'format.italic', keys: [format('italic')] },
       { label: 'format.link', keys: [format('link')] },
       { label: 'format.strike', keys: [format('strike')] },
+      { label: 'shortcuts.tableNextCell', keys: [{ key: 'Tab' }] },
+      { label: 'shortcuts.tablePreviousCell', keys: [{ key: 'Tab', shift: true }] },
+      { label: 'shortcuts.tableNewRow', keys: [{ key: 'Enter' }] },
     ],
   },
   {
