@@ -120,6 +120,7 @@ export const en: Messages = {
   'status.saving': 'Saving …',
   'status.savedAt': 'Saved at {time}',
   'status.modifiedAt': 'Last modified {time}',
+  'count.label': '{words} words · {chars} characters',
 
   'error.openFolder': 'The folder could not be opened.',
   'error.openNote': 'The note could not be opened.',

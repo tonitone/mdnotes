@@ -20,6 +20,7 @@ import { openBackupDialog } from './backup-dialog';
 import { isOutlineDialogOpen, openOutlineDialog } from './outline-dialog';
 import { EditorView } from '@codemirror/view';
 import { extractOutline, type OutlineEntry } from '../shared/markdown/outline';
+import { countText } from '../shared/markdown/count';
 import { isShortcutsDialogOpen, openShortcutsDialog } from './shortcuts-dialog';
 import { createEditor, type NoteEditor } from './editor/editor';
 import { FORMAT_SHORTCUTS } from './editor/format-commands';
@@ -153,6 +154,7 @@ export class App {
     backButton: $('backButton'),
     editorColumn: $('editorColumn'),
     saveStatus: $('saveStatus'),
+    textCount: $('textCount'),
     noteActions: $('noteActions'),
     exportButton: $('exportButton'),
     exportMenu: $('exportMenu'),
@@ -196,7 +198,7 @@ export class App {
     this.els.shell.accessibilityAttributes = { logo: { name: 'mdnotes' } };
     this.els.browserModeStrip.hidden = this.api.mode !== 'browser';
     this.editor = createEditor(this.els.editorHost, {
-      onChange: () => this.onEditorChange(),
+      onChange: (doc) => this.onEditorChange(doc),
       resolveAsset: (src) => this.api.assetUrl(src),
       saveImages: (files) => this.saveImages(files),
       onImagesInserted: (inserted) => void this.askForAltTexts(inserted),
@@ -572,7 +574,15 @@ export class App {
 
   private loadDoc(body: string, options?: { readOnly?: boolean }): void {
     this.editor?.setDoc(body, options);
+    this.updateCount(body);
     this.renderPreview();
+  }
+
+  /** Shows the word and character count next to the save status. */
+  private updateCount(body: string): void {
+    const { words, chars } = countText(body);
+    this.els.textCount.textContent = t('count.label', { words: words.toLocaleString(), chars: chars.toLocaleString() });
+    this.els.textCount.hidden = false;
   }
 
   private setViewMode(mode: ViewMode): void {
@@ -970,6 +980,7 @@ export class App {
     if (!editing) {
       this.setFileName('');
       this.els.saveStatus.textContent = '';
+      this.els.textCount.hidden = true;
     }
   }
 
@@ -1034,7 +1045,8 @@ export class App {
     }
   }
 
-  private onEditorChange(): void {
+  private onEditorChange(doc: string): void {
+    this.updateCount(doc);
     if (!this.currentId) return;
     this.dirty = true;
     this.scheduleRecovery();

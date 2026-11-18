@@ -90,10 +90,21 @@ ui5-flexible-column-layout {
 .editor-meta {
   display: flex;
   flex: 1 1 auto;
+  flex-wrap: wrap;
+  column-gap: 1rem;
   justify-content: flex-end;
   min-width: 0;
   color: var(--sapContent_LabelColor);
   font-size: var(--sapFontSmallSize);
+}
+
+.text-count {
+  white-space: nowrap;
+  color: var(--sapContent_LabelColor);
+}
+
+.text-count[hidden] {
+  display: none;
 }
 
 .save-status {
