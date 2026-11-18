@@ -131,6 +131,8 @@ export interface NotesApi {
   listNotes(): Promise<NoteSummary[]>;
   readNote(id: string): Promise<NoteDoc>;
   createNote(): Promise<NoteDoc>;
+  /** Copies a note (body, labels) into a new, unpinned note and returns it. */
+  duplicateNote(id: string): Promise<NoteDoc>;
   /** Saves the content without renaming the file. */
   saveNote(id: string, body: string): Promise<SaveResult>;
   /** Renames the file after the current title, if needed. */

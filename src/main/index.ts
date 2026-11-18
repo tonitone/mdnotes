@@ -307,6 +307,7 @@ function registerIpc(): void {
   handle('notes:list', () => requireWorkspace().store.summaries());
   handle('notes:read', (id) => requireWorkspace().store.read(requireId(id)));
   handle('notes:create', () => requireWorkspace().store.create());
+  handle('notes:duplicate', (id) => requireWorkspace().store.duplicate(requireId(id)));
   handle('notes:save', (id, body) => requireWorkspace().store.save(requireId(id), requireText(body)));
   handle('notes:finalize', (id) => requireWorkspace().store.finalize(requireId(id)));
   handle('notes:setLabels', (id, labels) => requireWorkspace().store.setLabels(requireId(id), requireLabels(labels)));

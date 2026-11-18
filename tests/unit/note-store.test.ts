@@ -142,6 +142,34 @@ for (const backend of backends) {
       assert.doesNotMatch(await fs.read(note.fileName), /pinned/);
     });
 
+    it('duplicates a note with body and labels, as a new unpinned note', async () => {
+      await fs.create('fremd.md', '---\nauthor: Toni\npinned: true\n---\n# Protokoll\n\nPunkt 1');
+      const [source] = await store.scan();
+      await store.setLabels(source.id, ['meeting']);
+      const copy = await store.duplicate(source.id);
+      assert.notEqual(copy.id, source.id);
+      assert.notEqual(copy.fileName, source.fileName);
+      assert.equal(copy.title, 'Protokoll');
+      assert.equal(copy.body, '# Protokoll\n\nPunkt 1');
+      assert.deepEqual(copy.labels, ['meeting']);
+      assert.equal(copy.pinned, false);
+      const text = await fs.read(copy.fileName);
+      assert.match(text, /author: Toni/);
+      assert.doesNotMatch(text, /pinned/);
+      assert.equal(parseNote(text).meta.id, copy.id);
+      assert.equal(store.summaries().length, 2);
+      // The original stays as it was.
+      assert.equal(store.read(source.id).body, '# Protokoll\n\nPunkt 1');
+    });
+
+    it('a duplicate is independent of the original', async () => {
+      const note = await store.create();
+      await store.save(note.id, '# Vorlage');
+      const copy = await store.duplicate(note.id);
+      await store.save(copy.id, '# Vorlage\n\nneu');
+      assert.equal(store.read(note.id).body, '# Vorlage');
+    });
+
     it('does not write when the pin state does not change', async () => {
       const note = await store.create();
       const before = await fs.read(note.fileName);
