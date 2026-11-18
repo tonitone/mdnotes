@@ -110,6 +110,7 @@ export type MenuCommand =
   | 'import'
   | 'export-all'
   | 'versions'
+  | 'outline'
   | 'backup'
   | 'shortcuts'
   | 'view-edit'

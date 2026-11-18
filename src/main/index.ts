@@ -450,6 +450,7 @@ function buildMenu(): void {
       label: t('menu.view'),
       submenu: [
         { label: t('menu.find'), accelerator: 'CmdOrCtrl+F', click: () => sendMenu('find') },
+        { label: t('menu.outline'), accelerator: 'CmdOrCtrl+Shift+O', click: () => sendMenu('outline') },
         { type: 'separator' },
         { label: t('view.edit'), accelerator: 'CmdOrCtrl+1', click: () => sendMenu('view-edit') },
         { label: t('view.split'), accelerator: 'CmdOrCtrl+2', click: () => sendMenu('view-split') },
