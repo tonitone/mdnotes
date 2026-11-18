@@ -129,6 +129,7 @@ export const de = {
   'status.saving': 'Speichert …',
   'status.savedAt': 'Gespeichert um {time}',
   'status.modifiedAt': 'Zuletzt geändert {time}',
+  'count.label': '{words} Wörter · {chars} Zeichen',
 
   // Errors and announcements in the main window
   'error.openFolder': 'Der Ordner konnte nicht geöffnet werden.',
