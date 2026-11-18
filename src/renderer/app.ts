@@ -1323,6 +1323,7 @@ export class App {
       const doc = await this.api.duplicateNote(id);
       this.notes = await this.api.listNotes();
       this.renderLibrary();
+      this.renderList();
       await this.openNote(doc.id);
       announce(t('announce.duplicated'));
     } catch (err) {
