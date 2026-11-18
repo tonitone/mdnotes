@@ -49,6 +49,7 @@ import '@ui5/webcomponents-icons/dist/save.js';
 import '@ui5/webcomponents-icons/dist/shield.js';
 import '@ui5/webcomponents-icons/dist/action.js';
 import '@ui5/webcomponents-icons/dist/copy.js';
+import '@ui5/webcomponents-icons/dist/duplicate.js';
 import '@ui5/webcomponents-icons/dist/delete.js';
 import '@ui5/webcomponents-icons/dist/download.js';
 import '@ui5/webcomponents-icons/dist/overflow.js';

@@ -318,6 +318,34 @@ export class NoteStore {
     });
   }
 
+  /**
+   * Copies a note into a new one with its own ID and file. Body, labels and
+   * foreign front matter are kept; the copy is not pinned and gets a new
+   * creation date. The original and its versions stay untouched.
+   */
+  duplicate(id: string, now: Date = new Date()): Promise<NoteDoc> {
+    return this.serial(async () => {
+      const source = this.entry(id);
+      const newNoteId = newId(now.getTime());
+      const meta: NoteMeta = { id: newNoteId, labels: [...source.meta.labels], created: now.toISOString() };
+      const extra = source.extraFrontMatter.filter((line) => !PINNED_LINE_RE.test(line));
+      const text = serializeNote(meta, source.body, extra);
+      const fileName = await this.createFile(fileNameFor(source.title, newNoteId), text);
+      this.entries.set(newNoteId, {
+        fileName,
+        meta,
+        extraFrontMatter: extra,
+        body: source.body,
+        title: source.title,
+        preview: source.preview,
+        modified: await this.fs.mtime(fileName),
+        idPending: false,
+        text,
+      });
+      return this.read(newNoteId);
+    });
+  }
+
   save(id: string, body: string): Promise<SaveResult> {
     return this.serial(async () => {
       const e = this.entry(id);
