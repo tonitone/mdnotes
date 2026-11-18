@@ -17,6 +17,9 @@ import { DEFAULT_NOTE_SORT, createdTime, groupNotes, isNoteSort, sortNotes, type
 import { markdownToHtml } from '../shared/markdown/html';
 import { markdownToWiki } from '../shared/markdown/wiki';
 import { openBackupDialog } from './backup-dialog';
+import { isOutlineDialogOpen, openOutlineDialog } from './outline-dialog';
+import { EditorView } from '@codemirror/view';
+import { extractOutline, type OutlineEntry } from '../shared/markdown/outline';
 import { isShortcutsDialogOpen, openShortcutsDialog } from './shortcuts-dialog';
 import { createEditor, type NoteEditor } from './editor/editor';
 import { FORMAT_SHORTCUTS } from './editor/format-commands';
@@ -110,6 +113,7 @@ export class App {
   private currentView: 'editor' | 'trashEntry' | 'noSelection' | 'noWorkspace' = 'noSelection';
   /** A format chosen in the Format menu runs once the menu has closed and given the focus back. */
   private pendingFormat: FormatKind | null = null;
+  private pendingOutline = false;
   private sort: NoteSort = DEFAULT_NOTE_SORT;
   /** The note whose context menu is open in the list. */
   private contextNoteId: string | null = null;
@@ -343,6 +347,7 @@ export class App {
     els.editorMoreMenu.addEventListener('item-click', (event: Event) => {
       const { action, format } = (event as CustomEvent<{ item: HTMLElement }>).detail.item.dataset;
       if (action === 'copy-file-name') void this.copyFileName();
+      if (action === 'outline') this.pendingOutline = true;
       if (action === 'toggle-pin') {
         const note = this.currentNote();
         if (note) void this.setPinned(note.id, !note.pinned);
@@ -354,6 +359,9 @@ export class App {
       if (event.target !== els.editorMoreMenu) return;
       const kind = this.pendingFormat;
       this.pendingFormat = null;
+      const outline = this.pendingOutline;
+      this.pendingOutline = false;
+      if (outline) requestAnimationFrame(() => void this.openOutline());
       // The menu gives the focus back to its button; wait for that, then move on to the editor.
       if (kind) requestAnimationFrame(() => this.runFormat(kind));
     });
@@ -458,6 +466,7 @@ export class App {
       if (command === 'import') void this.importNotes();
       if (command === 'export-all') void this.exportAll();
       if (command === 'versions') void this.openVersions();
+      if (command === 'outline') void this.openOutline();
       if (command === 'backup') void this.openBackup();
       if (command === 'shortcuts') void this.openShortcuts();
       if (command === 'view-edit') this.setViewMode('edit');
@@ -1460,6 +1469,37 @@ export class App {
     } catch (err) {
       this.showError(t('error.versions'), err);
     }
+  }
+
+  /** Shows the headings of the open note and jumps to the chosen one. */
+  private async openOutline(): Promise<void> {
+    if (isOutlineDialogOpen() || !this.editor || this.currentView !== 'editor') return;
+    try {
+      const entries = extractOutline(this.editor.getDoc());
+      const entry = await openOutlineDialog(entries);
+      if (entry) this.jumpToHeading(entry, entries);
+    } catch (err) {
+      this.showError(t('error.outline'), err);
+    }
+  }
+
+  private jumpToHeading(entry: OutlineEntry, entries: OutlineEntry[]): void {
+    const view = this.editor?.view;
+    if (!view) return;
+    if (this.viewMode === 'preview') {
+      // Only the rendered preview is visible. Match by text (and the n-th repeat of it), so headings
+      // the outline does not list, such as setext ones, cannot shift the position.
+      const repeat = entries.filter((e) => e.text === entry.text).indexOf(entry);
+      const target = [...this.els.previewPane.querySelectorAll('h1, h2, h3, h4, h5, h6')].filter((h) => h.textContent?.trim() === entry.text)[repeat];
+      target?.scrollIntoView({ block: 'start' });
+      (target as HTMLElement | undefined)?.setAttribute('tabindex', '-1');
+      (target as HTMLElement | undefined)?.focus({ preventScroll: true });
+    } else {
+      const pos = Math.min(entry.offset, view.state.doc.length);
+      view.dispatch({ selection: { anchor: pos }, effects: EditorView.scrollIntoView(pos, { y: 'start', yMargin: 8 }) });
+      view.focus();
+    }
+    announce(t('announce.outlineJump', { title: entry.text }), { toast: false });
   }
 
   private async openShortcuts(): Promise<void> {
