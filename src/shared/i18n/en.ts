@@ -54,6 +54,7 @@ export const en: Messages = {
   'editor.export': 'Export',
   'editor.more': 'More actions',
   'editor.copyFileName': 'Copy file name',
+  'editor.duplicate': 'Duplicate',
   'editor.outline': 'Outline …',
   'outline.title': 'Outline',
   'outline.empty': 'This note has no headings.',
@@ -124,6 +125,7 @@ export const en: Messages = {
 
   'error.openFolder': 'The folder could not be opened.',
   'error.openNote': 'The note could not be opened.',
+  'error.duplicate': 'The note could not be duplicated.',
   'error.createNote': 'The note could not be created.',
   'error.save': 'Saving failed. Your changes are still in the editor.',
   'error.rename': 'The file could not be renamed. The content is saved.',
@@ -158,6 +160,7 @@ export const en: Messages = {
   'announce.deleted': '“{title}” deleted permanently.',
   'announce.wikiCopied': 'Wiki markup copied.',
   'announce.markdownCopied': 'Markdown copied.',
+  'announce.duplicated': 'Note duplicated. The copy is open.',
   'announce.fileNameCopied': 'File name copied.',
   'announce.exported': 'Exported: {target}',
   'announce.exportedAll': 'All notes exported to {folder}',
