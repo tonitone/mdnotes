@@ -66,6 +66,10 @@ export const de = {
   'outline.title': 'Gliederung',
   'outline.empty': 'Diese Notiz hat keine Überschriften.',
   'outline.level': 'Ebene {level}',
+
+  'link.completions': 'Notizen zum Verlinken',
+  'link.missing': 'Diese Notiz gibt es nicht mehr.',
+  'backlinks.title': 'Verlinkt von',
   'error.outline': 'Die Gliederung konnte nicht angezeigt werden.',
   'announce.outlineJump': 'Gesprungen zu: {title}',
   'editor.trash': 'In den Papierkorb',
