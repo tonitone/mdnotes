@@ -160,3 +160,45 @@ describe('tables in HTML', () => {
     assert.doesNotMatch(html, /style=/);
   });
 });
+
+describe('footnotes', () => {
+  const source = 'Text[^b] and more[^a], again[^b].\n\n[^a]: First note.\n[^b]: Second\n    note with `code`.\n[^unused]: Dropped.';
+
+  it('numbers references by first use and appends the footnotes block', () => {
+    const blocks = parseMarkdown(source);
+    assert.equal(blocks.length, 2);
+    const last = blocks[1];
+    assert.equal(last.type, 'footnotes');
+    if (last.type !== 'footnotes') return;
+    assert.deepEqual(
+      last.items.map((f) => [f.id, f.number]),
+      [
+        ['b', 1],
+        ['a', 2],
+      ],
+    );
+  });
+
+  it('keeps a reference without definition as plain text', () => {
+    assert.deepEqual(parseMarkdown('Hi[^x]'), [{ type: 'paragraph', lines: [[{ type: 'text', value: 'Hi' }, { type: 'text', value: '[^x]' }]] }]);
+  });
+
+  it('does not treat definitions inside code fences as footnotes', () => {
+    const blocks = parseMarkdown('A[^1]\n\n```\n[^1]: not a note\n```');
+    assert.equal(blocks.some((b) => b.type === 'footnotes'), false);
+  });
+
+  it('renders HTML with back links', () => {
+    const html = markdownToHtml(source);
+    assert.match(html, /<sup class="footnote-ref"><a href="#fn-1" id="fnref-1">1<\/a><\/sup>/);
+    assert.match(html, /<li id="fn-2">First note\./);
+    assert.match(html, /href="#fnref-1"/);
+    assert.doesNotMatch(html, /Dropped/);
+  });
+
+  it('renders wiki markup with superscript numbers', () => {
+    const wiki = markdownToWiki('A[^1]\n\n[^1]: Note');
+    assert.match(wiki, /A\^1\^/);
+    assert.match(wiki, /----\n\^1\^ Note/);
+  });
+});
