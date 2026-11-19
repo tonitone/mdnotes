@@ -7,6 +7,8 @@
  * implementation; unknown constructs fall back to plain text.
  */
 
+import { wikiLinksToText } from '../wikilinks';
+
 // ---------------------------------------------------------------------------
 // AST
 // ---------------------------------------------------------------------------
@@ -83,7 +85,8 @@ function indentWidth(ws: string): number {
 }
 
 export function parseMarkdown(source: string): Block[] {
-  return parseBlocks(source.replace(/\r\n?/g, '\n').split('\n'));
+  // Note links `[[id|Title]]` read as their title in previews and exports.
+  return parseBlocks(wikiLinksToText(source).replace(/\r\n?/g, '\n').split('\n'));
 }
 
 function parseBlocks(lines: string[]): Block[] {
