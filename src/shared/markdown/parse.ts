@@ -17,6 +17,8 @@ export type Inline =
   | { type: 'code'; value: string }
   | { type: 'link'; href: string; children: Inline[] }
   | { type: 'image'; src: string; alt: string }
+  /** Footnote reference `[^id]`. `number` is assigned by `parseMarkdown` (order of first use). */
+  | { type: 'footnote'; id: string; number: number }
   | { type: 'break' };
 
 export interface ListItem {
@@ -34,7 +36,9 @@ export type Block =
   | { type: 'quote'; children: Block[] }
   | { type: 'list'; items: ListItem[] }
   | { type: 'table'; header: Inline[][]; align: Array<'left' | 'center' | 'right' | null>; rows: Inline[][][] }
-  | { type: 'hr' };
+  | { type: 'hr' }
+  /** All footnotes that are referenced, in order of first reference. Always the last block. */
+  | { type: 'footnotes'; items: Array<{ id: string; number: number; content: Inline[] }> };
 
 // ---------------------------------------------------------------------------
 // Block parsing
@@ -45,6 +49,7 @@ const HEADING_RE = /^\s{0,3}(#{1,6})(?:\s+(.*?))?\s*#*\s*$/;
 const HR_RE = /^\s{0,3}([-*_])(?:\s*\1){2,}\s*$/;
 const LIST_RE = /^(\s*)([-*+]|\d{1,9}[.)])\s+(.*)$/;
 const QUOTE_RE = /^\s{0,3}>\s?(.*)$/;
+const FOOTNOTE_DEF_RE = /^\s{0,3}\[\^([^\s\]]+)\]:\s*(.*)$/;
 const TABLE_SEP_RE = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
 
 function isBlank(line: string): boolean {
@@ -83,10 +88,16 @@ function indentWidth(ws: string): number {
 }
 
 export function parseMarkdown(source: string): Block[] {
-  return parseBlocks(source.replace(/\r\n?/g, '\n').split('\n'));
+  const defs = new Map<string, Inline[]>();
+  const blocks = parseBlocks(source.replace(/\r\n?/g, '\n').split('\n'), defs);
+  return resolveFootnotes(blocks, defs);
 }
 
-function parseBlocks(lines: string[]): Block[] {
+/**
+ * `defs` is only passed for the top level: footnote definitions are collected
+ * there (never inside quotes or lists) and removed from the block list.
+ */
+function parseBlocks(lines: string[], defs?: Map<string, Inline[]>): Block[] {
   const blocks: Block[] = [];
   let i = 0;
 
@@ -108,6 +119,16 @@ function parseBlocks(lines: string[]): Block[] {
       }
       i++; // closing fence (or end of input)
       blocks.push({ type: 'code', lang: fence[3] ?? '', text: body.join('\n') });
+      continue;
+    }
+
+    const def = defs ? FOOTNOTE_DEF_RE.exec(line) : null;
+    if (def) {
+      // Indented lines belong to the definition.
+      let text = def[2];
+      i++;
+      while (i < lines.length && /^( {2,}|\t)\S/.test(lines[i])) text += ' ' + lines[i++].trim();
+      if (!defs!.has(def[1])) defs!.set(def[1], parseInline(text));
       continue;
     }
 
@@ -342,6 +363,16 @@ export function parseInline(s: string): Inline[] {
       }
     }
 
+    if (ch === '[' && s[i + 1] === '^') {
+      const ref = /^\[\^([^\s\]]+)\](?!\()/.exec(s.slice(i));
+      if (ref) {
+        flush();
+        out.push({ type: 'footnote', id: ref[1], number: 0 });
+        i += ref[0].length;
+        continue;
+      }
+    }
+
     if (ch === '[') {
       const close = findClosingBracket(s, i);
       const target = close !== -1 ? parseLinkTarget(s, close + 1) : null;
@@ -405,9 +436,69 @@ export function inlineText(nodes: Inline[]): string {
           return n.alt;
         case 'break':
           return ' ';
+        case 'footnote':
+          return '';
         default:
           return inlineText(n.children);
       }
     })
     .join('');
+}
+
+// ---------------------------------------------------------------------------
+// Footnotes
+// ---------------------------------------------------------------------------
+
+/** Visits every inline list of a block, nested ones included. */
+function eachInlineList(block: Block, fn: (nodes: Inline[]) => void): void {
+  switch (block.type) {
+    case 'heading':
+      fn(block.content);
+      break;
+    case 'paragraph':
+      block.lines.forEach(fn);
+      break;
+    case 'quote':
+      block.children.forEach((b) => eachInlineList(b, fn));
+      break;
+    case 'list':
+      block.items.forEach((item) => fn(item.content));
+      break;
+    case 'table':
+      block.header.forEach(fn);
+      block.rows.forEach((row) => row.forEach(fn));
+      break;
+    default:
+      break;
+  }
+}
+
+/**
+ * Numbers footnote references in order of first use and appends the
+ * `footnotes` block. A reference without a definition is turned back into
+ * plain text; a definition that nobody references is dropped.
+ */
+function resolveFootnotes(blocks: Block[], defs: Map<string, Inline[]>): Block[] {
+  const numbers = new Map<string, number>();
+  const visit = (nodes: Inline[]): void => {
+    nodes.forEach((node, index) => {
+      if (node.type === 'footnote') {
+        if (!defs.has(node.id)) {
+          nodes[index] = { type: 'text', value: `[^${node.id}]` };
+          return;
+        }
+        if (!numbers.has(node.id)) numbers.set(node.id, numbers.size + 1);
+        node.number = numbers.get(node.id)!;
+      } else if ('children' in node) {
+        visit(node.children);
+      }
+    });
+  };
+  blocks.forEach((b) => eachInlineList(b, visit));
+  if (numbers.size === 0) return blocks;
+  // References inside a footnote are not supported; keep them as plain text.
+  const plain = (nodes: Inline[]): Inline[] =>
+    nodes.map((n): Inline => (n.type === 'footnote' ? { type: 'text', value: `[^${n.id}]` } : 'children' in n ? { ...n, children: plain(n.children) } : n));
+  const items = [...numbers].map(([id, number]) => ({ id, number, content: plain(defs.get(id)!) }));
+  return [...blocks, { type: 'footnotes', items }];
 }

@@ -1,5 +1,5 @@
 import { parseMarkdown, type Block, type Inline } from './parse';
-import { getLocale, textDirection } from '../i18n';
+import { getLocale, t, textDirection } from '../i18n';
 
 /** Renders Markdown to HTML (used for HTML and PDF export). */
 
@@ -35,6 +35,8 @@ function renderInline(nodes: Inline[], opts: HtmlOptions): string {
           return `<del>${renderInline(n.children, opts)}</del>`;
         case 'link':
           return `<a href="${escapeHtml(safeHref(n.href))}">${renderInline(n.children, opts)}</a>`;
+        case 'footnote':
+          return `<sup class="footnote-ref"><a href="#fn-${n.number}" id="fnref-${n.number}">${n.number}</a></sup>`;
         case 'image': {
           const src = opts.resolveImage ? opts.resolveImage(n.src) : n.src;
           return `<img src="${escapeHtml(src)}" alt="${escapeHtml(n.alt)}">`;
@@ -89,6 +91,16 @@ function renderBlock(block: Block, opts: HtmlOptions): string {
     }
     case 'hr':
       return '<hr>';
+    case 'footnotes': {
+      const items = block.items
+        .map(
+          (f) =>
+            `<li id="fn-${f.number}">${renderInline(f.content, opts)} ` +
+            `<a href="#fnref-${f.number}" class="footnote-back" aria-label="${escapeHtml(t('footnote.back', { n: String(f.number) }))}">\u21a9</a></li>`,
+        )
+        .join('\n');
+      return `<section class="footnotes"><hr><ol>${items}</ol></section>`;
+    }
   }
 }
 
@@ -114,6 +126,9 @@ const PRINT_CSS = `
   .align-left { text-align: left; } .align-center { text-align: center; } .align-right { text-align: right; }
   img { max-width: 100%; }
   li.task { list-style: none; margin-inline-start: -1.2em; }
+  .footnotes { font-size: 0.9em; color: #556b82; }
+  .footnotes ol { padding-inline-start: 1.4em; }
+  .footnote-ref { font-size: 0.75em; line-height: 0; }
   a { color: #0064d9; }
 `;
 
