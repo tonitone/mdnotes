@@ -36,7 +36,9 @@ test('[[ suggests notes and inserts a link bound to the note ID', async ({ page 
 test('a link shows the title, opens the target and the target lists the backlink', async ({ page }) => {
   await startLink(page);
   await page.keyboard.press('Enter');
+  await expect(page.locator('.cm-tooltip-autocomplete')).toHaveCount(0);
   await page.keyboard.type(' danach');
+  await expect(editor(page)).toContainText('danach');
   const link = page.locator('.cm-note-link');
   await expect(link).toHaveText(/Willkommen/);
 
