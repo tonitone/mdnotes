@@ -71,9 +71,9 @@ const CODE_LANGUAGES: Array<[string, string]> = [
   ['yaml', 'YAML'],
 ];
 
-type SyntaxNode = ReturnType<ReturnType<typeof syntaxTree>['resolveInner']>;
+export type SyntaxNode = ReturnType<ReturnType<typeof syntaxTree>['resolveInner']>;
 
-interface FenceDetails {
+export interface FenceDetails {
   lang: string;
   /** Where the language (info string) is, or an empty range right after the fence. */
   infoFrom: number;
@@ -82,7 +82,7 @@ interface FenceDetails {
 }
 
 /** Language, info range and code of a `FencedCode` node. */
-function fenceDetails(state: EditorState, node: SyntaxNode): FenceDetails {
+export function fenceDetails(state: EditorState, node: SyntaxNode): FenceDetails {
   const first = state.doc.lineAt(node.from);
   const last = state.doc.lineAt(node.to);
   const info = node.getChild('CodeInfo');
