@@ -144,6 +144,17 @@ ui5-flexible-column-layout {
   display: none;
 }
 
+.backlinks {
+  flex: none;
+  max-height: 30%;
+  overflow-y: auto;
+  border-top: 1px solid var(--sapGroup_TitleBorderColor);
+}
+
+.backlinks[hidden] {
+  display: none;
+}
+
 .editor-host {
   flex: 1;
   min-width: 0;

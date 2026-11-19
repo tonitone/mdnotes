@@ -59,6 +59,10 @@ export const en: Messages = {
   'outline.title': 'Outline',
   'outline.empty': 'This note has no headings.',
   'outline.level': 'Level {level}',
+
+  'link.completions': 'Notes to link',
+  'link.missing': 'This note no longer exists.',
+  'backlinks.title': 'Linked from',
   'error.outline': 'The outline could not be shown.',
   'announce.outlineJump': 'Jumped to: {title}',
   'editor.trash': 'Move to trash',
