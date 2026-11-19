@@ -202,6 +202,15 @@ function requireWorkspace(): Workspace {
   return workspace;
 }
 
+/** Window icon for Windows and Linux; macOS takes the Dock icon from the bundle. */
+function windowIconPath(): string | undefined {
+  if (process.platform === 'darwin') return undefined;
+  const file = app.isPackaged
+    ? path.join(process.resourcesPath, 'icon.png')
+    : path.join(app.getAppPath(), 'build', 'icons', '512x512.png');
+  return existsSync(file) ? file : undefined;
+}
+
 function requireWindow(): BrowserWindow {
   if (!mainWindow) throw new Error('No window.');
   return mainWindow;
@@ -486,6 +495,7 @@ function createWindow(): void {
     minHeight: 400,
     show: false,
     title: 'mdnotes',
+    icon: windowIconPath(),
     webPreferences: {
       preload: path.join(here, '../preload/index.cjs'),
       contextIsolation: true,
