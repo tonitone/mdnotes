@@ -20,6 +20,8 @@ async function startLink(page: Page) {
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.press('Enter');
   await page.keyboard.type('[[Will');
+  // Enter only accepts the suggestion once the list is open.
+  await expect(page.locator('.cm-tooltip-autocomplete li')).toHaveCount(1);
 }
 
 test('[[ suggests notes and inserts a link bound to the note ID', async ({ page }) => {
