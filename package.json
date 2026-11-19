@@ -25,6 +25,7 @@
     "test:electron": "playwright test -c playwright.electron.config.ts"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.20.4",
     "@codemirror/commands": "^6.8.0",
     "@codemirror/lang-markdown": "^6.3.0",
     "@codemirror/language": "^6.11.0",
