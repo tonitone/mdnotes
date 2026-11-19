@@ -12,6 +12,9 @@ The detailed feature list. The README has the short version.
 - Full-text search over title and content, hits with a text snippet
 - Trash (`.trash/`, 30 days), restore and delete forever, undo after moving a note to the trash
 - Outline of the headings (Cmd/Ctrl+Shift+O), word and character count, table editing with Tab, Shift+Tab and Enter
+- Links between notes: `[[` suggests notes, the file holds `[[<id>|<title>]]` (bound to the note ID, so renaming breaks nothing),
+  the editor shows the current title, Ctrl/Cmd+Enter or a click opens the target, "Linked from" below the note lists backlinks;
+  previews and HTML/PDF/Word/wiki exports show the title, Markdown export keeps the link text as is
 - Keyboard shortcut overview (Cmd/Ctrl+/)
 - Export a note as Markdown (with images), Jira/Confluence wiki markup or PDF;
   wiki markup and Markdown also straight to the clipboard
