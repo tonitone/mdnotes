@@ -48,5 +48,9 @@ In the Electron build `__BROWSER_MODE__` is `false`, so the mock adapter is not 
 | `npm run test:e2e` | UI and accessibility tests in browser mode (Playwright, axe) |
 | `npm run test:electron` | Smoke test of the real app (run `npm run build` first) |
 | `npm run package` | Installer for the current system (`release/`) |
+| `node scripts/generate-icons.mjs` | Rebuilds `build/icon.icns`, `build/icon.ico` and `build/icons/*.png` from `build/icon/mdnotes-icon.svg` |
 
 Run `npx playwright install chromium` once before the first e2e run.
+
+The app icon lives in `build/icon/mdnotes-icon.svg` (1024 px master, PNG next to it). After editing the SVG, run
+`node scripts/generate-icons.mjs` and commit the generated files; electron-builder reads them from `build/`.

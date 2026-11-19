@@ -1,3 +1,5 @@
+<p align="center"><img src="build/icon/mdnotes-icon.png" alt="mdnotes logo" width="128" height="128"></p>
+
 # mdnotes
 
 **Local Markdown notes, built with SAP ui5-webcomponents**

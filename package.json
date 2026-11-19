@@ -62,6 +62,12 @@
       "out/renderer/**",
       "package.json"
     ],
+    "extraResources": [
+      {
+        "from": "build/icons/512x512.png",
+        "to": "icon.png"
+      }
+    ],
     "fileAssociations": [
       {
         "ext": "md",
@@ -76,9 +82,11 @@
         "dmg",
         "zip"
       ],
-      "hardenedRuntime": true
+      "hardenedRuntime": true,
+      "icon": "build/icon.icns"
     },
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         "nsis"
       ]
@@ -93,6 +101,7 @@
         "deb",
         "rpm"
       ],
+      "icon": "build/icons",
       "category": "Office",
       "maintainer": "mdnotes"
     }
