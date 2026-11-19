@@ -27,7 +27,7 @@ Neue Issues werden auf Englisch geschrieben.
 
 **Arbeitsweise:**
 
-- Pro Issue ein Agent mit Sonnet. Opus nur für Reviews und knifflige Entscheidungen.
+- Pro Issue ein Agent mit Sonnet (Umsetzung). Reviews und Planung laufen mit Opus.
 - Höchstens zwei Agenten gleichzeitig, große Issues teilen.
 - Fehlersuche höchstens zwei CI-Runden. Danach melden statt weiter probieren.
 - Die stündliche Aufgabe „mdnotes PR review and fix loop“ (werktags 11 bis 22 Uhr) reviewt, korrigiert
