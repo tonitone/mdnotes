@@ -1,4 +1,4 @@
-import { autocompletion, type CompletionContext, type CompletionResult } from '@codemirror/autocomplete';
+import { autocompletion, closeCompletion, pickedCompletion, type Completion, type CompletionContext, type CompletionResult } from '@codemirror/autocomplete';
 import { EditorState, Facet, type Extension, type Range } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, WidgetType, keymap, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import { t } from '../../shared/i18n';
@@ -45,9 +45,9 @@ function complete(context: CompletionContext): CompletionResult | null {
       return as - bs || a.title.localeCompare(b.title);
     })
     .slice(0, 50)
-    .map((target) => ({
+    .map((target): Completion => ({
       label: target.title,
-      apply: (view: EditorView, _completion: unknown, from: number, to: number) => {
+      apply: (view: EditorView, completion: Completion, from: number, to: number) => {
         // Swallow a `]]` the user (or an earlier edit) already left behind the cursor.
         const after = view.state.doc.sliceString(to, to + 2);
         const end = after === ']]' ? to + 2 : to;
@@ -56,7 +56,10 @@ function complete(context: CompletionContext): CompletionResult | null {
           changes: { from, to: end, insert },
           selection: { anchor: from + insert.length },
           userEvent: 'input.complete',
+          annotations: pickedCompletion.of(completion),
         });
+        // The list must not stay open behind the inserted link.
+        closeCompletion(view);
       },
     }));
   return { from: match.from, options, filter: false };
