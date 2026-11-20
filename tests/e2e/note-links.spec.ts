@@ -22,6 +22,9 @@ async function startLink(page: Page) {
   await page.keyboard.type('[[Will');
   // Enter only accepts the suggestion once the list is open.
   await expect(page.locator('.cm-tooltip-autocomplete li')).toHaveCount(1);
+  // CodeMirror ignores Enter for `interactionDelay` (75 ms) after the list opened,
+  // so a key press right after it appears would insert a line break instead.
+  await page.waitForTimeout(150);
 }
 
 test('[[ suggests notes and inserts a link bound to the note ID', async ({ page }) => {
