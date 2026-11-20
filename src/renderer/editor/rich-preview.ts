@@ -1,5 +1,5 @@
 import { syntaxTree } from '@codemirror/language';
-import { StateField, type EditorState, type Range } from '@codemirror/state';
+import { StateEffect, StateField, type EditorState, type Extension, type Range } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import { t } from '../../shared/i18n';
 import { findBlockMath, findFootnoteMarks, findInlineMath } from '../../shared/markdown/math';
@@ -108,11 +108,15 @@ function mathDecorations(state: EditorState): DecorationSet {
 
 class DiagramWidget extends WidgetType {
   private sheets: CSSStyleSheet[] = [];
-  constructor(readonly source: string) {
+  constructor(
+    readonly source: string,
+    /** UI5 theme at build time; Mermaid colours depend on it. */
+    readonly theme: string,
+  ) {
     super();
   }
   eq(other: DiagramWidget): boolean {
-    return other.source === this.source;
+    return other.source === this.source && other.theme === this.theme;
   }
   toDOM(view: EditorView): HTMLElement {
     const el = document.createElement('div');
@@ -148,8 +152,13 @@ class DiagramWidget extends WidgetType {
   }
 }
 
+function currentTheme(): string {
+  return document.documentElement.dataset.theme ?? '';
+}
+
 function diagramDecorations(state: EditorState): DecorationSet {
   const active = activeLines(state);
+  const theme = currentTheme();
   const ranges: Range<Decoration>[] = [];
   syntaxTree(state).iterate({
     enter: (node) => {
@@ -161,19 +170,37 @@ function diagramDecorations(state: EditorState): DecorationSet {
       // An unclosed fence is still being typed.
       if (last.number === first.number || !/^\s*(`{3,}|~{3,})\s*$/.test(last.text)) return false;
       for (let n = first.number; n <= last.number; n++) if (active.has(n)) return false;
-      ranges.push(Decoration.replace({ widget: new DiagramWidget(details.code), block: true }).range(first.from, last.to));
+      ranges.push(Decoration.replace({ widget: new DiagramWidget(details.code, theme), block: true }).range(first.from, last.to));
       return false;
     },
   });
   return Decoration.set(ranges, true);
 }
 
+/** Dispatched when the UI5 theme changes, so diagrams are drawn again in matching colours. */
+const themeChanged = StateEffect.define<null>();
+
+const themeWatcher = ViewPlugin.fromClass(
+  class {
+    private readonly observer: MutationObserver;
+    constructor(view: EditorView) {
+      this.observer = new MutationObserver(() => view.dispatch({ effects: themeChanged.of(null) }));
+      this.observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    }
+    destroy() {
+      this.observer.disconnect();
+    }
+  },
+);
+
 /** Block decorations must come from a state field, not from a view plugin. */
 function replaceField(build: (state: EditorState) => DecorationSet): StateField<DecorationSet> {
   return StateField.define<DecorationSet>({
     create: build,
     update(decorations, tr) {
-      if (tr.docChanged || tr.selection || syntaxTree(tr.startState) !== syntaxTree(tr.state)) return build(tr.state);
+      if (tr.docChanged || tr.selection || syntaxTree(tr.startState) !== syntaxTree(tr.state) || tr.effects.some((e) => e.is(themeChanged))) {
+        return build(tr.state);
+      }
       return decorations;
     },
     provide: (field) => EditorView.decorations.from(field),
@@ -181,7 +208,7 @@ function replaceField(build: (state: EditorState) => DecorationSet): StateField<
 }
 
 export const mathPreview = replaceField(mathDecorations);
-export const diagramPreview = replaceField(diagramDecorations);
+export const diagramPreview: Extension = [replaceField(diagramDecorations), themeWatcher];
 
 // ---------------------------------------------------------------------------
 // Footnote marks (source stays visible; only styled)
