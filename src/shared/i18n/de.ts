@@ -66,6 +66,10 @@ export const de = {
   'outline.title': 'Gliederung',
   'outline.empty': 'Diese Notiz hat keine Überschriften.',
   'outline.level': 'Ebene {level}',
+
+  'link.completions': 'Notizen zum Verlinken',
+  'link.missing': 'Diese Notiz gibt es nicht mehr.',
+  'backlinks.title': 'Verlinkt von',
   'error.outline': 'Die Gliederung konnte nicht angezeigt werden.',
   'announce.outlineJump': 'Gesprungen zu: {title}',
   'editor.trash': 'In den Papierkorb',
@@ -311,6 +315,7 @@ export const de = {
   'shortcuts.nextArea': 'Nächster Bereich',
   'shortcuts.previousArea': 'Vorheriger Bereich',
   'shortcuts.leaveEditor': 'Editor verlassen',
+  'shortcuts.openLink': 'Notizlink an der Cursorposition öffnen',
   'shortcuts.tableNextCell': 'In Tabelle: nächste Zelle',
   'shortcuts.tablePreviousCell': 'In Tabelle: vorherige Zelle',
   'shortcuts.tableNewRow': 'In Tabelle: neue Zeile',

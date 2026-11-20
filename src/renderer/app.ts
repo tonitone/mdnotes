@@ -21,6 +21,7 @@ import { isOutlineDialogOpen, openOutlineDialog } from './outline-dialog';
 import { EditorView } from '@codemirror/view';
 import { extractOutline, type OutlineEntry } from '../shared/markdown/outline';
 import { countText } from '../shared/markdown/count';
+import { linksTo } from '../shared/wikilinks';
 import { isShortcutsDialogOpen, openShortcutsDialog } from './shortcuts-dialog';
 import { createEditor, type NoteEditor } from './editor/editor';
 import { FORMAT_SHORTCUTS } from './editor/format-commands';
@@ -175,6 +176,8 @@ export class App {
     editorHost: $('editor-host'),
     editorArea: $('editorArea'),
     previewPane: $('previewPane'),
+    backlinksRegion: $('backlinksRegion'),
+    backlinksList: $('backlinksList'),
     viewModeButton: $('viewModeButton'),
     noSelection: $('noSelection'),
     noWorkspace: $('noWorkspace'),
@@ -203,6 +206,11 @@ export class App {
       saveImages: (files) => this.saveImages(files),
       onImagesInserted: (inserted) => void this.askForAltTexts(inserted),
       onFormat: (outcome) => this.announceFormat(outcome),
+      links: {
+        // A note does not link to itself.
+        targets: () => this.notes.filter((n) => n.id !== this.currentId).map((n) => ({ id: n.id, title: n.title })),
+        open: (id) => void this.openNote(id),
+      },
     });
     // Expose the editor to e2e tests in browser mode only.
     if (__BROWSER_MODE__) (window as unknown as { __editorView: unknown }).__editorView = this.editor.view;
@@ -260,6 +268,10 @@ export class App {
     els.libraryList.addEventListener('item-click', (event: Event) => {
       const view = (event as CustomEvent<{ item: HTMLElement }>).detail.item?.dataset.view;
       if (view === 'all' || view === 'trash') void this.setView({ kind: view });
+    });
+    els.backlinksList.addEventListener('item-click', (event: Event) => {
+      const id = (event as CustomEvent<{ item: HTMLElement }>).detail.item?.dataset.id;
+      if (id) void this.openNote(id);
     });
     els.labelList.addEventListener('item-click', (event: Event) => {
       const label = (event as CustomEvent<{ item: HTMLElement }>).detail.item?.dataset.label;
@@ -977,6 +989,7 @@ export class App {
     this.els.noWorkspace.hidden = view !== 'noWorkspace';
     this.els.noteActions.hidden = view !== 'editor';
     this.els.labelRow.hidden = view !== 'editor';
+    if (view !== 'editor') this.els.backlinksRegion.hidden = true;
     this.els.trashActions.hidden = view !== 'trashEntry';
     if (!editing) {
       this.setFileName('');
@@ -1012,8 +1025,33 @@ export class App {
       this.showView('editor');
       this.setLayout('ThreeColumnsEndExpanded');
       this.updateSelection();
+      void this.refreshBacklinks(id);
     } catch (err) {
       this.showError(t('error.openNote'), err);
+    }
+  }
+
+  /** Fills "Linked from" with the notes whose text links to note `id`. */
+  private async refreshBacklinks(id: string): Promise<void> {
+    const list = this.els.backlinksList;
+    list.replaceChildren();
+    this.els.backlinksRegion.hidden = true;
+    try {
+      // The full-text search narrows the candidates; the body check makes sure it is a real link.
+      const hits = (await this.api.searchNotes(id)).filter((hit) => hit.id !== id);
+      const linking: NoteSummary[] = [];
+      for (const hit of hits) {
+        const note = this.notes.find((n) => n.id === hit.id);
+        if (note && linksTo((await this.api.readNote(hit.id)).body, id)) linking.push(note);
+      }
+      // The user may have opened another note meanwhile.
+      if (this.currentId !== id) return;
+      list.replaceChildren(
+        ...linking.map((note) => el('ui5-li', { icon: 'chain-link', tooltip: note.fileName, 'data-id': note.id }, [note.title])),
+      );
+      this.els.backlinksRegion.hidden = linking.length === 0;
+    } catch {
+      // The list is a convenience; a failed lookup just leaves it empty.
     }
   }
 
