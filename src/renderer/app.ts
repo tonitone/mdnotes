@@ -422,6 +422,13 @@ export class App {
       event.preventDefault();
       const href = link.getAttribute('href') ?? '';
       if (/^(https?:|mailto:)/i.test(href)) window.open(href, '_blank', 'noopener');
+      // Footnote references and back links jump within the preview.
+      else if (/^#fn(ref)?-\d+$/.test(href)) {
+        const target = els.previewPane.querySelector<HTMLElement>(href);
+        target?.scrollIntoView({ block: 'center' });
+        // Focus moves along: to the back link of a footnote, or to the reference itself.
+        (target?.matches('a') ? target : target?.querySelector<HTMLElement>('.footnote-back'))?.focus();
+      }
     });
     // In split view the preview follows the editor's scroll position.
     this.editor?.view.scrollDOM.addEventListener('scroll', () => {
