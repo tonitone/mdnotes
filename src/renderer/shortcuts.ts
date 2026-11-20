@@ -85,6 +85,7 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { label: 'shortcuts.nextArea', keys: [{ key: 'F6' }] },
       { label: 'shortcuts.previousArea', keys: [{ key: 'F6', shift: true }] },
       { label: 'shortcuts.leaveEditor', keys: [{ key: 'Esc' }, { key: 'Tab' }] },
+      { label: 'shortcuts.openLink', keys: [{ key: 'Enter', mod: true }] },
     ],
   },
 ];

@@ -315,6 +315,7 @@ export const de = {
   'shortcuts.nextArea': 'Nächster Bereich',
   'shortcuts.previousArea': 'Vorheriger Bereich',
   'shortcuts.leaveEditor': 'Editor verlassen',
+  'shortcuts.openLink': 'Notizlink an der Cursorposition öffnen',
   'shortcuts.tableNextCell': 'In Tabelle: nächste Zelle',
   'shortcuts.tablePreviousCell': 'In Tabelle: vorherige Zelle',
   'shortcuts.tableNewRow': 'In Tabelle: neue Zeile',

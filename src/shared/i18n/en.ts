@@ -299,6 +299,7 @@ export const en: Messages = {
   'shortcuts.nextArea': 'Next area',
   'shortcuts.previousArea': 'Previous area',
   'shortcuts.leaveEditor': 'Leave the editor',
+  'shortcuts.openLink': 'Open the note link at the cursor',
   'shortcuts.tableNextCell': 'In a table: next cell',
   'shortcuts.tablePreviousCell': 'In a table: previous cell',
   'shortcuts.tableNewRow': 'In a table: new row',
