@@ -643,3 +643,37 @@ ui5-illustrated-message {
   font-family: var(--sapContent_MonospaceFontFamily, monospace);
   font-size: 0.9em;
 }
+
+/* Math, diagrams and footnotes (editor and preview) */
+.cm-md-math { cursor: text; }
+.cm-md-math-block { display: block; text-align: center; overflow-x: auto; padding: 0.5rem 0; }
+.cm-md-math-error { color: var(--sapNegativeTextColor); }
+
+.cm-md-diagram {
+  display: block;
+  text-align: center;
+  overflow-x: auto;
+  cursor: text;
+  padding: 0.5rem 0;
+  color: var(--sapTextColor);
+}
+.cm-md-diagram svg { max-width: 100%; height: auto; }
+.cm-md-diagram-error { text-align: start; color: var(--sapNegativeTextColor); }
+.cm-md-diagram-error pre {
+  margin: 0.25rem 0 0;
+  white-space: pre-wrap;
+  font-family: var(--sapContent_MonospaceFontFamily, monospace);
+  color: var(--sapTextColor);
+}
+
+.cm-md-footnote-ref {
+  color: var(--sapLinkColor);
+  font-size: 0.75em;
+  vertical-align: super;
+  line-height: 0;
+}
+.cm-md-footnote-def { color: var(--sapLinkColor); font-weight: bold; }
+
+.preview .footnotes { font-size: 0.9em; color: var(--sapContent_LabelColor); }
+.preview .footnotes ol { padding-inline-start: 1.5rem; }
+.preview .footnote-ref { font-size: 0.75em; line-height: 0; }

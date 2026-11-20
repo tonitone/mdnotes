@@ -66,6 +66,7 @@ interface RunFormat {
   strike?: boolean;
   code?: boolean;
   link?: boolean;
+  sup?: boolean;
 }
 
 class DocxWriter {
@@ -96,6 +97,7 @@ class DocxWriter {
       fmt.bold ? '<w:b/>' : '',
       fmt.italic ? '<w:i/>' : '',
       fmt.strike ? '<w:strike/>' : '',
+      fmt.sup ? '<w:vertAlign w:val="superscript"/>' : '',
     ].join('');
     const rPr = props ? `<w:rPr>${props}</w:rPr>` : '';
     const content = value
@@ -148,6 +150,8 @@ class DocxWriter {
             return this.runs(n.children, { ...fmt, italic: true });
           case 'strike':
             return this.runs(n.children, { ...fmt, strike: true });
+          case 'footnote':
+            return this.text(String(n.number), { ...fmt, sup: true });
           case 'image':
             return this.image(n.src, n.alt, fmt);
           case 'link': {
@@ -244,6 +248,12 @@ class DocxWriter {
           case 'table':
             // Word needs a paragraph between a table and what follows.
             return this.table(block) + this.paragraph('');
+          case 'footnotes':
+            // Plain numbered paragraphs at the end; real Word footnotes need a footnotes part.
+            return (
+              this.paragraph('', undefined, '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="A9B4BE"/></w:pBdr>') +
+              block.items.map((f) => this.paragraph(this.text(String(f.number), { sup: true }) + this.text(' ', {}) + this.runs(f.content))).join('')
+            );
           case 'hr':
             return this.paragraph('', undefined, '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="A9B4BE"/></w:pBdr>');
         }
