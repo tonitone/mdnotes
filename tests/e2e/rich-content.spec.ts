@@ -48,3 +48,14 @@ test('footnote references and definitions are marked', async ({ page }) => {
   await expect(page.locator('.cm-md-footnote-ref')).toHaveText('[^1]');
   await expect(page.locator('.cm-md-footnote-def')).toHaveText('[^1]');
 });
+
+test('footnote links jump within the preview', async ({ page }) => {
+  await setText(page, 'Text[^1]\n\n[^1]: The note.\n\nlast line');
+  await page.locator('#viewModeButton ui5-segmented-button-item[data-mode="preview"]').click();
+  await expect(page.locator('#editorArea')).toHaveAttribute('data-mode', 'preview');
+  const preview = page.locator('#previewPane');
+  await preview.locator('#fnref-1').click();
+  await expect(preview.locator('#fn-1 .footnote-back')).toBeFocused();
+  await preview.locator('#fn-1 .footnote-back').click();
+  await expect(preview.locator('#fnref-1')).toBeFocused();
+});
