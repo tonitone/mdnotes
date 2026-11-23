@@ -54,3 +54,6 @@ Run `npx playwright install chromium` once before the first e2e run.
 
 The app icon lives in `build/icon/mdnotes-icon.svg` (1024 px master, PNG next to it). After editing the SVG, run
 `node scripts/generate-icons.mjs` and commit the generated files; electron-builder reads them from `build/`.
+The default icon is SAP blue (`#0070F2`). Earlier designs are archived in `build/icon/variants/<name>/`
+(currently `light-blue`); the build ignores them. To switch back, copy a variant's SVG over
+`build/icon/mdnotes-icon.svg` and run the generator.
