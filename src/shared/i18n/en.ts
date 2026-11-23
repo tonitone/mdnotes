@@ -268,6 +268,7 @@ export const en: Messages = {
   'diagram.label': 'Diagram (Mermaid)',
   'diagram.loading': 'Loading diagram…',
   'diagram.error': 'The diagram contains an error. Click to edit the source.',
+  'diagram.unavailable': 'The diagram cannot be displayed right now.',
   'footnote.back': 'Back to footnote {n}',
   'code.copied': 'Code copied',
   'code.copyFailed': 'Copying not possible',
