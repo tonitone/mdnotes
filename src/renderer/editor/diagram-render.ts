@@ -1,35 +1,53 @@
-import { adoptMarkup, type AdoptedMarkup } from './csp-dom';
+import { t } from '../../shared/i18n';
+import type { DiagramReply, DiagramRequest } from './diagram-protocol';
 
-/** Mermaid, loaded on first use (it is large). Returns SVG that satisfies the CSP. */
-let counter = 0;
-let initializedFor: string | null = null;
+/**
+ * Renders Mermaid diagrams in a hidden iframe (see `mermaid-frame.ts`) and
+ * returns them as `data:` URLs for an `<img>`. The iframe is created on
+ * first use, so Mermaid (large) is only loaded when a note has a diagram.
+ */
+
+let frame: Promise<HTMLIFrameElement> | null = null;
+let nextId = 0;
+const pending = new Map<number, { resolve: (url: string) => void; reject: (error: Error) => void }>();
 
 function isDark(): boolean {
   return /dark|hcb/.test(document.documentElement.dataset.theme ?? '');
 }
 
-export async function renderDiagram(source: string): Promise<AdoptedMarkup> {
-  const { default: mermaid } = await import('mermaid');
-  const theme = isDark() ? 'dark' : 'default';
-  if (initializedFor !== theme) {
-    mermaid.initialize({
-      startOnLoad: false,
-      // "strict" encodes HTML in labels and disables click handlers.
-      securityLevel: 'strict',
-      theme,
-      fontFamily: '"72", Arial, sans-serif',
-      flowchart: { htmlLabels: false },
+function loadFrame(): Promise<HTMLIFrameElement> {
+  frame ??= new Promise((resolve) => {
+    const iframe = document.createElement('iframe');
+    iframe.className = 'diagram-renderer';
+    iframe.src = 'mermaid.html';
+    iframe.tabIndex = -1;
+    iframe.title = t('diagram.label');
+    iframe.setAttribute('aria-hidden', 'true');
+    window.addEventListener('message', (event: MessageEvent<DiagramReply>) => {
+      if (event.source !== iframe.contentWindow) return;
+      const reply = event.data;
+      if ('ready' in reply) {
+        resolve(iframe);
+        return;
+      }
+      const job = pending.get(reply.id);
+      if (!job) return;
+      pending.delete(reply.id);
+      if ('svg' in reply) job.resolve(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(reply.svg)}`);
+      else job.reject(new Error(reply.error));
     });
-    initializedFor = theme;
-  }
-  const id = `mdnotes-diagram-${++counter}`;
-  try {
-    const { svg } = await mermaid.render(id, source);
-    const adopted = adoptMarkup(svg, 'image/svg+xml');
-    if (!adopted) throw new Error('Invalid SVG');
-    return adopted;
-  } finally {
-    // On errors Mermaid leaves its temporary container in the page.
-    document.getElementById(`d${id}`)?.remove();
-  }
+    document.body.append(iframe);
+  });
+  return frame;
+}
+
+/** Returns the diagram as a `data:` URL with an SVG image. Rejects on invalid diagram code. */
+export async function renderDiagram(source: string): Promise<string> {
+  const iframe = await loadFrame();
+  const id = ++nextId;
+  const request: DiagramRequest = { id, source, theme: isDark() ? 'dark' : 'default' };
+  return new Promise((resolve, reject) => {
+    pending.set(id, { resolve, reject });
+    iframe.contentWindow?.postMessage(request, '*');
+  });
 }

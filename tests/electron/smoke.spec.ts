@@ -31,8 +31,8 @@ test.beforeAll(async () => {
 
   const asset = `${createHash('sha256').update(PIXEL_PNG).digest('hex').slice(0, 16)}.png`;
   await writeFile(path.join(workspace, 'assets', asset), PIXEL_PNG);
-  // Image, code block and task, so the editor's widgets render under the app's CSP.
-  await writeFile(path.join(workspace, 'hallo.md'), `# Hallo\n\n![Pixel](assets/${asset})\n\n- [ ] Aufgabe\n\n\`\`\`js\nconst a = 1;\n\`\`\`\n`);
+  // Image, code block, task and diagram, so the editor's widgets render under the app's CSP.
+  await writeFile(path.join(workspace, 'hallo.md'), `# Hallo\n\n![Pixel](assets/${asset})\n\n- [ ] Aufgabe\n\n\`\`\`js\nconst a = 1;\n\`\`\`\n\n\`\`\`mermaid\ngraph TD\n  A-->B\n\`\`\`\n`);
   // A note with unsaved text left over from a "crash".
   await writeFile(path.join(workspace, 'crash.md'), `---\nid: ${CRASH_ID}\nlabels: []\ncreated: 2026-10-01T10:00:00.000Z\n---\n# Crash\n`);
   await mkdir(path.join(userData, 'recovery'));
@@ -85,6 +85,14 @@ test('shows images through the asset protocol', async () => {
   const img = page.locator('img.cm-md-image');
   await expect(img).toHaveAttribute('src', /^mdnotes-asset:\/\/local\/[0-9a-f]{16}\.png$/);
   await expect.poll(() => img.evaluate((i: HTMLImageElement) => i.naturalWidth)).toBe(1);
+});
+
+test('renders a Mermaid diagram through the hidden frame', async () => {
+  await listItems().filter({ hasText: 'Hallo' }).click();
+  // Mermaid runs in mermaid.html, loaded from file:// next to the app (frame-src 'self').
+  const diagram = page.locator('.cm-md-diagram img');
+  await expect(diagram).toHaveAttribute('src', /^data:image\/svg\+xml/, { timeout: 15_000 });
+  await expect.poll(() => diagram.evaluate((i: HTMLImageElement) => i.naturalWidth)).toBeGreaterThan(0);
 });
 
 test('exports a note with its image as HTML and Word document', async () => {

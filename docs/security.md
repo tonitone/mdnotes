@@ -11,8 +11,13 @@
 
 ## Libraries that emit inline styles (KaTeX, Mermaid)
 
-The CSP forbids `style` attributes and `<style>` elements without a nonce. KaTeX and Mermaid
-produce both, so `src/renderer/editor/csp-dom.ts` parses their output in an inert document,
-removes the inline styles, applies them through the CSSOM and turns `<style>` elements into
-constructable style sheets. KaTeX is set to MathML output. Mermaid runs with `securityLevel: 'strict'`
-and without HTML labels. The CSP itself is not relaxed.
+The CSP forbids `style` attributes and `<style>` elements without a nonce. The CSP of the app is not relaxed.
+
+- KaTeX runs with MathML output. `src/renderer/editor/csp-dom.ts` moves any remaining inline
+  styles to the CSSOM and `<style>` elements to constructable style sheets.
+- Mermaid writes inline styles into the live DOM while it measures text. It therefore runs in a
+  hidden iframe (`src/renderer/mermaid.html`, `mermaid-frame.ts`) with its own policy
+  (`MERMAID_POLICY` in `vite-plugins/csp.ts`): inline styles are allowed there, scripts still only
+  come from the app, nothing else may be loaded. The app allows this one frame with `frame-src 'self'`.
+  The finished SVG comes back as a string and is shown as an `<img>` with a `data:` URL, so its styles
+  never reach the app's document. Mermaid runs with `securityLevel: 'strict'` and without HTML labels.

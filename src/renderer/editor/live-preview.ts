@@ -305,6 +305,8 @@ function buildDecorations(view: EditorView): DecorationSet {
           case 'Link': {
             const marks = node.node.getChildren('LinkMark');
             if (marks.length < 2) break;
+            // `[^id]` is a footnote mark (rich-preview.ts styles it), not a link: keep its brackets.
+            if (state.sliceDoc(marks[0].to, marks[0].to + 1) === '^' && !node.node.getChild('URL')) break;
             const textFrom = marks[0].to;
             const textTo = marks[1].from;
             if (textTo > textFrom) ranges.push(mark('cm-md-link').range(textFrom, textTo));
