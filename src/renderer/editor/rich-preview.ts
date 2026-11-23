@@ -4,7 +4,7 @@ import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, typ
 import { t } from '../../shared/i18n';
 import { findBlockMath, findFootnoteMarks, findInlineMath } from '../../shared/markdown/math';
 import { releaseSheets } from './csp-dom';
-import { renderDiagram } from './diagram-render';
+import { DiagramUnavailableError, renderDiagram } from './diagram-render';
 import { fenceDetails } from './live-preview';
 import { renderMath } from './math-render';
 
@@ -129,11 +129,11 @@ class DiagramWidget extends WidgetType {
         img.src = url;
         el.replaceChildren(img);
       })
-      .catch(() => {
-        // Invalid diagram code: say so and keep the source readable.
+      .catch((error: unknown) => {
+        // Invalid diagram code (or no renderer): say so and keep the source readable.
         el.classList.add('cm-md-diagram-error');
         const message = document.createElement('p');
-        message.textContent = t('diagram.error');
+        message.textContent = t(error instanceof DiagramUnavailableError ? 'diagram.unavailable' : 'diagram.error');
         const code = document.createElement('pre');
         code.textContent = this.source;
         el.replaceChildren(message, code);

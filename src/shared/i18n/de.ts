@@ -282,6 +282,7 @@ export const de = {
   'diagram.label': 'Diagramm (Mermaid)',
   'diagram.loading': 'Diagramm wird geladen …',
   'diagram.error': 'Das Diagramm enthält einen Fehler. Klicken, um den Quelltext zu bearbeiten.',
+  'diagram.unavailable': 'Das Diagramm kann gerade nicht dargestellt werden.',
   'footnote.back': 'Zurück zu Fußnote {n}',
   'code.copied': 'Code kopiert',
   'code.copyFailed': 'Kopieren nicht möglich',
