@@ -292,16 +292,24 @@ const overflowedFormats = (page: Page) =>
 async function expectAllButtonsInRow(page: Page) {
   await expect(overflowButton(page)).toBeHidden();
   await expect.poll(() => overflowedFormats(page)).toEqual([]);
-  const bar = (await toolbar(page).boundingBox())!;
   const buttons = toolbar(page).getByRole('button');
   await expect(buttons).toHaveCount(6);
-  for (const [i, box] of (await buttons.evaluateAll((nodes) => nodes.map((n) => n.getBoundingClientRect().toJSON()))).entries()) {
-    expect(box.width, `button ${i} width`).toBeGreaterThan(0);
-    expect(box.left, `button ${i} left`).toBeGreaterThanOrEqual(bar.x - 0.5);
-    expect(box.right, `button ${i} right`).toBeLessThanOrEqual(bar.x + bar.width + 0.5);
-    expect(box.top, `button ${i} top`).toBeGreaterThanOrEqual(bar.y - 0.5);
-    expect(box.bottom, `button ${i} bottom`).toBeLessThanOrEqual(bar.y + bar.height + 0.5);
-  }
+  // The columns may still be settling after a resize or a note was opened, so the
+  // toolbar and its buttons are measured together and the check is retried until
+  // the layout is stable.
+  await expect(async () => {
+    const bar = (await toolbar(page).boundingBox())!;
+    const boxes = await buttons.evaluateAll((nodes) => nodes.map((n) => n.getBoundingClientRect().toJSON()));
+    const after = (await toolbar(page).boundingBox())!;
+    expect(after, 'toolbar did not move while measuring').toEqual(bar);
+    for (const [i, box] of boxes.entries()) {
+      expect(box.width, `button ${i} width`).toBeGreaterThan(0);
+      expect(box.left, `button ${i} left`).toBeGreaterThanOrEqual(bar.x - 0.5);
+      expect(box.right, `button ${i} right`).toBeLessThanOrEqual(bar.x + bar.width + 0.5);
+      expect(box.top, `button ${i} top`).toBeGreaterThanOrEqual(bar.y - 0.5);
+      expect(box.bottom, `button ${i} bottom`).toBeLessThanOrEqual(bar.y + bar.height + 0.5);
+    }
+  }).toPass({ timeout: 5_000 });
 }
 
 test.describe('toolbar overflow', () => {
@@ -320,9 +328,11 @@ test.describe('toolbar overflow', () => {
     await page.setViewportSize({ width: 320, height: 640 });
     await openNote(page);
     await expect(toolbar(page)).toBeVisible();
-    const bar = (await toolbar(page).boundingBox())!;
-    expect(bar.x).toBeGreaterThanOrEqual(0);
-    expect(bar.x + bar.width).toBeLessThanOrEqual(320.5);
+    await expect(async () => {
+      const bar = (await toolbar(page).boundingBox())!;
+      expect(bar.x).toBeGreaterThanOrEqual(0);
+      expect(bar.x + bar.width).toBeLessThanOrEqual(320.5);
+    }).toPass({ timeout: 5_000 });
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(0);
     const overflowed = await overflowedFormats(page);
