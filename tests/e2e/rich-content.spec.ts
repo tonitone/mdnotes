@@ -32,10 +32,14 @@ test('math is rendered as MathML without CSP violations', async ({ page }) => {
   await expect(page.locator('.cm-md-math-block math')).toBeVisible();
 });
 
-test('a mermaid block is rendered as an SVG diagram', async ({ page }) => {
+test('a mermaid block is rendered as an SVG image', async ({ page }) => {
   await setText(page, '```mermaid\ngraph TD\n  A-->B\n```\n\nlast line');
-  await expect(page.locator('.cm-md-diagram svg')).toBeVisible({ timeout: 15_000 });
-  await expect(page.locator('.cm-md-diagram')).toHaveAttribute('role', 'img');
+  // Mermaid runs in a hidden iframe with its own CSP; the app shows the result as an image.
+  const image = page.locator('.cm-md-diagram img');
+  await expect(image).toBeVisible({ timeout: 15_000 });
+  await expect(image).toHaveAttribute('alt', 'Diagramm (Mermaid)');
+  await expect(image).toHaveAttribute('src', /^data:image\/svg\+xml/);
+  expect(await image.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
 });
 
 test('an invalid mermaid block shows an error and keeps the source', async ({ page }) => {

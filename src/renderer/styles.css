@@ -668,7 +668,18 @@ ui5-illustrated-message {
   padding: 0.5rem 0;
   color: var(--sapTextColor);
 }
-.cm-md-diagram svg { max-width: 100%; height: auto; }
+.cm-md-diagram img { max-width: 100%; height: auto; }
+/* Hidden Mermaid renderer (diagram-render.ts). It needs layout to measure text, so no display: none. */
+.diagram-renderer {
+  position: fixed;
+  inset-inline-start: -10000px;
+  top: 0;
+  width: 1200px;
+  height: 800px;
+  border: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
 .cm-md-diagram-error { text-align: start; color: var(--sapNegativeTextColor); }
 .cm-md-diagram-error pre {
   margin: 0.25rem 0 0;

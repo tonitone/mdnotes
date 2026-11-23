@@ -28,7 +28,9 @@ export default defineConfig({
     define: { __BROWSER_MODE__: 'false' },
     plugins: [cspPlugin()],
     build: {
-      rollupOptions: { input: { index: resolve(root, 'src/renderer/index.html') } },
+      rollupOptions: {
+        input: { index: resolve(root, 'src/renderer/index.html'), mermaid: resolve(root, 'src/renderer/mermaid.html') },
+      },
     },
   },
 });

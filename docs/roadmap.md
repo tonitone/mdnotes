@@ -67,7 +67,7 @@ Neue Issues werden auf Englisch geschrieben.
 
 ## Meilenstein Später
 
-- #28 Phase 5, Punkt 10: Mathe, Mermaid, Fußnoten (neue Pakete, strenge CSP beachten). Umgesetzt im PR; braucht `npm install` (katex, mermaid) für den Lockfile.
+- #28 Phase 5, Punkt 10: Mathe, Mermaid, Fußnoten (neue Pakete, strenge CSP beachten).
 - #29 Phase 5, Punkt 11: Anhänge außer Bildern, mit Größenlimit.
 - #30 Phase 5, Punkt 12: Mehrere Notizen in Tabs oder Fenstern.
 - #31 Backups verschlüsseln (optional).

@@ -107,7 +107,6 @@ function mathDecorations(state: EditorState): DecorationSet {
 // ---------------------------------------------------------------------------
 
 class DiagramWidget extends WidgetType {
-  private sheets: CSSStyleSheet[] = [];
   constructor(
     readonly source: string,
     /** UI5 theme at build time; Mermaid colours depend on it. */
@@ -121,20 +120,18 @@ class DiagramWidget extends WidgetType {
   toDOM(view: EditorView): HTMLElement {
     const el = document.createElement('div');
     el.className = 'cm-md-diagram';
-    el.setAttribute('role', 'img');
-    el.setAttribute('aria-label', t('diagram.label'));
     el.textContent = t('diagram.loading');
     renderDiagram(this.source)
-      .then((result) => {
-        this.sheets = result.sheets;
-        el.replaceChildren(result.node);
-        view.requestMeasure();
+      .then((url) => {
+        const img = document.createElement('img');
+        img.alt = t('diagram.label');
+        img.addEventListener('load', () => view.requestMeasure());
+        img.src = url;
+        el.replaceChildren(img);
       })
       .catch(() => {
         // Invalid diagram code: say so and keep the source readable.
         el.classList.add('cm-md-diagram-error');
-        el.removeAttribute('role');
-        el.removeAttribute('aria-label');
         const message = document.createElement('p');
         message.textContent = t('diagram.error');
         const code = document.createElement('pre');
@@ -143,9 +140,6 @@ class DiagramWidget extends WidgetType {
         view.requestMeasure();
       });
     return el;
-  }
-  destroy(): void {
-    releaseSheets(this.sheets);
   }
   ignoreEvent(): boolean {
     return false;
