@@ -655,7 +655,7 @@ ui5-illustrated-message {
   font-size: 0.9em;
 }
 
-/* Math, diagrams and footnotes (editor and preview) */
+/* Math and diagrams (editor), footnotes (editor and preview) */
 .cm-md-math { cursor: text; }
 .cm-md-math-block { display: block; text-align: center; overflow-x: auto; padding: 0.5rem 0; }
 .cm-md-math-error { color: var(--sapNegativeTextColor); }

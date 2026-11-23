@@ -19,7 +19,7 @@ export function adoptMarkup(markup: string, type: 'text/html' | 'image/svg+xml')
   if (!root || root.localName === 'parsererror') return null;
 
   // Scripts and event handlers must never survive, whatever the library emits.
-  root.querySelectorAll('script, foreignObject script').forEach((el) => el.remove());
+  root.querySelectorAll('script').forEach((el) => el.remove());
   for (const el of [root, ...root.querySelectorAll('*')]) {
     for (const attr of [...el.attributes]) {
       if (/^on/i.test(attr.name)) el.removeAttribute(attr.name);
