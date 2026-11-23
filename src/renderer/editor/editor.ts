@@ -10,6 +10,7 @@ import { assetResolver, livePreview, tablePreview } from './live-preview';
 import { diagramPreview, footnotePreview, mathPreview } from './rich-preview';
 import { getLocale, t } from '../../shared/i18n';
 import { cspNonce } from './csp';
+import { linkPreview, noteLinks, type LinkHandlers } from './wikilinks';
 import { tableKeymap } from './table-commands';
 import { formatCommand, formatKeymap, type FormatHooks } from './format-commands';
 import type { FormatKind, FormatOutcome } from './format';
@@ -82,6 +83,8 @@ export interface EditorOptions {
   onImagesInserted: (inserted: Array<{ from: number; path: string }>) => void;
   /** Called after a shortcut or toolbar action changed the text. */
   onFormat: (outcome: FormatOutcome) => void;
+  /** Notes a `[[link]]` can point to, and how to open one. */
+  links: LinkHandlers;
 }
 
 function imageFiles(data: DataTransfer | null): File[] {
@@ -118,7 +121,8 @@ export function createEditor(parent: HTMLElement, options: EditorOptions): NoteE
   };
   const preview = new Compartment();
   let previewOn = true;
-  const previewExtension = () => (previewOn ? [livePreview, tablePreview, mathPreview, diagramPreview, footnotePreview] : []);
+  const previewExtension = () =>
+    previewOn ? [livePreview, tablePreview, linkPreview, mathPreview, diagramPreview, footnotePreview] : [];
   const readOnlyExtension = (on: boolean) => [EditorState.readOnly.of(on), EditorView.editable.of(!on)];
 
   const extensions = (isReadOnly: boolean): Extension[] => [
@@ -131,6 +135,7 @@ export function createEditor(parent: HTMLElement, options: EditorOptions): NoteE
     markdown({ base: markdownLanguage, codeLanguages: languages, addKeymap: true }),
     syntaxHighlighting(codeHighlight),
     assetResolver.of(options.resolveAsset),
+    noteLinks(options.links),
     preview.of(previewExtension()),
     placeholder(t('editor.placeholder')),
     fioriTheme,

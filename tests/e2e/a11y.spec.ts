@@ -252,6 +252,25 @@ for (const theme of ['light', 'hcb'] as const) {
   });
 }
 
+for (const theme of ['light', 'dark', 'hcb', 'hcw'] as const) {
+  test(`note links: suggestions and "Linked from": theme ${theme}`, async ({ page }) => {
+    await page.addInitScript((value) => localStorage.setItem('mdnotes.theme', value), theme);
+    await openApp(page);
+    await openNote(page, 'Sprint-Planung');
+    await editor(page).click();
+    await page.keyboard.press('ControlOrMeta+End');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('[[Will');
+    await expect(page.locator('.cm-tooltip-autocomplete li')).toHaveCount(1);
+    await expectNoSeriousViolations(page, `link suggestions, ${theme}`);
+    await page.keyboard.press('Enter');
+    await page.keyboard.type(' x');
+    await page.locator('.cm-note-link').click();
+    await expect(page.locator('#backlinksRegion')).toBeVisible();
+    await expectNoSeriousViolations(page, `linked from, ${theme}`);
+  });
+}
+
 test('confirm dialog for permanent deletion', async ({ page }) => {
   await openApp(page);
   await openNote(page, 'Einkauf');
