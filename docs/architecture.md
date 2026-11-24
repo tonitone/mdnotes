@@ -11,14 +11,15 @@ src/
     note-store.ts   Save, rename, labels, search, trash, import, change detection
     history.ts      Versions in .history/<id>/ with retention rules
     fs-port.ts      File system interface + MemoryFs
+    workspace-path.ts Relative note paths: validation, skipped folders, depth limit
     assets.ts       Images in assets/ (name from the content hash)
     markdown/       Parser and export to wiki markup and HTML
     api.ts          Interface between the UI and the file system
     i18n/           Language files (de.ts defines the keys, en.ts must have all of them)
   main/           Electron main process: window, menu, IPC, security
-    workspace.ts    Workspace with file watcher
+    workspace.ts    Workspace with file watcher (recursive; on Linux one watcher per scanned folder)
     transfer.ts     Export (Markdown, wiki, PDF) and import
-    node-fs.ts      File system access, limited to the workspace
+    node-fs.ts      File system access, limited to the workspace (recursive scan, symbolic links)
     backup.ts       Backups with manifest, verify, restore
     zip.ts          Read and write ZIP (no dependencies, with Zip Slip protection)
     recovery.ts     Emergency files for unsaved text (in the app profile)

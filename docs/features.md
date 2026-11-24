@@ -3,6 +3,10 @@
 The detailed feature list. The README has the short version.
 
 - Create notes, title from the first line, autosave, file name follows the title
+- Notes from subfolders of the workspace appear in the same flat list, with their folder in front of the preview
+  (hidden folders, `assets/` in the root and `node_modules/` are skipped, at most 10 levels deep).
+  Symbolic links to notes or folders are followed, also outside the workspace; saving keeps the link.
+  New notes go into the root, renaming keeps a note in its folder, restoring from the trash puts it into the root
 - Live preview: headings, emphasis, links, lists, tasks, quotes, images, tables
 - Formatting toolbar and shortcuts (Cmd/Ctrl+B, I, K, Shift+X)
 - Labels with suggestions, filter by label in the library, rename or merge labels across all notes
@@ -18,9 +22,10 @@ The detailed feature list. The README has the short version.
 - Keyboard shortcut overview (Cmd/Ctrl+/)
 - Export a note as Markdown (with images), Jira/Confluence wiki markup or PDF;
   wiki markup and Markdown also straight to the clipboard
-- Export all notes to a new folder, import Markdown files (from the menu with image import,
+- Export all notes to a new folder (with their subfolders), import Markdown files (from the menu with image import,
   or by dragging them into the window)
-- Changes from outside (another editor, a sync tool) are detected; on simultaneous
+- Changes from outside (another editor, a sync tool) are detected, also in subfolders and, when the window
+  regains focus, in linked files outside the workspace; on simultaneous
   editing the app asks which version wins
 - Themes light, dark and two high-contrast variants, density compact or cozy
 - Versions: created automatically after a pause in editing, compare old against current,
