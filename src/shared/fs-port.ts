@@ -1,13 +1,20 @@
+import { isScannedPath, isValidRelativePath } from './workspace-path';
+
 /**
  * Minimal file system interface for a workspace folder.
  *
- * Notes are files directly inside the workspace. Three subfolders are
- * managed by the app: `.trash/` for deleted notes, `assets/` for images and
- * `.history/<id>/` for versions. All names
- * passed in are plain file names, never paths.
+ * Notes are files anywhere in the workspace. Their names are paths relative
+ * to the workspace root with `/` as separator on every platform (see
+ * `workspace-path.ts`). Three folders are managed by the app and never
+ * scanned for notes: `.trash/` for deleted notes, `assets/` for images and
+ * `.history/<id>/` for versions. Names inside those are plain file names.
  */
 export interface FsPort {
-  /** File names (no subfolders) in the workspace. */
+  /**
+   * Relative paths of all files in the workspace and its subfolders, without
+   * skipped folders (hidden folders, root `assets/`, `node_modules/`) and
+   * without folders nested deeper than `MAX_FOLDER_DEPTH`.
+   */
   list(): Promise<string[]>;
   read(name: string): Promise<string>;
   /** Last modification in milliseconds. */
@@ -73,6 +80,12 @@ export class MemoryFs implements FsPort {
     return this.caseInsensitive ? name.toLowerCase() : name;
   }
 
+  /** Same rule as `NodeFs`: workspace-relative paths only. */
+  private check(name: string): string {
+    if (!isValidRelativePath(name)) throw new Error(`Invalid file name: ${name}`);
+    return name;
+  }
+
   private tick(): number {
     this.clock = Math.max(this.clock + 1, Date.now());
     return this.clock;
@@ -85,7 +98,7 @@ export class MemoryFs implements FsPort {
   }
 
   async list(): Promise<string[]> {
-    return [...this.files.values()].map((f) => f.name);
+    return [...this.files.values()].map((f) => f.name).filter(isScannedPath);
   }
 
   async read(name: string): Promise<string> {
@@ -101,16 +114,19 @@ export class MemoryFs implements FsPort {
   }
 
   async create(name: string, text: string): Promise<void> {
+    this.check(name);
     if (this.files.has(this.key(name))) throw new FileExistsError(name);
     this.files.set(this.key(name), { name, text, mtime: this.tick() });
   }
 
   async writeAtomic(name: string, text: string): Promise<void> {
+    this.check(name);
     const existing = this.files.get(this.key(name));
     this.files.set(this.key(name), { name: existing?.name ?? name, text, mtime: this.tick() });
   }
 
   async rename(from: string, to: string): Promise<void> {
+    this.check(to);
     const f = this.get(this.files, from);
     const sameFile = this.key(from) === this.key(to);
     if (!sameFile && this.files.has(this.key(to))) throw new FileExistsError(to);
@@ -134,6 +150,7 @@ export class MemoryFs implements FsPort {
   }
 
   async restoreFromTrash(trashName: string, name: string): Promise<void> {
+    this.check(name);
     const f = this.get(this.trash, trashName);
     if (this.files.has(this.key(name))) throw new FileExistsError(name);
     this.trash.delete(this.key(trashName));
