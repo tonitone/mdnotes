@@ -9,6 +9,7 @@ import { VERSION_NAME_RE } from '../shared/history';
 import { isLanguageChoice, resolveLocale, setLocale, t, type LanguageChoice } from '../shared/i18n';
 import { isNoteId } from '../shared/note';
 import { DEFAULT_NOTE_SORT, isNoteSort, type NoteSort } from '../shared/note-list';
+import { isValidRelativePath } from '../shared/workspace-path';
 import {
   assertBackupFolder,
   backupNotes,
@@ -269,7 +270,9 @@ function requireBackupName(name: unknown): string {
 }
 
 function requireNotePaths(paths: unknown): string[] {
-  if (!Array.isArray(paths) || paths.length > 10_000 || !paths.every((p) => typeof p === 'string' && /^[^/\\]+\.md$/i.test(p))) {
+  // Paths inside a backup, relative and with `/` (notes may lie in subfolders).
+  const valid = (p: unknown) => typeof p === 'string' && p.length <= 1000 && /\.md$/i.test(p) && isValidRelativePath(p);
+  if (!Array.isArray(paths) || paths.length > 10_000 || !paths.every(valid)) {
     throw new Error('Invalid note paths.');
   }
   return paths;
@@ -507,6 +510,9 @@ function createWindow(): void {
   });
 
   mainWindow.once('ready-to-show', () => mainWindow?.show());
+  // Watchers do not report edits to linked notes outside the workspace:
+  // look again whenever the user comes back to the app.
+  mainWindow.on('focus', () => workspace?.refreshSoon());
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     // Links in notes open in the default browser, never inside the app.

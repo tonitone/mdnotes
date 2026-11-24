@@ -150,8 +150,13 @@ export async function exportAll(ws: Workspace, parent: BrowserWindow): Promise<s
   await mkdir(folder); // not recursive: fails instead of writing into an existing folder
   for (const note of ws.store.summaries()) {
     const text = ws.store.fileText(note.id);
-    await writeFile(path.join(folder, note.fileName), text, { encoding: 'utf8', flag: 'wx' });
-    await copyAssets(ws, text, folder);
+    // Keep the folder structure, so notes with the same file name in two
+    // folders do not collide. Images go next to each note's folder, so the
+    // relative links `assets/…` keep working.
+    const target = path.join(folder, ...note.fileName.split('/'));
+    await mkdir(path.dirname(target), { recursive: true });
+    await writeFile(target, text, { encoding: 'utf8', flag: 'wx' });
+    await copyAssets(ws, text, path.dirname(target));
   }
   return folder;
 }

@@ -142,6 +142,32 @@ describe('backup', () => {
     await assert.rejects(restoreToFolder(folder, info.file, target), /nicht leer/);
   });
 
+  it('round-trips notes from subfolders and leaves skipped folders out', async () => {
+    await mkdir(path.join(workspace, 'projekte', '2026'), { recursive: true });
+    await mkdir(path.join(workspace, '.git'));
+    await writeFile(path.join(workspace, 'projekte', '2026', 'plan.md'), '# Plan\n');
+    await writeFile(path.join(workspace, '.git', 'intern.md'), '# Intern\n');
+    const info = await createBackup(workspace, folder, { kind: 'manual', includeHistory: false, keep: 10 });
+    assert.deepEqual(
+      (await backupNotes(folder, info.file)).map((n) => n.path),
+      ['eins.md', 'projekte/2026/plan.md', 'zwei.md'],
+    );
+
+    const target = path.join(root, 'restored');
+    await restoreToFolder(folder, info.file, target);
+    assert.equal(await readFile(path.join(target, 'projekte', '2026', 'plan.md'), 'utf8'), '# Plan\n');
+
+    // Single notes from a subfolder come back as a new note in the root.
+    const other = path.join(root, 'other');
+    await mkdir(other);
+    const fs = new NodeFs(other);
+    const store = new NoteStore(fs);
+    await store.scan();
+    const report = await restoreNotes(store, fs, folder, info.file, ['projekte/2026/plan.md']);
+    assert.deepEqual(report, { imported: 1, skipped: 0, warnings: [] });
+    assert.ok(store.summaries().every((n) => !n.fileName.includes('/')));
+  });
+
   it('rejects invalid backup names', async () => {
     await assert.rejects(restoreToFolder(folder, '../evil.zip', path.join(root, 'x')), /Invalid backup name/);
   });

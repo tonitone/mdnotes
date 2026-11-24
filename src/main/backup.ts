@@ -6,9 +6,10 @@ import { ASSET_DIR, isAssetName, referencedAssets } from '../shared/assets';
 import { HISTORY_DIR, VERSION_NAME_RE } from '../shared/history';
 import { isNoteId, parseNote, titleFromBody } from '../shared/note';
 import type { NoteStore } from '../shared/note-store';
-import type { NodeFs } from './node-fs';
 import { createZip, readZip, type ZipEntry } from './zip';
 import { t } from '../shared/i18n';
+import { isNotePath } from '../shared/workspace-path';
+import { NodeFs } from './node-fs';
 
 /**
  * Backups of a workspace as ZIP files with a manifest of SHA-256 checksums.
@@ -68,8 +69,10 @@ export async function collectWorkspace(root: string, includeHistory: boolean): P
     const stat = await fsp.stat(file);
     entries.push({ path: rel, data: new Uint8Array(await fsp.readFile(file)), mtime: stat.mtime });
   };
-  for (const e of await readDirSafe(root)) {
-    if (e.isFile() && !e.name.startsWith('.') && e.name.toLowerCase().endsWith('.md')) await add(e.name);
+  // Notes from all scanned subfolders, with their relative paths. Linked
+  // notes are stored with the content of their target.
+  for (const rel of await new NodeFs(root).list()) {
+    if (isNotePath(rel)) await add(rel);
   }
   for (const e of await readDirSafe(path.join(root, ASSET_DIR))) {
     if (e.isFile() && isAssetName(e.name)) await add(`${ASSET_DIR}/${e.name}`);
@@ -176,7 +179,7 @@ export async function createBackup(
 export async function backupNotes(folder: string, name: string): Promise<Array<{ path: string; title: string }>> {
   const { files } = await readBackup(folder, name);
   return [...files.entries()]
-    .filter(([p]) => !p.includes('/') && p.toLowerCase().endsWith('.md'))
+    .filter(([p]) => isNotePath(p))
     .map(([p, data]) => ({ path: p, title: titleFromBody(parseNote(Buffer.from(data).toString('utf8')).body) }))
     .sort((a, b) => a.title.localeCompare(b.title));
 }
@@ -190,7 +193,7 @@ export async function restoreNotes(store: NoteStore, fs: NodeFs, folder: string,
   const report: ImportReport = { imported: 0, skipped: 0, warnings: [] };
   for (const p of paths) {
     const data = files.get(p);
-    if (!data || p.includes('/')) {
+    if (!data || !isNotePath(p)) {
       report.warnings.push(t('main.notInBackup', { path: p }));
       continue;
     }
