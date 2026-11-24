@@ -654,3 +654,48 @@ ui5-illustrated-message {
   font-family: var(--sapContent_MonospaceFontFamily, monospace);
   font-size: 0.9em;
 }
+
+/* Math and diagrams (editor), footnotes (editor and preview) */
+.cm-md-math { cursor: text; }
+.cm-md-math-block { display: block; text-align: center; overflow-x: auto; padding: 0.5rem 0; }
+.cm-md-math-error { color: var(--sapNegativeTextColor); }
+
+.cm-md-diagram {
+  display: block;
+  text-align: center;
+  overflow-x: auto;
+  cursor: text;
+  padding: 0.5rem 0;
+  color: var(--sapTextColor);
+}
+.cm-md-diagram img { max-width: 100%; height: auto; }
+/* Hidden Mermaid renderer (diagram-render.ts). It needs layout to measure text, so no display: none. */
+.diagram-renderer {
+  position: fixed;
+  inset-inline-start: -10000px;
+  top: 0;
+  width: 1200px;
+  height: 800px;
+  border: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.cm-md-diagram-error { text-align: start; color: var(--sapNegativeTextColor); }
+.cm-md-diagram-error pre {
+  margin: 0.25rem 0 0;
+  white-space: pre-wrap;
+  font-family: var(--sapContent_MonospaceFontFamily, monospace);
+  color: var(--sapTextColor);
+}
+
+.cm-md-footnote-ref {
+  color: var(--sapLinkColor);
+  font-size: 0.75em;
+  vertical-align: super;
+  line-height: 0;
+}
+.cm-md-footnote-def { color: var(--sapLinkColor); font-weight: bold; }
+
+.preview .footnotes { font-size: 0.9em; color: var(--sapContent_LabelColor); }
+.preview .footnotes ol { padding-inline-start: 1.5rem; }
+.preview .footnote-ref { font-size: 0.75em; line-height: 0; }

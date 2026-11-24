@@ -17,5 +17,11 @@ export default defineConfig({
   server: { port: 5173, strictPort: true, host: '127.0.0.1' },
   // Tests run against the production build (strict CSP, as in the app).
   preview: { port: 5173, strictPort: true, host: '127.0.0.1' },
-  build: { outDir: resolve(root, 'out/browser'), emptyOutDir: true },
+  build: {
+    outDir: resolve(root, 'out/browser'),
+    emptyOutDir: true,
+    rollupOptions: {
+      input: { index: resolve(root, 'src/renderer/index.html'), mermaid: resolve(root, 'src/renderer/mermaid.html') },
+    },
+  },
 });

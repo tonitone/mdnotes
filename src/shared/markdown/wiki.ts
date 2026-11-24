@@ -83,6 +83,9 @@ function renderInline(nodes: Inline[]): string {
         out += label && label !== escapeText(node.href) ? `[${label}|${href}]` : `[${href}]`;
         break;
       }
+      case 'footnote':
+        out += `^${node.number}^`;
+        break;
       case 'image': {
         const src = /^[a-z]+:/i.test(node.src) ? node.src : fileName(node.src);
         const alt = node.alt.replace(/[|!]/g, '');
@@ -129,6 +132,9 @@ function renderBlock(block: Block): string {
     }
     case 'hr':
       return '----';
+    case 'footnotes':
+      // Jira wiki markup has no footnotes: a rule and numbered lines with superscript numbers.
+      return `----\n${block.items.map((f) => `^${f.number}^ ${renderInline(f.content)}`).join('\n')}`;
   }
 }
 

@@ -14,12 +14,35 @@ import type { Plugin } from 'vite';
  *   no network access, and Chromium hides nonces from CSS selectors.
  * - The Vite dev server injects CSS as <style> tags, so dev mode allows
  *   inline styles (and sets no nonce, which would disable 'unsafe-inline').
+ * - Frames only from the app: the hidden Mermaid page (see MERMAID_POLICY).
  * - No outbound connections. In dev mode also a WebSocket to the local
  *   Vite server for hot reload.
  *
  * Violations are logged and collected by src/renderer/csp-report.ts; the
  * e2e and Electron tests fail on any violation.
  */
+/**
+ * Mermaid writes style attributes and <style> elements while it lays out a
+ * diagram, so it runs in a hidden iframe with this policy: inline styles are
+ * allowed there, scripts still only come from the app. Nothing else may be
+ * loaded or embedded. The finished SVG goes to the app as an image.
+ */
+const MERMAID_POLICY = [
+  "default-src 'none'",
+  "script-src 'self'",
+  "script-src-attr 'none'",
+  "style-src 'self' 'unsafe-inline'",
+  "style-src-attr 'unsafe-inline'",
+  "img-src data:",
+  "font-src 'self' data:",
+  "connect-src 'self'",
+  "base-uri 'none'",
+  "form-action 'none'",
+  "object-src 'none'",
+  "frame-src 'none'",
+  "worker-src 'none'",
+].join('; ');
+
 export function cspPlugin(): Plugin {
   let isDev = false;
   const nonce = randomBytes(18).toString('base64');
@@ -28,7 +51,11 @@ export function cspPlugin(): Plugin {
     configResolved(config) {
       isDev = config.command === 'serve';
     },
-    transformIndexHtml() {
+    transformIndexHtml(_html, ctx) {
+      // The hidden Mermaid page (mermaid.html) gets its own, narrower policy.
+      if (ctx.path.endsWith('/mermaid.html')) {
+        return [{ tag: 'meta', attrs: { 'http-equiv': 'Content-Security-Policy', content: MERMAID_POLICY }, injectTo: 'head-prepend' }];
+      }
       const policy = [
         "default-src 'none'",
         "script-src 'self'",
@@ -41,7 +68,7 @@ export function cspPlugin(): Plugin {
         "base-uri 'none'",
         "form-action 'none'",
         "object-src 'none'",
-        "frame-src 'none'",
+        "frame-src 'self'",
         "worker-src 'none'",
       ].join('; ');
       return [

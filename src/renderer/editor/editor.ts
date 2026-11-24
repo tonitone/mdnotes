@@ -7,6 +7,7 @@ import { Compartment, EditorState, Prec, type Extension } from '@codemirror/stat
 import { drawSelection, EditorView, keymap, placeholder } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
 import { assetResolver, livePreview, tablePreview } from './live-preview';
+import { diagramPreview, footnotePreview, mathPreview } from './rich-preview';
 import { getLocale, t } from '../../shared/i18n';
 import { cspNonce } from './csp';
 import { linkPreview, noteLinks, type LinkHandlers } from './wikilinks';
@@ -120,7 +121,8 @@ export function createEditor(parent: HTMLElement, options: EditorOptions): NoteE
   };
   const preview = new Compartment();
   let previewOn = true;
-  const previewExtension = () => (previewOn ? [livePreview, tablePreview, linkPreview] : []);
+  const previewExtension = () =>
+    previewOn ? [livePreview, tablePreview, linkPreview, mathPreview, diagramPreview, footnotePreview] : [];
   const readOnlyExtension = (on: boolean) => [EditorState.readOnly.of(on), EditorView.editable.of(!on)];
 
   const extensions = (isReadOnly: boolean): Extension[] => [

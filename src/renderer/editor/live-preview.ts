@@ -71,9 +71,9 @@ const CODE_LANGUAGES: Array<[string, string]> = [
   ['yaml', 'YAML'],
 ];
 
-type SyntaxNode = ReturnType<ReturnType<typeof syntaxTree>['resolveInner']>;
+export type SyntaxNode = ReturnType<ReturnType<typeof syntaxTree>['resolveInner']>;
 
-interface FenceDetails {
+export interface FenceDetails {
   lang: string;
   /** Where the language (info string) is, or an empty range right after the fence. */
   infoFrom: number;
@@ -82,7 +82,7 @@ interface FenceDetails {
 }
 
 /** Language, info range and code of a `FencedCode` node. */
-function fenceDetails(state: EditorState, node: SyntaxNode): FenceDetails {
+export function fenceDetails(state: EditorState, node: SyntaxNode): FenceDetails {
   const first = state.doc.lineAt(node.from);
   const last = state.doc.lineAt(node.to);
   const info = node.getChild('CodeInfo');
@@ -305,6 +305,8 @@ function buildDecorations(view: EditorView): DecorationSet {
           case 'Link': {
             const marks = node.node.getChildren('LinkMark');
             if (marks.length < 2) break;
+            // `[^id]` is a footnote mark (rich-preview.ts styles it), not a link: keep its brackets.
+            if (state.sliceDoc(marks[0].to, marks[0].to + 1) === '^' && !node.node.getChild('URL')) break;
             const textFrom = marks[0].to;
             const textTo = marks[1].from;
             if (textTo > textFrom) ranges.push(mark('cm-md-link').range(textFrom, textTo));

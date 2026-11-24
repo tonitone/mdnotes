@@ -32,3 +32,8 @@ The detailed feature list. The README has the short version.
 - Labels can be renamed or merged across all notes
 - UI in German or English (follows the system or is set under Appearance → Language),
   layout prepared for right-to-left languages
+- Math: `$x^2$` inline and `$$ ... $$` as a block, rendered with KaTeX as MathML (no fonts, no CSS,
+  no inline styles). Diagrams: a fenced block with the language `mermaid` is rendered as SVG.
+  Both are loaded on first use and replace the source while the cursor is elsewhere.
+  Footnotes: `[^id]` and `[^id]: text`, numbered by first reference in HTML, PDF, Word and wiki export.
+  Math and diagrams are not rendered in the exports yet (the source stays as text or code).
