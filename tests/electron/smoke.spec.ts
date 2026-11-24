@@ -33,6 +33,9 @@ test.beforeAll(async () => {
   await writeFile(path.join(workspace, 'assets', asset), PIXEL_PNG);
   // Image, code block, task and diagram, so the editor's widgets render under the app's CSP.
   await writeFile(path.join(workspace, 'hallo.md'), `# Hallo\n\n![Pixel](assets/${asset})\n\n- [ ] Aufgabe\n\n\`\`\`js\nconst a = 1;\n\`\`\`\n\n\`\`\`mermaid\ngraph TD\n  A-->B\n\`\`\`\n`);
+  // A note in a subfolder: the workspace is scanned recursively.
+  await mkdir(path.join(workspace, 'projekte'));
+  await writeFile(path.join(workspace, 'projekte', 'unterordner.md'), '# Im Unterordner\n');
   // A note with unsaved text left over from a "crash".
   await writeFile(path.join(workspace, 'crash.md'), `---\nid: ${CRASH_ID}\nlabels: []\ncreated: 2026-10-01T10:00:00.000Z\n---\n# Crash\n`);
   await mkdir(path.join(userData, 'recovery'));
@@ -65,6 +68,12 @@ test('starts with the configured workspace', async () => {
   // The visible path is shortened; the full path is the tooltip.
   await expect(page.locator('#workspacePath')).toHaveAttribute('title', workspace, { timeout: 20_000 });
   await expect(listItems().filter({ hasText: 'Hallo' })).toHaveCount(1);
+});
+
+test('lists a note from a subfolder with its folder', async () => {
+  const item = listItems().filter({ hasText: 'Im Unterordner' });
+  await expect(item).toHaveCount(1);
+  await expect(item).toHaveAttribute('tooltip', 'projekte/unterordner.md');
 });
 
 test('offers unsaved text left over from a crash', async () => {

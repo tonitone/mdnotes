@@ -169,6 +169,19 @@ for (const theme of ['light', 'hcb'] as const) {
   });
 }
 
+// A note from a subfolder: its folder is part of the list item's description
+test('note list with a note from a subfolder', async ({ page }) => {
+  await openApp(page);
+  await page.evaluate(() =>
+    (window as unknown as { __mdnotesExternalFile: (path: string, text: string) => Promise<void> }).__mdnotesExternalFile(
+      'projekte/2026/plan.md',
+      '# Quartalsplan\n\nZiele festhalten',
+    ),
+  );
+  await expect(listItems(page).filter({ hasText: 'Quartalsplan' })).toContainText('projekte/2026');
+  await expectNoSeriousViolations(page, 'note from a subfolder');
+});
+
 // ---------------------------------------------------------------------------
 // Menus and dialogs
 // ---------------------------------------------------------------------------

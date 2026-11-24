@@ -38,6 +38,7 @@ export const de = {
   'notes.empty': 'Noch keine Notizen',
   'notes.noHits': 'Keine Treffer',
   'notes.noText': 'Kein weiterer Text',
+  'notes.inFolder': '{folder} · {text}',
   'notes.sort': 'Sortieren',
   'notes.sortCurrent': 'Sortieren: {order}',
   'notes.pin': 'Anheften',

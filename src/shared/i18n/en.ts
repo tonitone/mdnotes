@@ -31,6 +31,7 @@ export const en: Messages = {
   'notes.empty': 'No notes yet',
   'notes.noHits': 'No results',
   'notes.noText': 'No additional text',
+  'notes.inFolder': '{folder} · {text}',
   'notes.sort': 'Sort',
   'notes.sortCurrent': 'Sort: {order}',
   'notes.pin': 'Pin',
