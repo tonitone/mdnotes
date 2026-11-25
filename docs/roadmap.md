@@ -27,12 +27,13 @@ Neue Issues werden auf Englisch geschrieben.
 
 **Arbeitsweise:**
 
-- Pro Issue ein Agent mit Sonnet (Umsetzung). Reviews und Planung laufen mit Opus.
+- Modelle und Rollen regelt `AGENTS.md` (Regel 7): Umsetzung und Planung mit Opus, Review durch einen GPT-Agenten,
+  beides mit hohem Effort.
 - Höchstens zwei Agenten gleichzeitig, große Issues teilen.
 - Fehlersuche höchstens zwei CI-Runden. Danach melden statt weiter probieren.
-- Die stündliche Aufgabe „mdnotes PR review and fix loop“ (werktags 11 bis 22 Uhr) reviewt, korrigiert
-  und mergt PRs mit `Closes #n`. Agenten setzen ihre PRs nach grüner CI selbst auf bereit.
-- PRs mit neuen Paketen (`package.json`, `package-lock.json`) mergt sie seit 24. November 2026 auch selbst,
+- Der GPT-Reviewer reviewt, korrigiert und mergt PRs mit `Closes #n`. Die frühere Aufgabe
+  „mdnotes PR review and fix loop“ gibt es nicht mehr. Agenten setzen ihre PRs nach grüner CI selbst auf bereit.
+- PRs mit neuen Paketen (`package.json`, `package-lock.json`) mergt er seit 24. November 2026 auch selbst,
   wenn das Lockfile geprüft ist: nur die neuen Pakete, keine bestehende Version geändert, alles von
   registry.npmjs.org. Änderungen an Workflows unter `.github/` und an der Release-Konfiguration bleiben bei Toni.
 
