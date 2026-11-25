@@ -27,14 +27,35 @@ Neue Issues werden auf Englisch geschrieben.
 
 **Arbeitsweise:**
 
-- Pro Issue ein Agent mit Sonnet (Umsetzung). Reviews und Planung laufen mit Opus.
+- Pro Issue ein Agent mit Sonnet (Umsetzung). Reviews und Planung laufen mit Opus (siehe „Modellregeln“ unten).
 - Höchstens zwei Agenten gleichzeitig, große Issues teilen.
 - Fehlersuche höchstens zwei CI-Runden. Danach melden statt weiter probieren.
-- Die stündliche Aufgabe „mdnotes PR review and fix loop“ (werktags 11 bis 22 Uhr) reviewt, korrigiert
+- Die Aufgabe „mdnotes PR review and fix loop“ (werktags, ungerade Stunden, siehe „Automatisierung“) reviewt, korrigiert
   und mergt PRs mit `Closes #n`. Agenten setzen ihre PRs nach grüner CI selbst auf bereit.
 - PRs mit neuen Paketen (`package.json`, `package-lock.json`) mergt sie seit 24. November 2026 auch selbst,
   wenn das Lockfile geprüft ist: nur die neuen Pakete, keine bestehende Version geändert, alles von
   registry.npmjs.org. Änderungen an Workflows unter `.github/` und an der Release-Konfiguration bleiben bei Toni.
+
+## Automatisierung
+
+Zwei geplante Aufgaben arbeiten die Roadmap ab:
+
+| Aufgabe | Zeitplan (werktags) | Modell | Aufgabe |
+| --- | --- | --- | --- |
+| mdnotes issue implementer | gerade Stunden, Minute 41 | Sonnet | Setzt das nächste Issue um und öffnet einen PR mit `Closes #n`. |
+| mdnotes PR review and fix loop | ungerade Stunden, Minute 11 | Opus | Reviewt PRs, korrigiert, mergt bei grüner CI. |
+
+**Modellregeln:** Umsetzung läuft auf Sonnet, Reviews auf Opus, Planung (Roadmap, Aufteilen großer Issues) auf Opus.
+Wer ein Issue umsetzt, reviewt es nicht selbst.
+
+**Abgebrochene CI-Jobs:** Wird ein Job abgebrochen („not acquired by Runner“, meist macOS), startet
+`.github/workflows/rerun-cancelled.yml` den Lauf einmal neu. Ein zweiter Abbruch wird gemeldet, nicht erneut gestartet.
+
+**Offene Entscheidungen:** Braucht ein Issue oder PR eine Entscheidung von Toni, setzt der Agent das Label
+`needs-owner-decision` und schreibt einen Kommentar mit der Frage und den Optionen. Nach der Antwort entfernt er das Label.
+
+**Installer:** Der Job „Build installers“ läuft bei jedem Push auf `main` ohne Abhängigkeit von der Test-Matrix,
+damit ein abgebrochener Testjob keine macOS-Installer verhindert. Getestet wird vor dem Merge im PR.
 
 ## Meilenstein Phase 5.1: Design-Grundlage
 
