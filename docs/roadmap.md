@@ -29,7 +29,7 @@ Everything in the repository is written in English (see `CLAUDE.md`, "Way of wor
 
 - Models and roles are defined in `AGENTS.md` (rule 7): implementation and planning on Opus, review by a GPT agent,
   both at high effort.
-- The scheduled task "mdnotes issue implementer" runs on weekdays from 11:00 to 15:00 Europe/Berlin, one PR at a time.
+- The scheduled task "mdnotes issue implementer" runs on weekdays from 09:00 to 15:00 Europe/Berlin, one PR at a time.
   It subscribes to its PR and is woken by the reviewer's reviews, CI results and the merge, and starts the next issue
   right after a merge. The hourly run is only a fallback. No new issue is started after 15:00.
 - At most two agents at the same time; split large issues.
