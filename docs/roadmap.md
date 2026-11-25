@@ -1,102 +1,62 @@
 # Fahrplan
 
-Die geordnete Liste aller offenen Pakete: Phase 5 („Alltag und Komfort“) und die Design-Überarbeitung (D1 bis D7).
-Jeder Eintrag ist ein PR und ein GitHub-Issue. Toni bestimmt die Reihenfolge, dieses Dokument hält sie fest.
-Den Status zeigen die Issues und Meilensteine: Ein PR schließt sein Issue mit `Closes #n` in der Beschreibung.
+Die geordnete Liste der offenen Pakete. Jedes Paket ist ein GitHub-Issue und genau ein PR, der es mit `Closes #n` schließt.
+Toni ist Product Owner und Tester: Er legt Issues an, bestimmt die Reihenfolge und gibt frei. Den Status zeigen Issues und Labels.
 
 Hintergrund und Begründungen stehen in den claude.ai Artifacts „Plan: Markdown-Editor“ (Backlog Phase 5)
-und „Plan: Design-Überarbeitung mdnotes“.
+und „Plan: Design-Überarbeitung mdnotes“. Neue Issues werden auf Englisch geschrieben.
 
-## Stand (8. November 2026)
+## Stand (25. November 2026)
 
-Erledigt: #14 D1, #15 D3, #16 D7, #17 Formatierung und Leiste, #36, #37, #39, #45, #38 (Logo).
-Neue Issues werden auf Englisch geschrieben.
+Erledigt: Phase 5.1 bis 5.4 und die Design-Überarbeitung D1 bis D7 (#14 bis #28), dazu #36 bis #39, #45, #48, #53, #54,
+#69, #74 und #77. #29 (Anhänge) schließt PR #80.
 
-**Als Nächstes, in dieser Reihenfolge:**
+**Als Nächstes, in dieser Reihenfolge:** nichts freigegeben. Neue Issues ohne Label kommen nach Nummer dran.
 
-1. PR #52 (#18 Anheften, Sortieren, Datumsgruppen) fertigstellen. Der Agent brach am Sitzungslimit ab,
-   der PR ist ein Entwurf. CI prüfen (zuletzt war der macOS-Job abgebrochen), Lücken schließen,
-   dann mit `POST repos/tonitone/mdnotes/pulls/52/ccr/ready_for_review` auf bereit setzen.
-2. PR #50 (#48 scrollender Editor, axe) ist bereit. Er wartet auf Review und Merge der stündlichen Aufgabe.
-   Offen: Der Eintrag zur Zielgröße von `ui5-select` in `KNOWN_UI5_ISSUES` wird bei #21 nachgemessen.
-3. #53 (Bug): Eine zugeklappte Bibliotheksspalte geht beim Öffnen einer Notiz oder beim Logo-Klick wieder auf.
-   Sie soll zu bleiben, bis Toni sie wieder öffnet.
-4. #54: Der Logo-Klick soll im breiten Fenster die offene Notiz nicht schließen, sondern nur die Liste auf
-   „Alle Notizen“ stellen.
-5. Danach #19, #20 (Phase 5.2), #21 und #22 (Phase 5.3), dann Phase 5.4.
+**Zurückgestellt (Label `later`):**
 
-**Arbeitsweise:**
-
-- Pro Issue ein Agent mit Sonnet (Umsetzung). Reviews und Planung laufen mit Opus (siehe „Modellregeln“ unten).
-- Höchstens zwei Agenten gleichzeitig, große Issues teilen.
-- Fehlersuche höchstens zwei CI-Runden. Danach melden statt weiter probieren.
-- Die Aufgabe „mdnotes PR review and fix loop“ (werktags, ungerade Stunden, siehe „Automatisierung“) reviewt, korrigiert
-  und mergt PRs mit `Closes #n`. Agenten setzen ihre PRs nach grüner CI selbst auf bereit.
-- PRs mit neuen Paketen (`package.json`, `package-lock.json`) mergt sie seit 24. November 2026 auch selbst,
-  wenn das Lockfile geprüft ist: nur die neuen Pakete, keine bestehende Version geändert, alles von
-  registry.npmjs.org. Änderungen an Workflows unter `.github/` und an der Release-Konfiguration bleiben bei Toni.
+- #30 Mehrere Notizen in Tabs oder Fenstern (Phase 5, Punkt 12).
+- #31 Backups verschlüsseln (optional).
+- #32 Blockweises Wiederherstellen aus einer Version.
 
 ## Automatisierung
 
-Zwei geplante Aufgaben arbeiten die Roadmap ab:
+**Ablauf.** Ein Issue nach dem anderen:
 
-| Aufgabe | Zeitplan (werktags) | Modell | Aufgabe |
-| --- | --- | --- | --- |
-| mdnotes issue implementer | gerade Stunden, Minute 41 | Sonnet | Setzt das nächste Issue um und öffnet einen PR mit `Closes #n`. |
-| mdnotes PR review and fix loop | ungerade Stunden, Minute 11 | Opus | Reviewt PRs, korrigiert, mergt bei grüner CI. |
+1. Der Umsetzer nimmt das nächste freigegebene Issue, setzt es auf einem Branch `feat/…` oder `fix/…` um und öffnet einen PR mit `Closes #n`.
+2. Der Review-Agent reviewt den PR. Der Umsetzer behebt die Befunde, danach reviewt der Review-Agent erneut.
+3. Ist die CI grün und kein Befund mehr offen, mergt der Review-Agent den PR.
+4. Der Merge weckt den Umsetzer, und er nimmt sofort das nächste Issue.
 
-**Modellregeln:** Umsetzung läuft auf Sonnet, Reviews auf Opus, Planung (Roadmap, Aufteilen großer Issues) auf Opus.
-Wer ein Issue umsetzt, reviewt es nicht selbst.
+Solange ein PR offen ist, beginnt der Umsetzer nichts Neues. Die Kette wartet bewusst auf das Review.
+
+**Freigabe.** Freigegeben sind alle offenen Issues ohne die Labels `later` und `needs-owner-decision`.
+Zuerst kommen die Issues aus „Als Nächstes“ in dieser Reihenfolge, danach die übrigen nach Issue-Nummer.
+Toni gibt ein zurückgestelltes Issue frei, indem er `later` entfernt, und hält eines zurück, indem er `later` setzt.
+Issues zu den geplanten Aufgaben selbst (`chore(automation)`) nimmt der Umsetzer nicht. Sie werden mit Toni im Chat geklärt.
+
+| Rolle | Wer | Zeitplan |
+| --- | --- | --- |
+| Umsetzer | geplante Aufgabe „mdnotes issue implementer“, Claude Opus | werktags stündlich von 9 bis 14 Uhr (Europe/Berlin), dazu bei jedem Ereignis an seinem PR |
+| Review und Merge | GPT-Agent, markiert seine Reviews mit `<!-- reviewed-sha: <sha> -->` | eigener Zeitplan außerhalb dieses Repos |
+| Product Owner, Tester | Toni | legt Issues an, gibt frei, beantwortet offene Entscheidungen |
+
+Der stündliche Lauf ist der Fallback. Findet er kein freigegebenes Issue, endet er nach wenigen Sekunden mit „nichts zu tun“.
+Eine Änderung an einem Issue (neues Issue, `later` entfernt) greift also spätestens beim nächsten Lauf.
+
+**Regeln.**
+
+- Wer ein Issue umsetzt, reviewt es nicht selbst.
+- Fehlersuche höchstens zwei CI-Runden. Danach folgt eine offene Entscheidung statt weiterer Versuche.
+- **Offene Entscheidungen:** Braucht ein Issue oder PR eine Entscheidung von Toni, setzt der Agent das Label `needs-owner-decision`
+  und schreibt einen Kommentar mit der Frage und zwei bis drei Optionen. Nach Tonis Antwort entfernt er das Label und macht weiter.
+- **Neue Pakete** (`package.json`, `package-lock.json`) sind erlaubt, wenn das Lockfile geprüft ist: nur die neuen Pakete,
+  keine bestehende Version geändert, alles von registry.npmjs.org. Sonst ist es eine offene Entscheidung.
+- **Bei Toni bleiben** Änderungen an Workflows unter `.github/`, an der Release-Konfiguration und an `AGENTS.md`.
+  Solche PRs mergt der Review-Agent nicht.
 
 **Abgebrochene CI-Jobs:** Wird ein Job abgebrochen („not acquired by Runner“, meist macOS), startet
 `.github/workflows/rerun-cancelled.yml` den Lauf einmal neu. Ein zweiter Abbruch wird gemeldet, nicht erneut gestartet.
 
-**Offene Entscheidungen:** Braucht ein Issue oder PR eine Entscheidung von Toni, setzt der Agent das Label
-`needs-owner-decision` und schreibt einen Kommentar mit der Frage und den Optionen. Nach der Antwort entfernt er das Label.
-
 **Installer:** Der Job „Build installers“ läuft bei jedem Push auf `main` ohne Abhängigkeit von der Test-Matrix,
 damit ein abgebrochener Testjob keine macOS-Installer verhindert. Getestet wird vor dem Merge im PR.
-
-## Meilenstein Phase 5.1: Design-Grundlage
-
-1. #14 **D1 Split-Ansicht nach Spaltenbreite.** `@container` auf `.editor-column` statt `@media` auf das Fenster.
-2. #15 **D3 Sprachauswahl aus „Darstellung“.** Eigenes Shellbar-Symbol (Globus) mit flachem Menü. Es bleibt bei vier Shellbar-Einträgen,
-   Fallback bei Problemen ist ein Einstellungen-Dialog.
-3. #16 **D7 UI5 für alle Bedienelemente.** Code-Werkzeuge auf `ui5-select` und `ui5-button`. Aufgaben-Kästchen zuerst als Spike mit
-   `ui5-checkbox`, fällt er durch, bleibt das native Element und die Begründung kommt in `CLAUDE.md`.
-
-## Meilenstein Phase 5.2: Schreiben und Ordnen
-
-4. #17 **Phase 5, Punkt 1 zusammen mit D2.** Formatier-Kürzel (Cmd+B/I/K, Cmd+Shift+X) und Toolbar, dazu die neue Editor-Kopfzeile:
-   Dateiname raus, Menü „Weitere Aktionen“ mit „Dateiname kopieren“, Speicherstatus neben die Aktionen, `ui5-toolbar` mit Overflow.
-5. #18 **Phase 5, Punkt 2 zusammen mit D4.** Anheften und Sortieren (Entscheidung offen: `pinned` im Front Matter oder in `config.json`)
-   und Datumsgruppen wie in Apple Notes. Angeheftete Notizen bilden die erste Gruppe. Bei Suche und bei Sortierung nach Titel keine Gruppen.
-6. #19 **Phase 5, Punkt 3.** „Rückgängig“ nach dem Löschen.
-7. #20 **Phase 5, Punkt 4.** Tastenkürzel-Übersicht (Cmd+/).
-
-## Meilenstein Phase 5.3: Politur
-
-8. #21 **D5 Zielgrößen und Tokens.** Test für die Mindestgröße 24 × 24 px (WCAG 2.2 AA, 2.5.8), feste Rundungen durch Theme-Token ersetzen.
-   Kann früher zwischen die Features geschoben werden.
-9. #22 **D6 Bibliothek und Status.** Zähler an „Alle Notizen“, Workspace-Pfad vorne gekürzt, „Neue Notiz“ mit Text bei breiter Spalte und
-   nur als Symbol bei schmaler Spalte, Speicherstatus nach einigen Sekunden dezent. Kann früher eingeschoben werden.
-
-## Meilenstein Phase 5.4: Vernetzen
-
-- #23 Phase 5, Punkt 5: `[[Links]]` mit Rückverweisen (braucht vermutlich `@codemirror/autocomplete`, also Lockfile vom Mac).
-- #24 Phase 5, Punkt 6: Gliederung.
-- #25 Phase 5, Punkt 7: Tabellen bearbeiten (Rendern in der Live Preview ist mit PR #11 erledigt).
-- #26 Phase 5, Punkt 8: Wörter und Zeichen zählen.
-- #27 Phase 5, Punkt 9: Notiz duplizieren und Vorlagen (Eintrag „Duplizieren“ im Menü „Weitere Aktionen“ aus D2).
-
-## Meilenstein Später
-
-- #28 Phase 5, Punkt 10: Mathe, Mermaid, Fußnoten (neue Pakete, strenge CSP beachten).
-- #29 Phase 5, Punkt 11: Anhänge außer Bildern, mit Größenlimit.
-- #30 Phase 5, Punkt 12: Mehrere Notizen in Tabs oder Fenstern.
-- #31 Backups verschlüsseln (optional).
-- #32 Blockweises Wiederherstellen aus einer Version.
-
-## Vor D2 und D4
-
-Screenshots der App (hell, dunkel, Split-Ansicht) ansehen, damit der Entwurf nicht am Bild vorbei geht.

@@ -43,8 +43,8 @@ Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand
 - UI-Tests (`tests/e2e`) laufen gegen den Produktions-Build (`E2E_DEV=1` für den Dev-Server)
   und importieren `test`/`expect` aus `tests/e2e/fixtures.ts` (prüft CSP-Verstöße).
 - Offen: Backups verschlüsseln (optional, #31), blockweises Wiederherstellen aus einer Version (#32).
-- Nächstes: Alle offenen Pakete (Phase 5 und Design-Überarbeitung D1 bis D7) sind GitHub-Issues in den Meilensteinen
-  „Phase 5.1“ bis „Phase 5.4“ und „Später“. Die Reihenfolge steht in `docs/roadmap.md`, Toni entscheidet sie.
+- Nächstes: Offene Pakete sind GitHub-Issues. Reihenfolge, Freigabe (Label `later`) und der automatische Ablauf
+  (Umsetzer, Review-Agent, offene Entscheidungen mit `needs-owner-decision`) stehen in `docs/roadmap.md`.
   Ein PR pro Issue, die Beschreibung enthält `Closes #n`. Hintergrund: claude.ai Artifacts „Plan: Markdown-Editor“
   (Backlog Phase 5) und „Plan: Design-Überarbeitung mdnotes“.
 
