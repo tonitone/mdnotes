@@ -22,6 +22,7 @@ import { EditorView } from '@codemirror/view';
 import { extractOutline, type OutlineEntry } from '../shared/markdown/outline';
 import { countText } from '../shared/markdown/count';
 import { linksTo } from '../shared/wikilinks';
+import { folderOf } from '../shared/workspace-path';
 import { isShortcutsDialogOpen, openShortcutsDialog } from './shortcuts-dialog';
 import { createEditor, type NoteEditor } from './editor/editor';
 import { FORMAT_SHORTCUTS } from './editor/format-commands';
@@ -873,7 +874,10 @@ export class App {
   }
 
   private noteItem(note: NoteSummary & { snippet?: string }): Ui5Element {
-    const description = note.snippet ?? (note.preview || t('notes.noText'));
+    const text = note.snippet ?? (note.preview || t('notes.noText'));
+    // Notes from a subfolder name their folder first; root notes show nothing extra.
+    const folder = folderOf(note.fileName);
+    const description = folder ? t('notes.inFolder', { folder, text }) : text;
     // The date shown is the one the list is sorted and grouped by.
     const time = formatModified(this.sort === 'created' && !this.searchHits ? createdTime(note) : note.modified);
     return el('ui5-li', {

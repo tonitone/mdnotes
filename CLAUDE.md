@@ -7,7 +7,9 @@ Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand
 - Electron (nicht Tauri), TypeScript, electron-vite, Node.js 22/24 LTS.
 - UI5 Web Components exakt 2.27.2, Themes SAP Horizon (hell, dunkel, hcb, hcw). Kein Corporate-Theme.
 - CodeMirror 6 mit selbst gebauter Live Preview (`src/renderer/editor/live-preview.ts`). Kein WYSIWYG.
-- Plain `.md`-Dateien in einem wählbaren Workspace, alles lokal: kein Netzwerk, kein Account, keine Telemetrie.
+- Plain `.md`-Dateien in einem wählbaren Workspace, auch in Unterordnern (flache Liste, kein Ordnerbaum),
+  alles lokal: kein Netzwerk, kein Account, keine Telemetrie. Der Dateiname einer Notiz ist intern der Pfad
+  relativ zum Workspace mit `/` (`src/shared/workspace-path.ts`).
 - Plattformen: macOS, Windows, Linux. Linux ist ein vollwertiges Ziel.
 - Identität einer Notiz = ULID im Front Matter. Dateiname `titel-slug--<letzte 6 Zeichen der ID>.md` folgt dem Titel.
 - Titel = erste Zeile. Front Matter enthält nur `id`, `labels`, `created` und `pinned` (nur als `pinned: true`,
@@ -66,8 +68,10 @@ Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand
   einer Aufgabe würde schwere Shadow-DOM-Elemente neu erzeugen. Prüfungen am nativen Kästchen:
   Tastatur (Space), Zielgröße mindestens 24 px per CSS, zugänglicher Name (`task.open`/`task.done`).
 - Jede neue Ansicht und jeder neue Dialog bekommt einen axe-Test in `tests/e2e/a11y.spec.ts`.
-- Cloud-Sitzung: npm-Registry gesperrt (neue Pakete nur mit Lockfile vom Mac des Nutzers), lokal nur
-  Unit-Tests. Die CI ist die Testschleife; Fehler über die Check-Run-Annotations-API lesen. PRs über die REST-API.
+- Cloud-Sitzung: Die npm-Registry ist erreichbar (`npm ci`, neue Pakete mit `npm install`, Lockfile mit committen).
+  Typen, Unit-, UI- und Electron-Tests laufen auch lokal; Playwright dort mit dem vorinstallierten Chromium
+  (`launchOptions.executablePath`), Electron unter `xvfb-run`. Die CI bleibt die maßgebliche Testschleife;
+  Fehler über die Check-Run-Annotations-API lesen. PRs über die REST-API.
 
 ## Bekannte Risiken
 

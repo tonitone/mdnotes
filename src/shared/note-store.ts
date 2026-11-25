@@ -13,6 +13,7 @@ import {
   untitled,
   type NoteMeta,
 } from './note';
+import { baseName, folderOf, isNotePath, joinPath } from './workspace-path';
 
 interface Entry {
   fileName: string;
@@ -30,11 +31,6 @@ interface Entry {
 
 export const TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_LABEL_LENGTH = 40;
-
-/** Skips files that are not notes: hidden files, temp files. */
-function isNoteFile(name: string): boolean {
-  return name.toLowerCase().endsWith('.md') && !name.startsWith('.');
-}
 
 function isExists(err: unknown): boolean {
   return err instanceof FileExistsError || (err as { code?: string }).code === 'EEXIST';
@@ -145,7 +141,7 @@ export class NoteStore {
     return this.serial(async () => {
       this.entries.clear();
       await this.recoverInterruptedRenames();
-      const names = (await this.fs.list()).filter(isNoteFile).sort();
+      const names = (await this.fs.list()).filter(isNotePath).sort();
       for (const fileName of names) {
         const { id, entry } = await this.load(fileName, await this.fs.read(fileName));
         this.entries.set(id, entry);
@@ -165,7 +161,7 @@ export class NoteStore {
       for (const [id, e] of this.entries) byFile.set(e.fileName, id);
       const seen = new Set<string>();
 
-      for (const fileName of (await this.fs.list()).filter(isNoteFile)) {
+      for (const fileName of (await this.fs.list()).filter(isNotePath)) {
         const text = await this.fs.read(fileName);
         const knownId = byFile.get(fileName);
         if (knownId) {
@@ -361,7 +357,8 @@ export class NoteStore {
     return this.serial(async () => {
       const e = this.entry(id);
       if (e.idPending) await this.write(id, e);
-      const desired = fileNameFor(e.title, id);
+      // The note stays in its folder; only the file name follows the title.
+      const desired = joinPath(folderOf(e.fileName), fileNameFor(e.title, id));
       if (desired !== e.fileName) {
         e.fileName = await this.renameTo(e.fileName, desired);
         e.modified = await this.fs.mtime(e.fileName);
@@ -510,7 +507,8 @@ export class NoteStore {
   trash(id: string, now: Date = new Date()): Promise<string> {
     return this.serial(async () => {
       const e = this.entry(id);
-      const trashName = `${now.getTime()}--${e.fileName}`;
+      // The trash is flat: the folder is not kept, restore puts the note into the root.
+      const trashName = `${now.getTime()}--${baseName(e.fileName)}`;
       await this.fs.moveToTrash(e.fileName, trashName);
       this.entries.delete(id);
       return trashName;
@@ -586,10 +584,11 @@ export class NoteStore {
 
   /** If a two-step rename was interrupted, make the file visible again. */
   private async recoverInterruptedRenames(): Promise<void> {
-    for (const name of await this.fs.list()) {
+    for (const path of await this.fs.list()) {
+      const name = baseName(path);
       if (!/^\.rename-[a-z0-9]+\.tmp$/.test(name)) continue;
-      const target = await this.uniqueName(`wiederhergestellt-${name.slice(8, -4)}.md`);
-      await this.fs.rename(name, target);
+      const target = await this.uniqueName(joinPath(folderOf(path), `wiederhergestellt-${name.slice(8, -4)}.md`));
+      await this.fs.rename(path, target);
     }
   }
 
@@ -597,7 +596,7 @@ export class NoteStore {
     // Only the case changed: go through a temporary name, because a direct
     // rename is not reliable on macOS and Windows.
     if (current.toLowerCase() === desired.toLowerCase()) {
-      const temp = `.rename-${Date.now().toString(36)}.tmp`;
+      const temp = joinPath(folderOf(current), `.rename-${Date.now().toString(36)}.tmp`);
       await this.fs.rename(current, temp);
       await this.fs.rename(temp, desired);
       return desired;

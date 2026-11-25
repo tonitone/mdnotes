@@ -32,6 +32,9 @@ Neue Issues werden auf Englisch geschrieben.
 - Fehlersuche höchstens zwei CI-Runden. Danach melden statt weiter probieren.
 - Die stündliche Aufgabe „mdnotes PR review and fix loop“ (werktags 11 bis 22 Uhr) reviewt, korrigiert
   und mergt PRs mit `Closes #n`. Agenten setzen ihre PRs nach grüner CI selbst auf bereit.
+- PRs mit neuen Paketen (`package.json`, `package-lock.json`) mergt sie seit 24. November 2026 auch selbst,
+  wenn das Lockfile geprüft ist: nur die neuen Pakete, keine bestehende Version geändert, alles von
+  registry.npmjs.org. Änderungen an Workflows unter `.github/` und an der Release-Konfiguration bleiben bei Toni.
 
 ## Meilenstein Phase 5.1: Design-Grundlage
 

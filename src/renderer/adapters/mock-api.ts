@@ -80,6 +80,7 @@ declare global {
     __mdnotesExports?: MockExport[];
     /** e2e tests: change a note's file as if another program did it. */
     __mdnotesExternalEdit?: (id: string, body: string) => Promise<void>;
+    __mdnotesExternalFile?: (path: string, text: string) => Promise<void>;
   }
 }
 
@@ -155,6 +156,12 @@ export async function createMockApi(): Promise<NotesApi> {
   window.__mdnotesExternalEdit = async (id, body) => {
     const fileName = store.read(id).fileName;
     fs.putExternal(fileName, store.fileText(id).replace(/\n---\n[\s\S]*$/, `\n---\n${body}`));
+    const event = await store.refresh();
+    changeListeners.forEach((listener) => listener(event));
+  };
+  // Tests only: a file that appears outside the app, e.g. in a subfolder.
+  window.__mdnotesExternalFile = async (path, text) => {
+    fs.putExternal(path, text);
     const event = await store.refresh();
     changeListeners.forEach((listener) => listener(event));
   };

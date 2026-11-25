@@ -429,7 +429,8 @@ describe('NodeFs safety', () => {
   it('rejects paths outside the workspace', async () => {
     const fs = new NodeFs(dir);
     await assert.rejects(fs.read('../etc/passwd'), /Invalid file name/);
-    await assert.rejects(fs.create('sub/x.md', ''), /Invalid file name/);
+    await assert.rejects(fs.create('sub/../../x.md', ''), /Invalid file name/);
+    await assert.rejects(fs.create('/tmp/x.md', ''), /Invalid file name/);
   });
 
   it('leaves no temp files after an atomic write', async () => {
