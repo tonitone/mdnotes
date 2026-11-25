@@ -12,6 +12,10 @@ The detailed feature list. The README has the short version.
 - Labels with suggestions, filter by label in the library, rename or merge labels across all notes
 - Pin notes, sort order (modified, created, title), date groups in the note list like Apple Notes
 - Images by paste or drag, stored in `assets/`, with a prompt for an image description
+- Attachments (PDF, documents, archives …, up to 50 MB) by paste, drag or "Attach file…" in More actions,
+  stored in `assets/` and linked as `[name.pdf](assets/<hash>.pdf)`; the editor shows a chip, a click or
+  Ctrl/Cmd+Enter opens the file with the system's app, the folder button or Ctrl/Cmd+Shift+Enter shows it
+  in the file manager. Programs and scripts (`.exe`, `.app`, `.sh`, `.ps1`, `.jar` …) are refused
 - Code blocks with syntax highlighting, language picker and copy button
 - Full-text search over title and content, hits with a text snippet
 - Trash (`.trash/`, 30 days), restore and delete forever, undo after moving a note to the trash
@@ -20,7 +24,7 @@ The detailed feature list. The README has the short version.
   the editor shows the current title, Ctrl/Cmd+Enter or a click opens the target, "Linked from" below the note lists backlinks;
   previews and HTML/PDF/Word/wiki exports show the title, Markdown export keeps the link text as is
 - Keyboard shortcut overview (Cmd/Ctrl+/)
-- Export a note as Markdown (with images), Jira/Confluence wiki markup or PDF;
+- Export a note as Markdown (with images and attachments), Jira/Confluence wiki markup or PDF;
   wiki markup and Markdown also straight to the clipboard
 - Export all notes to a new folder (with their subfolders), import Markdown files (from the menu with image import,
   or by dragging them into the window)

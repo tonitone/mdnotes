@@ -60,6 +60,28 @@ for (const theme of ['light', 'hcb'] as const) {
   });
 }
 
+// Attachment chip (link and ui5-button "Show in folder") in the live preview
+for (const theme of ['light', 'dark', 'hcb', 'hcw'] as const) {
+  test(`attachment chip in the live preview: theme ${theme}`, async ({ page }) => {
+    await page.addInitScript((value) => localStorage.setItem('mdnotes.theme', value), theme);
+    await openApp(page);
+    await page.locator('#newNoteButton').click();
+    await expect(editor(page)).toBeFocused();
+    await page.keyboard.type('# Anhang');
+    await page.keyboard.press('Enter');
+    await page.evaluate(() => {
+      const data = new DataTransfer();
+      data.items.add(new File(['%PDF-1.7'], 'Bericht.pdf', { type: 'application/pdf' }));
+      document.querySelector('.cm-content')!.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+    });
+    // Storing the file is asynchronous; the cursor moves away only once the link is in the text.
+    await expect(editor(page)).toContainText('assets/');
+    await page.keyboard.press('Control+Home');
+    await expect(page.locator('.cm-attachment ui5-button')).toBeVisible();
+    await expectNoSeriousViolations(page, `attachment chip ${theme}`);
+  });
+}
+
 // A long note makes the editor scroll, in split mode in the stacked layout (scrollable-region-focusable)
 for (const mode of ['edit', 'split'] as const) {
   test(`long note in ${mode} mode: the scrolling editor is keyboard reachable`, async ({ page }) => {

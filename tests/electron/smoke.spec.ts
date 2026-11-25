@@ -161,6 +161,27 @@ test('writes a verified backup to the backup folder', async () => {
   await dialog.locator('ui5-button', { hasText: 'Schließen' }).click();
 });
 
+test('stores attachments in assets/ and refuses programs', async () => {
+  const result = await page.evaluate(async () => {
+    const api = (window as unknown as { notesApi: import('../../src/shared/api').NotesApi }).notesApi;
+    const saved = await api.saveAttachment(new TextEncoder().encode('%PDF-1.7'), 'Bericht.PDF');
+    const refused = await api.saveAttachment(new TextEncoder().encode('MZ'), 'setup.exe').then(
+      () => 'stored',
+      () => 'refused',
+    );
+    // A path outside assets/ is never opened; nothing is launched in this test.
+    const outside = await api.openAttachment('../hallo.md').then(
+      () => 'opened',
+      () => 'refused',
+    );
+    return { saved, refused, outside, url: api.assetUrl(saved) };
+  });
+  expect(result.saved).toMatch(/^assets\/[0-9a-f]{16}\.pdf$/);
+  expect(result).toMatchObject({ refused: 'refused', outside: 'refused', url: null });
+  expect(await readFile(path.join(workspace, result.saved), 'utf8')).toBe('%PDF-1.7');
+  expect((await readdir(path.join(workspace, 'assets'))).some((f) => f.endsWith('.exe'))).toBe(false);
+});
+
 test('picks up files added outside the app', async () => {
   await writeFile(path.join(workspace, 'extern.md'), '# Von draußen\n');
   await expect(listItems().filter({ hasText: 'Von draußen' })).toHaveCount(1, { timeout: 10_000 });

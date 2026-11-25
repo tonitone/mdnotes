@@ -40,6 +40,9 @@ const api: NotesApi = {
 
   saveAsset: (bytes, mime) => ipcRenderer.invoke('assets:save', bytes, mime),
   assetUrl,
+  saveAttachment: (bytes, fileName) => ipcRenderer.invoke('assets:saveAttachment', bytes, fileName),
+  openAttachment: (src) => ipcRenderer.invoke('assets:open', src),
+  revealAttachment: (src) => ipcRenderer.invoke('assets:reveal', src),
 
   exportNote: (id, format) => ipcRenderer.invoke('transfer:exportNote', id, format),
   exportAll: () => ipcRenderer.invoke('transfer:exportAll'),

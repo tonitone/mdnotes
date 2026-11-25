@@ -11,7 +11,7 @@ import type {
   TrashEntry,
 } from '../shared/api';
 import { renderFinished } from '@ui5/webcomponents-base/dist/Render.js';
-import { MAX_ASSET_BYTES, isImageMime } from '../shared/assets';
+import { MAX_ASSET_BYTES, MAX_ATTACHMENT_BYTES, attachmentNameFromPath, isAllowedAttachment, isImageMime } from '../shared/assets';
 import { normalizeLabels } from '../shared/note-store';
 import { DEFAULT_NOTE_SORT, createdTime, groupNotes, isNoteSort, sortNotes, type NoteSort } from '../shared/note-list';
 import { markdownToHtml } from '../shared/markdown/html';
@@ -164,6 +164,8 @@ export class App {
     editorMoreMenu: $('editorMoreMenu'),
     formatToolbarRow: $('formatToolbarRow'),
     formatToolbar: $('formatToolbar'),
+    attachInput: $<HTMLInputElement>('attachInput'),
+    attachMenuItem: $('attachMenuItem'),
     formatMenuItem: $('formatMenuItem'),
     deleteButton: $('deleteButton'),
     trashActions: $('trashActions'),
@@ -206,6 +208,11 @@ export class App {
       resolveAsset: (src) => this.api.assetUrl(src),
       saveImages: (files) => this.saveImages(files),
       onImagesInserted: (inserted) => void this.askForAltTexts(inserted),
+      saveAttachments: (files) => this.saveAttachments(files),
+      attachments: {
+        open: (src) => void this.openAttachment(src),
+        reveal: (src) => void this.revealAttachment(src),
+      },
       onFormat: (outcome) => this.announceFormat(outcome),
       links: {
         // A note does not link to itself.
@@ -363,6 +370,11 @@ export class App {
       const { action, format } = (event as CustomEvent<{ item: HTMLElement }>).detail.item.dataset;
       if (action === 'copy-file-name') void this.copyFileName();
       if (action === 'duplicate') void this.duplicateCurrent();
+      // The menu item is the visible control; the hidden file input only opens the system's file dialog.
+      if (action === 'attach') {
+        els.attachInput.value = '';
+        els.attachInput.click();
+      }
       if (action === 'outline') this.pendingOutline = true;
       if (action === 'toggle-pin') {
         const note = this.currentNote();
@@ -384,6 +396,10 @@ export class App {
     for (const button of els.formatToolbar.querySelectorAll<HTMLElement>('[data-format]')) {
       button.addEventListener('click', () => this.runFormat(button.dataset.format as FormatKind));
     }
+    els.attachInput.addEventListener('change', () => {
+      const files = [...(els.attachInput.files ?? [])];
+      if (files.length > 0) void this.editor?.insertFiles(files);
+    });
     els.deleteButton.addEventListener('click', () => void this.trashCurrent());
     els.restoreButton.addEventListener('click', () => void this.restoreCurrentTrash());
     els.deleteForeverButton.addEventListener('click', () => void this.deleteCurrentTrashForever());
@@ -435,6 +451,7 @@ export class App {
       event.preventDefault();
       const href = link.getAttribute('href') ?? '';
       if (/^(https?:|mailto:)/i.test(href)) window.open(href, '_blank', 'noopener');
+      else if (attachmentNameFromPath(href)) void this.openAttachment(href);
       // Footnote references and back links jump within the preview.
       else if (/^#fn(ref)?-\d+$/.test(href)) {
         const target = els.previewPane.querySelector<HTMLElement>(href);
@@ -683,6 +700,7 @@ export class App {
     const editable = this.currentView === 'editor' && this.viewMode !== 'preview';
     this.els.formatToolbarRow.hidden = !editable;
     this.els.formatMenuItem.disabled = !editable;
+    this.els.attachMenuItem.disabled = !editable;
   }
 
   private applyViewMode(): void {
@@ -1224,6 +1242,43 @@ export class App {
       }
     }
     return paths;
+  }
+
+  private async saveAttachments(files: File[]): Promise<Array<{ name: string; path: string }>> {
+    const saved: Array<{ name: string; path: string }> = [];
+    for (const file of files) {
+      if (!isAllowedAttachment(file.name)) {
+        this.showError(t('error.attachmentType', { name: file.name }), file.name);
+        continue;
+      }
+      if (file.size > MAX_ATTACHMENT_BYTES) {
+        this.showError(t('error.attachmentSize', { name: file.name }), file.size);
+        continue;
+      }
+      try {
+        saved.push({ name: file.name, path: await this.api.saveAttachment(new Uint8Array(await file.arrayBuffer()), file.name) });
+      } catch (err) {
+        this.showError(t('error.attachmentSave', { name: file.name }), err);
+      }
+    }
+    if (saved.length > 0) announce(tp('announce.attached', saved.length));
+    return saved;
+  }
+
+  private async openAttachment(src: string): Promise<void> {
+    try {
+      await this.api.openAttachment(src);
+    } catch (err) {
+      this.showError(t('error.attachmentOpen'), err);
+    }
+  }
+
+  private async revealAttachment(src: string): Promise<void> {
+    try {
+      await this.api.revealAttachment(src);
+    } catch (err) {
+      this.showError(t('error.attachmentOpen'), err);
+    }
   }
 
   /** Asks for an alternative text right after inserting images (accessibility). */

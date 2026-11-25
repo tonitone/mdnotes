@@ -9,7 +9,7 @@ macOS, Windows and Linux. Notes are plain `.md` files in a folder you choose.
 
 ## Features
 
-- **Write:** live preview, formatting toolbar, images, code blocks, tables, outline, word count
+- **Write:** live preview, formatting toolbar, images and attachments, code blocks, tables, outline, word count
 - **Organize:** labels, pin and sort, date groups, trash with undo
 - **Find:** full-text search with snippets
 - **Protect:** versions, backups, crash recovery, detection of outside changes

@@ -12,7 +12,7 @@ src/
     history.ts      Versions in .history/<id>/ with retention rules
     fs-port.ts      File system interface + MemoryFs
     workspace-path.ts Relative note paths: validation, skipped folders, depth limit
-    assets.ts       Images in assets/ (name from the content hash)
+    assets.ts       Images and attachments in assets/ (name from the content hash)
     markdown/       Parser and export to wiki markup and HTML
     api.ts          Interface between the UI and the file system
     i18n/           Language files (de.ts defines the keys, en.ts must have all of them)

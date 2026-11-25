@@ -8,6 +8,11 @@
   The UI tests run against the production build and fail on every CSP violation
   (`src/renderer/csp-report.ts`).
 - Exported HTML files contain no scripts and only load embedded images or images over https.
+- Attachments: files whose extension runs code when opened (`BLOCKED_EXTENSIONS` in
+  `src/shared/assets.ts`: programs, scripts, installers, shortcuts) are never stored. The main
+  process checks the name again and opens only existing files in `assets/` with a content-hash name
+  (`shell.openPath`). The asset protocol serves images only, so a stored HTML or PDF file is never
+  rendered inside the app window.
 
 ## Libraries that emit inline styles (KaTeX, Mermaid)
 

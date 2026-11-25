@@ -5,7 +5,7 @@ import { copyFile, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { ExportFormat, ImportReport } from '../shared/api';
-import { ASSET_DIR, MAX_ASSET_BYTES, MIME_BY_EXT, assetNameFor, assetNameFromPath, referencedAssets } from '../shared/assets';
+import { ASSET_DIR, MAX_ASSET_BYTES, MIME_BY_EXT, assetNameFor, assetNameFromPath, isImageAssetName, referencedAssets } from '../shared/assets';
 import { markdownToDocx, type DocxImage } from '../shared/markdown/docx';
 import { markdownToHtmlDocument, markdownToPrintDocument } from '../shared/markdown/html';
 import { imageSize } from '../shared/image-size';
@@ -28,7 +28,8 @@ const FORMATS: Record<ExportFormat, { ext: string; filter: MessageKey; title: Me
 /** Reads the workspace images a note references, by asset name. Missing ones are skipped. */
 async function loadAssets(ws: Workspace, body: string): Promise<Map<string, Uint8Array>> {
   const assets = new Map<string, Uint8Array>();
-  for (const name of referencedAssets(body)) {
+  // Only images are embedded; attachments stay links.
+  for (const name of referencedAssets(body).filter(isImageAssetName)) {
     try {
       assets.set(name, new Uint8Array(await readFile(path.join(ws.root, ASSET_DIR, name))));
     } catch {
@@ -74,7 +75,7 @@ function timestamp(date = new Date()): string {
   return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}-${p(date.getHours())}${p(date.getMinutes())}${p(date.getSeconds())}`;
 }
 
-/** Copies the images a note references into `<targetDir>/assets/`. */
+/** Copies the images and attachments a note references into `<targetDir>/assets/`. */
 async function copyAssets(ws: Workspace, body: string, targetDir: string): Promise<void> {
   const names = referencedAssets(body);
   if (names.length === 0) return;
