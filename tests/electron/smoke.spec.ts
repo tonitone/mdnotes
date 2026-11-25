@@ -1,6 +1,6 @@
 import { _electron as electron, expect, test, type ElectronApplication, type Page } from '@playwright/test';
 import { createHash } from 'node:crypto';
-import { mkdtemp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -180,6 +180,24 @@ test('stores attachments in assets/ and refuses programs', async () => {
   expect(result).toMatchObject({ refused: 'refused', outside: 'refused', url: null });
   expect(await readFile(path.join(workspace, result.saved), 'utf8')).toBe('%PDF-1.7');
   expect((await readdir(path.join(workspace, 'assets'))).some((f) => f.endsWith('.exe'))).toBe(false);
+});
+
+test('never opens an attachment that is a link to a file elsewhere', async () => {
+  test.skip(process.platform === 'win32', 'symbolic links need extra rights on Windows');
+  const outside = path.join(root, 'outside.pdf');
+  await writeFile(outside, '%PDF-1.7');
+  await symlink(outside, path.join(workspace, 'assets', 'abcdefabcdefabcd.pdf'));
+  // Nothing is launched: the check in the main process refuses the link first.
+  const result = await page.evaluate(async () => {
+    const api = (window as unknown as { notesApi: import('../../src/shared/api').NotesApi }).notesApi;
+    const tryIt = (p: Promise<void>) => p.then(() => 'done', () => 'refused');
+    return {
+      open: await tryIt(api.openAttachment('assets/abcdefabcdefabcd.pdf')),
+      reveal: await tryIt(api.revealAttachment('assets/abcdefabcdefabcd.pdf')),
+      missing: await tryIt(api.openAttachment('assets/0000000000000000.pdf')),
+    };
+  });
+  expect(result).toEqual({ open: 'refused', reveal: 'refused', missing: 'refused' });
 });
 
 test('picks up files added outside the app', async () => {

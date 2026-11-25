@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, protocol, session, shell, type IpcMainInvokeEvent } from 'electron';
 import { existsSync } from 'node:fs';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { BackupKind, BackupSettings, ExportFormat, MenuCommand, NotesChangedEvent } from '../shared/api';
@@ -267,13 +267,29 @@ function requireFileName(name: unknown): string {
   return name;
 }
 
-/** An existing attachment in the workspace, as an absolute path. */
+/**
+ * An existing attachment as an absolute path. It must be a regular file (not a
+ * link, folder or device) directly in the workspace's own `assets/` folder, and
+ * that folder must lie inside the workspace, so a planted link can never make
+ * the app open a file elsewhere.
+ */
 async function requireAttachmentFile(src: unknown): Promise<string> {
   const name = typeof src === 'string' && src.length <= 300 ? attachmentNameFromPath(src) : null;
   if (!name) throw new Error('Invalid attachment.');
-  const file = path.join(requireWorkspace().root, ASSET_DIR, name);
-  if (!existsSync(file)) throw new Error(t('main.attachmentMissing'));
-  return file;
+  const root = requireWorkspace().root;
+  const file = path.join(root, ASSET_DIR, name);
+  let info;
+  try {
+    info = await lstat(file);
+  } catch {
+    throw new Error(t('main.attachmentMissing'));
+  }
+  if (!info.isFile()) throw new Error('Invalid attachment.');
+  const [realRoot, realDir, realFile] = await Promise.all([realpath(root), realpath(path.dirname(file)), realpath(file)]);
+  if (realDir !== path.join(realRoot, ASSET_DIR) || realFile !== path.join(realDir, name)) {
+    throw new Error('Invalid attachment.');
+  }
+  return realFile;
 }
 
 function requireFormat(format: unknown): ExportFormat {
