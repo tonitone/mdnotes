@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   attachmentExtension,
+  fileKind,
   attachmentMarkdown,
   attachmentNameFor,
   attachmentNameFromPath,
@@ -37,12 +38,29 @@ describe('attachments', () => {
     assert.equal(isAllowedAttachment('setup.exe  '), false);
   });
 
+  it('classifies files the same way for storing and rendering', () => {
+    assert.deepEqual(fileKind('a.png', 'image/png'), { kind: 'image', mime: 'image/png' });
+    // A supported extension without (or with a generic) MIME type is still an image.
+    assert.deepEqual(fileKind('Foto.PNG', ''), { kind: 'image', mime: 'image/png' });
+    assert.deepEqual(fileKind('bild.jpeg', 'application/octet-stream'), { kind: 'image', mime: 'image/jpeg' });
+    // Unsupported images keep the image error instead of becoming attachments.
+    assert.deepEqual(fileKind('scan.tiff', 'image/tiff'), { kind: 'unsupported-image' });
+    assert.deepEqual(fileKind('photo.heic', ''), { kind: 'attachment' });
+    assert.deepEqual(fileKind('fake.png', 'text/plain'), { kind: 'unsupported-image' });
+    assert.deepEqual(fileKind('Bericht.pdf', 'application/pdf'), { kind: 'attachment' });
+    assert.deepEqual(fileKind('README', ''), { kind: 'attachment' });
+    // Image names never go the attachment way.
+    assert.equal(isAllowedAttachment('Foto.png'), false);
+    assert.equal(isAllowedAttachment('Bericht.pdf'), true);
+  });
+
   it('names attachments by content and never with a blocked extension', async () => {
     const bytes = new TextEncoder().encode('%PDF-1.7');
     const name = await attachmentNameFor(bytes, 'Bericht.pdf');
     assert.match(name, /^[0-9a-f]{16}\.pdf$/);
     assert.equal(await attachmentNameFor(bytes, 'Kopie.PDF'), name);
     await assert.rejects(attachmentNameFor(bytes, 'setup.exe'));
+    await assert.rejects(attachmentNameFor(bytes, 'Foto.png'));
     assert.equal(isAssetName(name), true);
     assert.equal(isAssetName('0123456789abcdef.exe'), false);
     assert.equal(isAssetName('0123456789abcdef.pdf/../x'), false);

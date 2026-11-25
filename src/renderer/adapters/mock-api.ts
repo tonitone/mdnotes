@@ -83,6 +83,8 @@ declare global {
     __mdnotesExternalFile?: (path: string, text: string) => Promise<void>;
     /** e2e tests: attachments opened or shown in the folder, as `open:assets/…` or `reveal:assets/…`. */
     __mdnotesAttachmentActions?: string[];
+    /** e2e tests: delay in ms before an image or attachment is stored, to test notes switched meanwhile. */
+    __mdnotesAssetDelayMs?: number;
   }
 }
 
@@ -144,6 +146,7 @@ export async function createMockApi(): Promise<NotesApi> {
   const changeListeners = new Set<(event: NotesChangedEvent) => void>();
   const exports: MockExport[] = (window.__mdnotesExports = []);
   const attachmentActions: string[] = (window.__mdnotesAttachmentActions = []);
+  const assetDelay = () => new Promise((resolve) => window.setTimeout(resolve, window.__mdnotesAssetDelayMs ?? 0));
   const requireAttachment = async (src: string): Promise<string> => {
     const name = attachmentNameFromPath(src);
     if (!name) throw new Error('Invalid attachment.');
@@ -205,6 +208,7 @@ export async function createMockApi(): Promise<NotesApi> {
     deleteFromTrash: (name) => store.deleteFromTrash(name),
 
     async saveAsset(bytes, mime) {
+      await assetDelay();
       const name = await assetNameFor(bytes, mime);
       if (await fs.writeAsset(name, bytes)) {
         assetUrls.set(name, URL.createObjectURL(new Blob([bytes.slice().buffer as ArrayBuffer], { type: mime })));
@@ -216,6 +220,7 @@ export async function createMockApi(): Promise<NotesApi> {
       return name && isImageAssetName(name) ? (assetUrls.get(name) ?? null) : null;
     },
     async saveAttachment(bytes, fileName) {
+      await assetDelay();
       if (!isAllowedAttachment(fileName)) throw new Error('Blocked file type.');
       const name = await attachmentNameFor(bytes, fileName);
       await fs.writeAsset(name, bytes);

@@ -84,3 +84,42 @@ test.describe('attachments', () => {
     await expect.poll(() => actions(page)).toEqual([`open:${src}`]);
   });
 });
+
+test.describe('attachments: review follow-ups', () => {
+  test('an insert that finishes after a note switch does not touch the newly opened note', async ({ page }) => {
+    await newNote(page, 'Quelle');
+    await page.evaluate(() => (window.__mdnotesAssetDelayMs = 1500));
+    await pasteFiles(page, [{ name: 'Bericht.pdf', type: 'application/pdf', text: '%PDF-1.7' }]);
+    // Switch notes while the file is still being stored.
+    await listItems(page).filter({ hasText: 'Willkommen' }).first().click();
+    await expect.poll(() => editorDoc(page)).toContain('# Willkommen');
+    const before = await editorDoc(page);
+    await page.waitForTimeout(2500);
+    expect(await editorDoc(page)).toBe(before);
+    // The source note did not get the link either (it was not open any more).
+    await listItems(page).filter({ hasText: 'Quelle' }).first().click();
+    await expect.poll(() => editorDoc(page)).toBe('# Quelle\n');
+  });
+
+  test('an image without a MIME type is still stored and shown as an image', async ({ page }) => {
+    await newNote(page, 'Ohne Typ');
+    await page.evaluate((base64) => {
+      const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+      const data = new DataTransfer();
+      data.items.add(new File([bytes], 'pixel.png', { type: '' }));
+      document.querySelector('.cm-content')!.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+    }, 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
+    const altInput = page.locator('ui5-dialog ui5-input input');
+    await expect(altInput).toBeVisible();
+    await altInput.fill('Punkt');
+    await altInput.press('Enter');
+    await expect.poll(() => editorDoc(page)).toMatch(/^# Ohne Typ\n!\[Punkt\]\(assets\/[0-9a-f]{16}\.png\)$/);
+  });
+
+  test('an unsupported image type keeps the image error and is not attached', async ({ page }) => {
+    await newNote(page, 'TIFF');
+    await pasteFiles(page, [{ name: 'scan.tiff', type: 'image/tiff', text: 'II*' }]);
+    await expect(page.locator('#errorRegion ui5-message-strip')).toContainText('„scan.tiff“ ist kein unterstütztes Bildformat');
+    expect(await editorDoc(page)).toBe('# TIFF\n');
+  });
+});

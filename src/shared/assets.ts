@@ -81,8 +81,30 @@ export function attachmentExtension(fileName: string): string | null {
   return /^[a-z0-9]{1,16}$/.test(ext) ? ext : PLAIN_EXT;
 }
 
+/**
+ * Attachments never get an image extension: those names are shown inline and
+ * belong to the image path (`fileKind`). Files that can run code are refused.
+ */
 export function isAllowedAttachment(fileName: string): boolean {
-  return attachmentExtension(fileName) !== null;
+  const ext = attachmentExtension(fileName);
+  return ext !== null && !(ext in MIME_BY_EXT);
+}
+
+export type FileKind = { kind: 'image'; mime: string } | { kind: 'unsupported-image' } | { kind: 'attachment' };
+
+/**
+ * One rule for pasted, dropped and chosen files, used for storing and for
+ * rendering: a supported image type (by MIME type, or by extension when the
+ * MIME type is missing or generic) is an image; any other `image/*` type is an
+ * unsupported image; everything else is an attachment.
+ */
+export function fileKind(fileName: string, mime: string): FileKind {
+  if (isImageMime(mime)) return { kind: 'image', mime };
+  const ext = /\.([^.]+)$/.exec(fileName.trim())?.[1].toLowerCase() ?? '';
+  const byExt = MIME_BY_EXT[ext];
+  if (byExt && (mime === '' || mime === 'application/octet-stream')) return { kind: 'image', mime: byExt };
+  if (mime.startsWith('image/') || byExt) return { kind: 'unsupported-image' };
+  return { kind: 'attachment' };
 }
 
 export async function sha256Hex(bytes: Uint8Array): Promise<string> {
@@ -100,7 +122,7 @@ export async function assetNameFor(bytes: Uint8Array, mime: string): Promise<str
 /** Content-addressed name for an attachment; identical files end up as one. */
 export async function attachmentNameFor(bytes: Uint8Array, fileName: string): Promise<string> {
   const ext = attachmentExtension(fileName);
-  if (!ext) throw new Error(`Blocked file type: ${fileName}`);
+  if (!ext || ext in MIME_BY_EXT) throw new Error(`Not an attachment: ${fileName}`);
   return `${(await sha256Hex(bytes)).slice(0, 16)}.${ext}`;
 }
 

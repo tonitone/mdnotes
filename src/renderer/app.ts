@@ -11,7 +11,7 @@ import type {
   TrashEntry,
 } from '../shared/api';
 import { renderFinished } from '@ui5/webcomponents-base/dist/Render.js';
-import { MAX_ASSET_BYTES, MAX_ATTACHMENT_BYTES, attachmentNameFromPath, isAllowedAttachment, isImageMime } from '../shared/assets';
+import { MAX_ASSET_BYTES, MAX_ATTACHMENT_BYTES, attachmentNameFromPath, fileKind, isAllowedAttachment } from '../shared/assets';
 import { normalizeLabels } from '../shared/note-store';
 import { DEFAULT_NOTE_SORT, createdTime, groupNotes, isNoteSort, sortNotes, type NoteSort } from '../shared/note-list';
 import { markdownToHtml } from '../shared/markdown/html';
@@ -1227,7 +1227,8 @@ export class App {
   private async saveImages(files: File[]): Promise<string[]> {
     const paths: string[] = [];
     for (const file of files) {
-      if (!isImageMime(file.type)) {
+      const kind = fileKind(file.name, file.type);
+      if (kind.kind !== 'image') {
         this.showError(t('error.imageType', { name: file.name }), file.type);
         continue;
       }
@@ -1236,7 +1237,7 @@ export class App {
         continue;
       }
       try {
-        paths.push(await this.api.saveAsset(new Uint8Array(await file.arrayBuffer()), file.type));
+        paths.push(await this.api.saveAsset(new Uint8Array(await file.arrayBuffer()), kind.mime));
       } catch (err) {
         this.showError(t('error.imageSave'), err);
       }
