@@ -50,7 +50,8 @@ jobs:
 
   package:
     name: Build installers (${{ matrix.os }})
-    needs: [test, e2e]
+    # No `needs` on the test jobs: every change reaches main through a PR that already passed them.
+    # With `needs`, one cancelled or flaky job in the test matrix (often macOS) skipped all installers.
     if: github.ref == 'refs/heads/main'
     strategy:
       fail-fast: false

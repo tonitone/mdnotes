@@ -1,0 +1,25 @@
+name: Rerun cancelled jobs
+
+# macOS runners are sometimes cancelled before a runner picks the job up ("not acquired by Runner").
+# Rerun the cancelled jobs of a CI run once, so nobody has to restart them by hand.
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  actions: write
+
+jobs:
+  rerun:
+    name: Rerun cancelled jobs once
+    if: github.event.workflow_run.conclusion == 'cancelled' && github.event.workflow_run.run_attempt == 1
+    runs-on: ubuntu-latest
+    steps:
+      - name: Rerun failed and cancelled jobs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: gh run rerun "$RUN_ID" --failed
