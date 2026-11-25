@@ -1,88 +1,90 @@
-# Projektkontext für Claude
+# Project context for Claude
 
-Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand: Phase 4 abgeschlossen.
+Local Markdown editor in the style of Apple Notes, designed after SAP Fiori. Status: phase 4 complete.
 
-## Feste Entscheidungen
+## Fixed decisions
 
-- Electron (nicht Tauri), TypeScript, electron-vite, Node.js 22/24 LTS.
-- UI5 Web Components exakt 2.27.2, Themes SAP Horizon (hell, dunkel, hcb, hcw). Kein Corporate-Theme.
-- CodeMirror 6 mit selbst gebauter Live Preview (`src/renderer/editor/live-preview.ts`). Kein WYSIWYG.
-- Plain `.md`-Dateien in einem wählbaren Workspace, auch in Unterordnern (flache Liste, kein Ordnerbaum),
-  alles lokal: kein Netzwerk, kein Account, keine Telemetrie. Der Dateiname einer Notiz ist intern der Pfad
-  relativ zum Workspace mit `/` (`src/shared/workspace-path.ts`).
-- Plattformen: macOS, Windows, Linux. Linux ist ein vollwertiges Ziel.
-- Identität einer Notiz = ULID im Front Matter. Dateiname `titel-slug--<letzte 6 Zeichen der ID>.md` folgt dem Titel.
-- Titel = erste Zeile. Front Matter enthält nur `id`, `labels`, `created` und `pinned` (nur als `pinned: true`,
-  sonst weggelassen), fremde Zeilen bleiben unverändert. Die Sortierung der Liste ist eine App-Einstellung (`config.json`).
-- Browser-Modus (`npm run dev:browser`) mit Mock-Adapter nur für Entwicklung und Tests, nie ausgeliefert.
-- Barrierefreiheit: WCAG 2.2 AA, EN 301 549. F6 zwischen Bereichen, Esc dann Tab verlässt den Editor.
+- Electron (not Tauri), TypeScript, electron-vite, Node.js 22/24 LTS.
+- UI5 Web Components exactly 2.27.2, SAP Horizon themes (light, dark, hcb, hcw). No corporate theme.
+- CodeMirror 6 with a custom Live Preview (`src/renderer/editor/live-preview.ts`). No WYSIWYG.
+- Plain `.md` files in a selectable workspace, including subfolders (flat list, no folder tree),
+  everything local: no network, no account, no telemetry. Internally, a note's file name is its path
+  relative to the workspace with `/` (`src/shared/workspace-path.ts`).
+- Platforms: macOS, Windows, Linux. Linux is a first-class target.
+- A note's identity = ULID in the front matter. The file name `title-slug--<last 6 characters of the ID>.md` follows the title.
+- Title = first line. The front matter contains only `id`, `labels`, `created` and `pinned` (only as `pinned: true`,
+  omitted otherwise); foreign lines stay unchanged. The list's sort order is an app setting (`config.json`).
+- Browser mode (`npm run dev:browser`) with a mock adapter, for development and tests only, never shipped.
+- Accessibility: WCAG 2.2 AA, EN 301 549. F6 moves between areas, Esc then Tab leaves the editor.
 
-## Architekturregeln
+## Architecture rules
 
-- `src/shared/` hat keine Abhängigkeiten und läuft in Main, Renderer und Tests.
-- Die Oberfläche spricht nur über `NotesApi` (`src/shared/api.ts`) mit dem Dateisystem.
-- Electron und Browser-Modus nutzen dieselbe `NoteStore`-Logik, nur das `FsPort` darunter unterscheidet sich.
-- Dateizugriff nur im Main-Prozess. Jedes IPC-Argument wird dort geprüft.
-- Nie eine bestehende Datei überschreiben: `create` mit `wx`, Schreiben atomar über temporäre Datei.
+- `src/shared/` has no dependencies and runs in main, renderer and tests.
+- The UI talks to the file system only through `NotesApi` (`src/shared/api.ts`).
+- Electron and browser mode use the same `NoteStore` logic; only the `FsPort` underneath differs.
+- File access only in the main process. Every IPC argument is validated there.
+- Never overwrite an existing file: `create` with `wx`, writes are atomic via a temporary file.
 
-## Stand und nächste Schritte
+## Status and next steps
 
-- Phase 1 bis 4 sind fertig. CI prüft Typen, Unit-Tests (`tests/unit`), UI- und
-  Barrierefreiheitstests im Browser-Modus (`tests/e2e`) und einen Smoke-Test der echten
-  Electron-App auf macOS, Windows und Linux (`tests/electron`).
-- Neue npm-Pakete nur zusammen mit aktualisierter `package-lock.json` (CI nutzt `npm ci`).
-- Commits auf Englisch nach Conventional Commits, Code-Kommentare auf Englisch.
-- Oberfläche Deutsch und Englisch: neue Texte immer in `src/shared/i18n/de.ts` und `en.ts`,
-  nie fest im Code. Statische HTML-Texte über `data-i18n`/`data-i18n-attr`. Tests laufen auf Deutsch.
-- Versionen: `.history/<id>/<ms>-<hash8>.md`, Snapshot in `finalize()`, vor `restoreVersion()`
-  und bevor eine Änderung von außen übernommen wird.
-- Backups: `src/main/backup.ts` (ZIP + Manifest), Einstellungen in `config.json` im App-Profil.
-  Notfalldateien für Crash-Recovery liegen im App-Profil unter `recovery/`, nie im Workspace.
-- Phase 4 ist fertig: i18n/RTL, Barrierefreiheits-Audit (`docs/accessibility.md`), HTML/DOCX-Export,
-  strenge CSP. Signierung und Auto-Update entfallen (kein App-Store).
-- UI-Tests (`tests/e2e`) laufen gegen den Produktions-Build (`E2E_DEV=1` für den Dev-Server)
-  und importieren `test`/`expect` aus `tests/e2e/fixtures.ts` (prüft CSP-Verstöße).
-- Offen: Backups verschlüsseln (optional, #31), blockweises Wiederherstellen aus einer Version (#32).
-- Nächstes: Alle offenen Pakete (Phase 5 und Design-Überarbeitung D1 bis D7) sind GitHub-Issues in den Meilensteinen
-  „Phase 5.1“ bis „Phase 5.4“ und „Später“. Die Reihenfolge steht in `docs/roadmap.md`, Toni entscheidet sie.
-  Ein PR pro Issue, die Beschreibung enthält `Closes #n`. Hintergrund: claude.ai Artifacts „Plan: Markdown-Editor“
-  (Backlog Phase 5) und „Plan: Design-Überarbeitung mdnotes“.
+- Phases 1 to 4 are done. CI checks types, unit tests (`tests/unit`), UI and
+  accessibility tests in browser mode (`tests/e2e`) and a smoke test of the real
+  Electron app on macOS, Windows and Linux (`tests/electron`).
+- New npm packages only together with an updated `package-lock.json` (CI uses `npm ci`).
+- UI in German and English: new texts always go into `src/shared/i18n/de.ts` and `en.ts`,
+  never hard-coded. Static HTML texts via `data-i18n`/`data-i18n-attr`. Tests run in German.
+- Versions: `.history/<id>/<ms>-<hash8>.md`, snapshot in `finalize()`, before `restoreVersion()`
+  and before a change from outside is taken over.
+- Backups: `src/main/backup.ts` (ZIP + manifest), settings in `config.json` in the app profile.
+  Emergency files for crash recovery live in the app profile under `recovery/`, never in the workspace.
+- Phase 4 is done: i18n/RTL, accessibility audit (`docs/accessibility.md`), HTML/DOCX export,
+  strict CSP. Code signing and auto-update are dropped (no app store).
+- UI tests (`tests/e2e`) run against the production build (`E2E_DEV=1` for the dev server)
+  and import `test`/`expect` from `tests/e2e/fixtures.ts` (checks for CSP violations).
+- Open: encrypt backups (optional, #31), block-wise restore from a version (#32).
+- Next: All open packages (phase 5 and design revision D1 to D7) are GitHub issues in the milestones
+  "Phase 5.1" to "Phase 5.4" and "Später" (later). The order is in `docs/roadmap.md`; Toni decides it.
+  One PR per issue, the description contains `Closes #n`. Background: claude.ai Artifacts "Plan: Markdown-Editor"
+  (phase 5 backlog) and "Plan: Design-Überarbeitung mdnotes".
 
-## Arbeitsweise
+## Way of working
 
-- Regeln für Beiträge von Agenten (Commit-Trailer, PR-Rollen, keine Werbe-Footer): @AGENTS.md
-- Gesprächssprache Deutsch, kurz und konkret. Pro Thema ein PR, erst bei grüner CI melden. Bugs vor Features.
-  Bei größeren, mehrdeutigen Aufgaben vorher kurz fragen.
-- Design: Standard-Horizon. Eigene Looks wurden abgelehnt (PR #9). UI5-Komponenten nie verändern.
-- UI5-Komponenten auch nicht von außen umstylen: kein `display`, `width`, `flex` oder `padding` auf dem Host.
-  Autoren-CSS schlägt `:host`-Regeln und zerstört das innere Layout (Beispiel: `display: block` auf `ui5-toolbar`
-  ließ jeden Knopf in voller Breite messen, alles landete im Überlauf).
-- Scheint eine UI5-Komponente nicht zu funktionieren, zuerst die eigene Seite prüfen (CSS am Host, fehlende Imports,
-  falsche Kinder im Slot, versteckter Container beim ersten Rendern, Testannahmen). Ersatz oder Weglassen nur mit
-  belegter Ursache im UI5-Quelltext der gepinnten Version (Datei und Zeile) in der PR-Beschreibung.
-- Bedienelemente (Knopf, Auswahl, Checkbox, Eingabe, Menü, Dialog, Liste) sind immer UI5-Komponenten.
-  Inhalt (Markdown in Editor und Vorschau) bleibt semantisches HTML und CodeMirror. Die Code-Werkzeuge
-  (`ui5-select`, `ui5-button`) in `live-preview.ts` sind UI5. Das Aufgaben-Kästchen bleibt das native
-  `<input type="checkbox">`, als Teil des Markdown-Inhalts (Spike D7 mit `ui5-checkbox` ist gescheitert):
-  Es müsste unter die vorgesehene Box von 2,75rem/2rem verkleinert werden (UI5 verändert, Klickfläche
-  und Fokusring ragen aus der Zeile, Höhe unter 24 px gefährdet WCAG 2.5.8), und jeder Tastendruck über
-  einer Aufgabe würde schwere Shadow-DOM-Elemente neu erzeugen. Prüfungen am nativen Kästchen:
-  Tastatur (Space), Zielgröße mindestens 24 px per CSS, zugänglicher Name (`task.open`/`task.done`).
-- Jede neue Ansicht und jeder neue Dialog bekommt einen axe-Test in `tests/e2e/a11y.spec.ts`.
-- Cloud-Sitzung: Die npm-Registry ist erreichbar (`npm ci`, neue Pakete mit `npm install`, Lockfile mit committen).
-  Typen, Unit-, UI- und Electron-Tests laufen auch lokal; Playwright dort mit dem vorinstallierten Chromium
-  (`launchOptions.executablePath`), Electron unter `xvfb-run`. Die CI bleibt die maßgebliche Testschleife;
-  Fehler über die Check-Run-Annotations-API lesen. PRs über die REST-API.
+- Rules for agent contributions (commit trailers, PR roles, models, no promotional footers): @AGENTS.md
+- Language: everything written into the repository is English: code, comments, commits, docs, rules,
+  CLAUDE.md, AGENTS.md, issues, PRs, reviews and prompts of scheduled tasks. Conversation with Toni is in German,
+  short and concrete. The only German in the repo is the German UI catalog and the German tests that use it.
+- One PR per topic, report only once CI is green. Bugs before features.
+  For larger, ambiguous tasks, ask briefly first.
+- Design: standard Horizon. Custom looks were rejected (PR #9). Never modify UI5 components.
+- Do not restyle UI5 components from outside either: no `display`, `width`, `flex` or `padding` on the host.
+  Author CSS beats `:host` rules and breaks the inner layout (example: `display: block` on `ui5-toolbar`
+  made every button measure at full width, so everything ended up in the overflow).
+- If a UI5 component seems not to work, check our own side first (CSS on the host, missing imports,
+  wrong children in the slot, hidden container at first render, test assumptions). Replace or drop it only with
+  a proven cause in the UI5 source of the pinned version (file and line) in the PR description.
+- Controls (button, select, checkbox, input, menu, dialog, list) are always UI5 components.
+  Content (Markdown in editor and preview) stays semantic HTML and CodeMirror. The code tools
+  (`ui5-select`, `ui5-button`) in `live-preview.ts` are UI5. The task checkbox stays the native
+  `<input type="checkbox">`, as part of the Markdown content (spike D7 with `ui5-checkbox` failed):
+  it would have to be shrunk below its intended box of 2.75rem/2rem (modifies UI5, click area
+  and focus ring stick out of the line, a height below 24 px endangers WCAG 2.5.8), and every keystroke over
+  a task would re-create heavy shadow DOM elements. Checks on the native checkbox:
+  keyboard (Space), target size at least 24 px via CSS, accessible name (`task.open`/`task.done`).
+- Every new view and every new dialog gets an axe test in `tests/e2e/a11y.spec.ts`.
+- Cloud session: the npm registry is reachable (`npm ci`, new packages with `npm install`, commit the lockfile).
+  Types, unit, UI and Electron tests also run locally; Playwright there with the pre-installed Chromium
+  (`launchOptions.executablePath`), Electron under `xvfb-run`. CI remains the authoritative test loop;
+  read failures via the check-run annotations API. PRs via the REST API.
 
-## Bekannte Risiken
+## Known risks
 
-- CodeMirror braucht `root: document` (Fokus im UI5-Slot). Mehrzeilige Ersetzungen nur über ein `StateField`.
-- UI5-Theme erst nach der Sprache setzen, sonst bleibt die App mit dunklem Theme leer.
-- FCL feuert `layout-change` nicht bei programmatischem Layout: immer `setLayout()` nutzen.
-  `setLayout()` hält die Bibliothek zu (`ThreeColumnsStartHiddenEndExpanded`), solange der Nutzer sie im breiten Fenster
-  eingeklappt hat (`libraryCollapsed`, nur für die Sitzung).
-- UI5-Listeneinträge enthalten unsichtbaren Zusatztext: in Tests `toContainText` statt `toHaveText`.
-- UI5 2.27.2 hat einen Render-Loop-Fehler im `ui5-tokenizer` (behoben ab 2.28.0). Betrifft das Label-Feld bei sehr vielen Labels.
-- Die Schrift 72 kopiert `scripts/copy-fonts.mjs` aus node_modules. Pfade prüfen, falls die Konsole warnt.
-- CSP ohne `unsafe-inline`: Neuer Code darf keine `style`-Attribute oder `<style>`-Elemente
-  setzen, nur Klassen oder `element.style` (CSSOM). CodeMirror bekommt die Nonce über `cspNonce()`.
+- CodeMirror needs `root: document` (focus inside the UI5 slot). Multi-line replacements only via a `StateField`.
+- Set the UI5 theme only after the language, otherwise the app stays blank with the dark theme.
+- FCL does not fire `layout-change` for programmatic layouts: always use `setLayout()`.
+  `setLayout()` keeps the library closed (`ThreeColumnsStartHiddenEndExpanded`) as long as the user has collapsed it
+  in the wide window (`libraryCollapsed`, session only).
+- UI5 list items contain invisible extra text: in tests use `toContainText` instead of `toHaveText`.
+- UI5 2.27.2 has a render loop bug in `ui5-tokenizer` (fixed from 2.28.0). Affects the label field with very many labels.
+- The 72 font is copied from node_modules by `scripts/copy-fonts.mjs`. Check the paths if the console warns.
+- CSP without `unsafe-inline`: new code must not set `style` attributes or `<style>` elements,
+  only classes or `element.style` (CSSOM). CodeMirror gets the nonce via `cspNonce()`.

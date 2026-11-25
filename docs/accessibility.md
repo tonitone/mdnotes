@@ -1,136 +1,139 @@
-# Barrierefreiheit: Prüfprotokoll
+# Accessibility: audit log
 
-Ziel: WCAG 2.2 AA, wie sie EN 301 549 (Kapitel 11, Software) verlangt.
+Goal: WCAG 2.2 AA, as required by EN 301 549 (chapter 11, software).
 
-## Automatisch in der CI
+UI texts below are quoted from the English catalog (`src/shared/i18n/en.ts`). The automated tests run in German;
+the manual checks apply to both languages.
 
-`tests/e2e/a11y.spec.ts` läuft bei jedem Push im Browser-Modus:
+## Automated in CI
 
-- **axe (WCAG 2.2 AA)** auf der Hauptansicht in allen vier Themes (Hell, Dunkel,
-  Hoher Kontrast schwarz und weiß) und auf Englisch.
-- **Alle Zustände:** keine Notiz gewählt, keine Treffer, Label-Ansicht, Papierkorb mit
-  schreibgeschützter Notiz, Hinweis bei Änderung von außen, Notizliste mit Datumsgruppen und
-  angehefteter Notiz (Hell und Hoher Kontrast schwarz).
-- **Alle Menüs und Dialoge:** Darstellung, Sprache, Weitere Aktionen, Sortieren, Kontextmenü einer Notiz, Export, Versionen mit Diff,
-  Backup mit Aktionsmenü, Notizauswahl, Bestätigung „Endgültig löschen“, Eingabedialog.
-- **Tastatur:** Skip-Link als erster Tab-Stopp, F6/Shift+F6 zwischen den drei Bereichen,
-  Esc und danach Tab verlässt den Editor, Fokus kehrt nach dem Schließen eines Dialogs zum
-  auslösenden Knopf zurück.
-- **Reflow (1.4.10):** kein waagerechtes Scrollen bei 320 CSS-Pixeln Breite.
-- **Textabstände (1.4.12):** erhöhte Zeilen-, Buchstaben- und Wortabstände schneiden nichts ab.
+`tests/e2e/a11y.spec.ts` runs on every push in browser mode:
 
-Bekannte Fehler innerhalb von UI5 stehen mit Begründung in `tests/e2e/axe.ts`
-(`KNOWN_UI5_ISSUES`) und werden entfernt, sobald UI5 sie behebt.
+- **axe (WCAG 2.2 AA)** on the main view in all four themes (light, dark,
+  high contrast black and white) and in English.
+- **All states:** no note selected, no results, label view, trash with a
+  read-only note, notice about a change from outside, note list with date groups and
+  a pinned note (light and high contrast black).
+- **All menus and dialogs:** Appearance, Language, More actions, Sort, a note's context menu, Export, Versions with diff,
+  Backup with action menu, note picker, "Delete permanently" confirmation, input dialog.
+- **Keyboard:** skip link as the first tab stop, F6/Shift+F6 between the three areas,
+  Esc then Tab leaves the editor, focus returns to the triggering button after a dialog
+  closes.
+- **Reflow (1.4.10):** no horizontal scrolling at a width of 320 CSS pixels.
+- **Text spacing (1.4.12):** increased line, letter and word spacing does not clip anything.
 
-## Manuell mit Screenreader
+Known bugs inside UI5 are listed with their reasoning in `tests/e2e/axe.ts`
+(`KNOWN_UI5_ISSUES`) and are removed as soon as UI5 fixes them.
 
-axe findet etwa ein Drittel der Probleme. Den Rest prüft nur ein Mensch. Einmal pro
-größerem Release, je System mit dem dort üblichen Screenreader:
+## Manual, with a screen reader
 
-| System  | Screenreader | Start                       |
-| ------- | ------------ | --------------------------- |
-| macOS   | VoiceOver    | Cmd+F5                      |
-| Windows | NVDA         | Strg+Alt+N (nach Installation) |
-| Linux   | Orca         | Super+Alt+S (GNOME)         |
+axe finds about a third of the problems. Only a person can check the rest. Once per
+larger release, on each system with its usual screen reader:
 
-Bei jedem Punkt: Was wird angesagt? Stimmt es mit dem überein, was man sieht?
+| System  | Screen reader | Start                         |
+| ------- | ------------- | ----------------------------- |
+| macOS   | VoiceOver     | Cmd+F5                        |
+| Windows | NVDA          | Ctrl+Alt+N (after installing) |
+| Linux   | Orca          | Super+Alt+S (GNOME)           |
 
-### Start und Orientierung
+For every item: what is announced? Does it match what is visible?
 
-- [ ] Fenstertitel und Bereiche werden angesagt: „Bibliothek“ (Navigation),
-      „Notizen“ (Region), „Editor“ (Hauptbereich).
-- [ ] Der erste Tab-Stopp ist „Zum Editor springen“. Enter springt in den Editor oder,
-      ohne offene Notiz, in die Notizliste.
-- [ ] F6 und Shift+F6 springen zwischen Shellbar, Bibliothek, Notizliste und Editor.
-- [ ] Das Logo in der Shellbar wird als Link „mdnotes“ angesagt, im breiten und im schmalen
-      Fenster (unter etwa 700 px) und nur einmal. Enter oder Leertaste führt zu „Alle Notizen“:
-      Der Fokus liegt in der Notizliste, eine offene Notiz bleibt offen (im schmalen Fenster
-      hinter der Liste), ein offener Papierkorb-Eintrag wird geschlossen.
+### Start and orientation
 
-### Notizliste
+- [ ] The window title and the areas are announced: "Library" (navigation),
+      "Notes" (region), "Editor" (main).
+- [ ] The first tab stop is "Skip to editor". Enter jumps into the editor or,
+      without an open note, into the note list.
+- [ ] F6 and Shift+F6 jump between shellbar, library, note list and editor.
+- [ ] The logo in the shellbar is announced as the link "mdnotes", in the wide and in the narrow
+      window (below about 700 px), and only once. Enter or Space leads to "All notes":
+      focus is in the note list, an open note stays open (behind the list in the narrow
+      window), an open trash entry is closed.
 
-- [ ] Pfeiltasten bewegen durch die Liste. Angesagt werden Titel, Vorschau und Datum.
-- [ ] Die offene Notiz ist als aktuelle erkennbar („aktiv“ bzw. „navigated“).
-- [ ] Die Suche hat einen Namen („Notizen durchsuchen“). Bei keinem Treffer wird
-      „Keine Treffer“ vorgelesen.
-- [ ] Datumsgruppen (`ui5-li-group`): Beim Wechsel in eine Gruppe wird ihr Name angesagt
-      („Angeheftet“, „Heute“, „Gestern“, „Vorherige 7 Tage“, „Vorherige 30 Tage“, Monat, Jahr).
-      Die Gruppenköpfe sind mit den Pfeiltasten erreichbar, VoiceOver nennt die Gruppe als Liste.
-- [ ] Eine angeheftete Notiz sagt „angeheftet“ nach dem Titel an, auch ohne Gruppe
-      (Sortierung nach Titel, Suche, Papierkorb).
-- [ ] Kontextmenü einer Notiz mit Shift+F10 oder der Kontextmenütaste: „Anheften“ bzw.
-      „Loslösen“. Nach der Auswahl steht der Fokus wieder auf derselben Notiz, die Änderung
-      wird angesagt („„Einkauf“ angeheftet.“). Im Papierkorb gibt es kein Kontextmenü.
-- [ ] Knopf „Sortieren: Änderungsdatum“ öffnet das Menü „Sortieren nach“ mit drei
-      Auswahlpunkten (Änderungsdatum, Erstelldatum, Titel); der gewählte ist als ausgewählt
-      angesagt. Die neue Sortierung wird angesagt („Sortiert nach Titel.“).
+### Note list
+
+- [ ] The arrow keys move through the list. Title, preview and date are announced.
+- [ ] The open note is recognizable as the current one ("active" or "navigated").
+- [ ] The search has a name ("Search notes"). With no match,
+      "No results" is read out.
+- [ ] Date groups (`ui5-li-group`): when moving into a group, its name is announced
+      ("Pinned", "Today", "Yesterday", "Previous 7 Days", "Previous 30 Days", month, year).
+      The group headers can be reached with the arrow keys; VoiceOver names the group as a list.
+- [ ] A pinned note announces "pinned" after the title, also without groups
+      (sorting by title, search, trash).
+- [ ] A note's context menu via Shift+F10 or the context menu key: "Pin" or
+      "Unpin". After choosing, focus is back on the same note and the change
+      is announced ("“Shopping” pinned."). The trash has no context menu.
+- [ ] The button "Sort: Date modified" opens the menu "Sort by" with three
+      choices (Date modified, Date created, Title); the chosen one is announced as selected.
+      The new sort order is announced ("Sorted by Title.").
 
 ### Editor
 
-- [ ] Beim Betreten: „Notizinhalt, Markdown-Editor. Die erste Zeile ist der Titel …“.
-- [ ] Getippter Text wird vorgelesen. Überschriften und Listen bleiben als Text lesbar
-      (die Live Preview blendet Zeichen nur außerhalb der Cursorzeile aus).
-- [ ] Aufgaben-Kästchen: „Aufgabe offen“ bzw. „Aufgabe erledigt“, umschaltbar.
-- [ ] Code-Block: Sprachauswahl und „Code kopieren“ sind erreichbar, „Code kopiert“
-      wird angesagt.
-- [ ] Bild einfügen: Der Dialog „Bildbeschreibung“ öffnet sich, der Fokus steht im Feld.
-- [ ] Speicherstatus („Speichert …“, „Gespeichert um …“) wird höflich angesagt,
-      ohne das Tippen zu unterbrechen.
-- [ ] Esc, danach Tab verlässt den Editor (keine Tastaturfalle).
+- [ ] On entering: "Note content, Markdown editor. The first line is the title …".
+- [ ] Typed text is read out. Headings and lists stay readable as text
+      (the Live Preview hides characters only outside the cursor line).
+- [ ] Task checkbox: "Task open" or "Task done", toggleable.
+- [ ] Code block: the language selection and "Copy code" are reachable, "Code copied"
+      is announced.
+- [ ] Inserting an image: the dialog "Image description" opens, focus is in the field.
+- [ ] The save status ("Saving …", "Saved at …") is announced politely,
+      without interrupting typing.
+- [ ] Esc, then Tab leaves the editor (no keyboard trap).
 
-### Formatierung
+### Formatting
 
-Kürzel im Editor (Cmd statt Strg auf dem Mac): Strg+B fett, Strg+I kursiv, Strg+K Link,
-Strg+Umschalt+X durchgestrichen. Strg+I belegt damit „Übergeordnete Syntax wählen“ von
-CodeMirror. Weitere Aktionen gibt es in der Formatleiste (`ui5-toolbar`: Überschrift, Liste,
-Aufgabe, Tabelle, Code, Link); fett, kursiv und durchgestrichen auch im Menü
-„Weitere Aktionen“ > „Format“, dort mit dem Kürzel.
+Shortcuts in the editor (Cmd instead of Ctrl on the Mac): Ctrl+B bold, Ctrl+I italic, Ctrl+K link,
+Ctrl+Shift+X strikethrough. Ctrl+I thereby replaces CodeMirror's "Select parent syntax".
+Further actions are in the formatting toolbar (`ui5-toolbar`: Heading, List,
+Task, Table, Code, Link); bold, italic and strikethrough are also in the menu
+"More actions" > "Format", there with the shortcut.
 
-- [ ] Strg+B, Strg+I, Strg+K, Strg+Umschalt+X: „Fett an/aus“ usw. wird angesagt.
-- [ ] Die Formatleiste hat den Namen „Formatierung“, jeder Knopf einen Namen (Tooltip nennt das Kürzel).
-- [ ] In der Leiste wechseln Pfeiltasten, Pos1 und Ende zwischen den Knöpfen.
-- [ ] Nach einem Knopf der Leiste oder einem Eintrag im Menü „Format“ steht der Fokus wieder im Editor.
-- [ ] Bei sehr schmalem Fenster wandern die letzten Knöpfe in das Überlaufmenü der Leiste und
-      bleiben dort mit Maus und Tastatur bedienbar.
-- [ ] Im Menü „Format“ wird das Kürzel eines Eintrags angesagt (`aria-keyshortcuts`).
+- [ ] Ctrl+B, Ctrl+I, Ctrl+K, Ctrl+Shift+X: "Bold on/off" etc. is announced.
+- [ ] The formatting toolbar has the name "Formatting", every button has a name (the tooltip shows the shortcut).
+- [ ] In the toolbar, the arrow keys, Home and End move between the buttons.
+- [ ] After a toolbar button or an entry in the "Format" menu, focus is back in the editor.
+- [ ] In a very narrow window, the last buttons move into the toolbar's overflow menu and
+      stay usable there with mouse and keyboard.
+- [ ] In the "Format" menu, an entry's shortcut is announced (`aria-keyshortcuts`).
 
 ### Labels
 
-- [ ] Das Label-Feld heißt „Labels der Notiz“. Vorschläge werden angesagt.
-- [ ] Ein Label lässt sich mit Rücktaste oder Entf entfernen. Die Änderung ist hörbar.
+- [ ] The label field is called "Labels of this note". Suggestions are announced.
+- [ ] A label can be removed with Backspace or Delete. The change is audible.
 
-### Dialoge
+### Dialogs
 
-- [ ] Beim Öffnen wird der Titel angesagt, der Fokus steht im Dialog.
-- [ ] Tab bleibt im Dialog. Esc schließt ihn. Der Fokus kehrt zum Auslöser zurück.
-- [ ] Versionen: Die Liste ist bedienbar. Die Zusammenfassung („2 Änderungen: …“) wird
-      nach der Auswahl angesagt. Beide Diff-Seiten haben einen Namen.
-- [ ] Backup: Auswahl „Automatisch sichern“ hat eine Beschriftung, „Backup gespeichert“
-      wird angesagt.
+- [ ] On opening, the title is announced and focus is in the dialog.
+- [ ] Tab stays inside the dialog. Esc closes it. Focus returns to the trigger.
+- [ ] Versions: the list is usable. The summary ("2 changes: …") is
+      announced after choosing. Both diff sides have a name.
+- [ ] Backup: the selection "Back up automatically" has a label, "Backup saved"
+      is announced.
 
-### Meldungen
+### Messages
 
-- [ ] Fehler (z. B. Speichern fehlgeschlagen) werden sofort angesagt (assertive).
-- [ ] Hinweise zu Änderungen von außen sind mit Tab erreichbar, ihre Knöpfe sind benannt.
-- [ ] Toasts wie „In den Papierkorb verschoben“ werden zusätzlich über die Live-Region
-      angesagt, weil Toasts allein schnell verschwinden.
+- [ ] Errors (e.g. saving failed) are announced immediately (assertive).
+- [ ] Notices about changes from outside can be reached with Tab, their buttons have names.
+- [ ] Toasts such as "moved to the trash" are also announced via the live region,
+      because toasts alone disappear quickly.
 
-## Manuell ohne Screenreader
+## Manual, without a screen reader
 
-- [ ] **Nur Tastatur:** Alles von Neue Notiz über Labels, Anheften, Sortieren, Export und Backup bis zum
-      Wiederherstellen aus dem Papierkorb geht ohne Maus. Der Fokus ist immer sichtbar.
-- [ ] **Zoom 200 % und 400 %** (Cmd/Strg und +): Nichts überlappt. Bei 400 % zeigt das
-      Layout eine Spalte, der Zurück-Knopf führt zur Liste.
-- [ ] **Kontrastdesigns des Systems** (Windows: Kontrastdesigns, macOS: Kontrast
-      erhöhen): Mit „System folgen“ wechselt die App auf Hoher Kontrast.
-- [ ] **Bewegung reduzieren** im System: keine Animationen.
-- [ ] **Sprache Englisch:** Alle Texte und Ansagen wechseln, auch Menü und Dialoge des
-      Systems (Ordnerwahl).
+- [ ] **Keyboard only:** everything from New note through labels, pinning, sorting, export and backup to
+      restoring from the trash works without a mouse. Focus is always visible.
+- [ ] **Zoom 200 % and 400 %** (Cmd/Ctrl and +): nothing overlaps. At 400 % the
+      layout shows one column, the back button leads to the list.
+- [ ] **System contrast themes** (Windows: contrast themes, macOS: increase
+      contrast): with "Follow system" the app switches to high contrast.
+- [ ] **Reduce motion** in the system: no animations.
+- [ ] **Language English:** all texts and announcements switch, including the system's menu and dialogs
+      (folder picker).
 
-## Ergebnisse
+## Results
 
-| Datum | System / Screenreader | Version | Ergebnis / Befunde |
-| ----- | --------------------- | ------- | ------------------ |
-| 2026-10-22 | macOS 27.0.1 (26A434) / VoiceOver | Phase 4 (`feat/strict-csp`, fb4cd62), Dev-Modus | Start und Orientierung, Editor (Aufgaben, Code-Block, Bild mit Beschreibung), Dialoge, Labels, Meldungen und Sprachwechsel: bestanden, keine Befunde |
-| | Windows / NVDA | | noch offen |
-| | Linux / Orca | | noch offen |
+| Date | System / screen reader | Version | Result / findings |
+| ---- | ---------------------- | ------- | ----------------- |
+| 2026-10-22 | macOS 27.0.1 (26A434) / VoiceOver | Phase 4 (`feat/strict-csp`, fb4cd62), dev mode | Start and orientation, editor (tasks, code block, image with description), dialogs, labels, messages and language switch: passed, no findings |
+| | Windows / NVDA | | still open |
+| | Linux / Orca | | still open |

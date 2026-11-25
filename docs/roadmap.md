@@ -1,82 +1,82 @@
-# Fahrplan
+# Roadmap
 
-Die geordnete Liste aller offenen Pakete: Phase 5 („Alltag und Komfort“) und die Design-Überarbeitung (D1 bis D7).
-Jeder Eintrag ist ein PR und ein GitHub-Issue. Toni bestimmt die Reihenfolge, dieses Dokument hält sie fest.
-Den Status zeigen die Issues und Meilensteine: Ein PR schließt sein Issue mit `Closes #n` in der Beschreibung.
+The ordered list of all open packages: phase 5 ("everyday use and comfort") and the design revision (D1 to D7).
+Each entry is one PR and one GitHub issue. Toni decides the order; this document records it.
+The status is shown by the issues and milestones: a PR closes its issue with `Closes #n` in the description.
 
-Hintergrund und Begründungen stehen in den claude.ai Artifacts „Plan: Markdown-Editor“ (Backlog Phase 5)
-und „Plan: Design-Überarbeitung mdnotes“.
+Background and reasoning are in the claude.ai Artifacts "Plan: Markdown-Editor" (phase 5 backlog)
+and "Plan: Design-Überarbeitung mdnotes".
 
-## Stand (8. November 2026)
+## Status (8 November 2026)
 
-Erledigt: #14 D1, #15 D3, #16 D7, #17 Formatierung und Leiste, #36, #37, #39, #45, #38 (Logo).
-Neue Issues werden auf Englisch geschrieben.
+Done: #14 D1, #15 D3, #16 D7, #17 formatting and toolbar, #36, #37, #39, #45, #38 (logo).
+Everything in the repository is written in English (see `CLAUDE.md`, "Way of working").
 
-**Als Nächstes, in dieser Reihenfolge:**
+**Next, in this order:**
 
-1. PR #52 (#18 Anheften, Sortieren, Datumsgruppen) fertigstellen. Der Agent brach am Sitzungslimit ab,
-   der PR ist ein Entwurf. CI prüfen (zuletzt war der macOS-Job abgebrochen), Lücken schließen,
-   dann mit `POST repos/tonitone/mdnotes/pulls/52/ccr/ready_for_review` auf bereit setzen.
-2. PR #50 (#48 scrollender Editor, axe) ist bereit. Er wartet auf Review und Merge der stündlichen Aufgabe.
-   Offen: Der Eintrag zur Zielgröße von `ui5-select` in `KNOWN_UI5_ISSUES` wird bei #21 nachgemessen.
-3. #53 (Bug): Eine zugeklappte Bibliotheksspalte geht beim Öffnen einer Notiz oder beim Logo-Klick wieder auf.
-   Sie soll zu bleiben, bis Toni sie wieder öffnet.
-4. #54: Der Logo-Klick soll im breiten Fenster die offene Notiz nicht schließen, sondern nur die Liste auf
-   „Alle Notizen“ stellen.
-5. Danach #19, #20 (Phase 5.2), #21 und #22 (Phase 5.3), dann Phase 5.4.
+1. Finish PR #52 (#18 pinning, sorting, date groups). The agent stopped at the session limit,
+   the PR is a draft. Check CI (the macOS job was cancelled last time), close the gaps,
+   then mark it ready with `POST repos/tonitone/mdnotes/pulls/52/ccr/ready_for_review`.
+2. PR #50 (#48 scrolling editor, axe) is ready. It is waiting for review and merge.
+   Open: the entry for the target size of `ui5-select` in `KNOWN_UI5_ISSUES` is re-measured in #21.
+3. #53 (bug): A collapsed library column opens again when a note is opened or the logo is clicked.
+   It should stay closed until Toni opens it again.
+4. #54: In the wide window, clicking the logo should not close the open note, only switch the list to
+   "All notes".
+5. Then #19, #20 (phase 5.2), #21 and #22 (phase 5.3), then phase 5.4.
 
-**Arbeitsweise:**
+**Way of working:**
 
-- Modelle und Rollen regelt `AGENTS.md` (Regel 7): Umsetzung und Planung mit Opus, Review durch einen GPT-Agenten,
-  beides mit hohem Effort.
-- Höchstens zwei Agenten gleichzeitig, große Issues teilen.
-- Fehlersuche höchstens zwei CI-Runden. Danach melden statt weiter probieren.
-- Der GPT-Reviewer reviewt, korrigiert und mergt PRs mit `Closes #n`. Die frühere Aufgabe
-  „mdnotes PR review and fix loop“ gibt es nicht mehr. Agenten setzen ihre PRs nach grüner CI selbst auf bereit.
-- PRs mit neuen Paketen (`package.json`, `package-lock.json`) mergt er seit 24. November 2026 auch selbst,
-  wenn das Lockfile geprüft ist: nur die neuen Pakete, keine bestehende Version geändert, alles von
-  registry.npmjs.org. Änderungen an Workflows unter `.github/` und an der Release-Konfiguration bleiben bei Toni.
+- Models and roles are defined in `AGENTS.md` (rule 7): implementation and planning on Opus, review by a GPT agent,
+  both at high effort.
+- At most two agents at the same time; split large issues.
+- Debugging at most two CI rounds. After that, report instead of trying further.
+- The GPT reviewer reviews, fixes and merges PRs with `Closes #n`. The former scheduled task
+  "mdnotes PR review and fix loop" no longer exists. Agents mark their PRs ready themselves once CI is green.
+- Since 24 November 2026 it also merges PRs with new packages (`package.json`, `package-lock.json`) itself
+  once the lockfile has been checked: only the new packages, no existing version changed, everything from
+  registry.npmjs.org. Changes to workflows under `.github/` and to the release configuration stay with Toni.
 
-## Meilenstein Phase 5.1: Design-Grundlage
+## Milestone Phase 5.1: design foundation
 
-1. #14 **D1 Split-Ansicht nach Spaltenbreite.** `@container` auf `.editor-column` statt `@media` auf das Fenster.
-2. #15 **D3 Sprachauswahl aus „Darstellung“.** Eigenes Shellbar-Symbol (Globus) mit flachem Menü. Es bleibt bei vier Shellbar-Einträgen,
-   Fallback bei Problemen ist ein Einstellungen-Dialog.
-3. #16 **D7 UI5 für alle Bedienelemente.** Code-Werkzeuge auf `ui5-select` und `ui5-button`. Aufgaben-Kästchen zuerst als Spike mit
-   `ui5-checkbox`, fällt er durch, bleibt das native Element und die Begründung kommt in `CLAUDE.md`.
+1. #14 **D1 split view by column width.** `@container` on `.editor-column` instead of `@media` on the window.
+2. #15 **D3 language selection out of "Appearance".** Its own shellbar icon (globe) with a flat menu. The shellbar keeps four entries;
+   the fallback if there are problems is a settings dialog.
+3. #16 **D7 UI5 for all controls.** Code tools on `ui5-select` and `ui5-button`. Task checkbox first as a spike with
+   `ui5-checkbox`; if it fails, the native element stays and the reasoning goes into `CLAUDE.md`.
 
-## Meilenstein Phase 5.2: Schreiben und Ordnen
+## Milestone Phase 5.2: writing and organizing
 
-4. #17 **Phase 5, Punkt 1 zusammen mit D2.** Formatier-Kürzel (Cmd+B/I/K, Cmd+Shift+X) und Toolbar, dazu die neue Editor-Kopfzeile:
-   Dateiname raus, Menü „Weitere Aktionen“ mit „Dateiname kopieren“, Speicherstatus neben die Aktionen, `ui5-toolbar` mit Overflow.
-5. #18 **Phase 5, Punkt 2 zusammen mit D4.** Anheften und Sortieren (Entscheidung offen: `pinned` im Front Matter oder in `config.json`)
-   und Datumsgruppen wie in Apple Notes. Angeheftete Notizen bilden die erste Gruppe. Bei Suche und bei Sortierung nach Titel keine Gruppen.
-6. #19 **Phase 5, Punkt 3.** „Rückgängig“ nach dem Löschen.
-7. #20 **Phase 5, Punkt 4.** Tastenkürzel-Übersicht (Cmd+/).
+4. #17 **Phase 5, item 1 together with D2.** Formatting shortcuts (Cmd+B/I/K, Cmd+Shift+X) and toolbar, plus the new editor header:
+   file name removed, "More actions" menu with "Copy file name", save status next to the actions, `ui5-toolbar` with overflow.
+5. #18 **Phase 5, item 2 together with D4.** Pinning and sorting (open decision: `pinned` in the front matter or in `config.json`)
+   and date groups as in Apple Notes. Pinned notes form the first group. No groups while searching or when sorting by title.
+6. #19 **Phase 5, item 3.** "Undo" after deleting.
+7. #20 **Phase 5, item 4.** Keyboard shortcut overview (Cmd+/).
 
-## Meilenstein Phase 5.3: Politur
+## Milestone Phase 5.3: polish
 
-8. #21 **D5 Zielgrößen und Tokens.** Test für die Mindestgröße 24 × 24 px (WCAG 2.2 AA, 2.5.8), feste Rundungen durch Theme-Token ersetzen.
-   Kann früher zwischen die Features geschoben werden.
-9. #22 **D6 Bibliothek und Status.** Zähler an „Alle Notizen“, Workspace-Pfad vorne gekürzt, „Neue Notiz“ mit Text bei breiter Spalte und
-   nur als Symbol bei schmaler Spalte, Speicherstatus nach einigen Sekunden dezent. Kann früher eingeschoben werden.
+8. #21 **D5 target sizes and tokens.** Test for the minimum size of 24 × 24 px (WCAG 2.2 AA, 2.5.8), replace fixed radii with theme tokens.
+   Can be moved earlier between the features.
+9. #22 **D6 library and status.** Counter on "All notes", workspace path shortened at the front, "New note" with text in a wide column and
+   icon only in a narrow column, save status turns subtle after a few seconds. Can be moved earlier.
 
-## Meilenstein Phase 5.4: Vernetzen
+## Milestone Phase 5.4: linking
 
-- #23 Phase 5, Punkt 5: `[[Links]]` mit Rückverweisen (braucht vermutlich `@codemirror/autocomplete`, also Lockfile vom Mac).
-- #24 Phase 5, Punkt 6: Gliederung.
-- #25 Phase 5, Punkt 7: Tabellen bearbeiten (Rendern in der Live Preview ist mit PR #11 erledigt).
-- #26 Phase 5, Punkt 8: Wörter und Zeichen zählen.
-- #27 Phase 5, Punkt 9: Notiz duplizieren und Vorlagen (Eintrag „Duplizieren“ im Menü „Weitere Aktionen“ aus D2).
+- #23 Phase 5, item 5: `[[links]]` with backlinks (probably needs `@codemirror/autocomplete`, so a lockfile from the Mac).
+- #24 Phase 5, item 6: outline.
+- #25 Phase 5, item 7: editing tables (rendering in the Live Preview is done with PR #11).
+- #26 Phase 5, item 8: counting words and characters.
+- #27 Phase 5, item 9: duplicate a note and templates ("Duplicate" entry in the "More actions" menu from D2).
 
-## Meilenstein Später
+## Milestone Later ("Später")
 
-- #28 Phase 5, Punkt 10: Mathe, Mermaid, Fußnoten (neue Pakete, strenge CSP beachten).
-- #29 Phase 5, Punkt 11: Anhänge außer Bildern, mit Größenlimit.
-- #30 Phase 5, Punkt 12: Mehrere Notizen in Tabs oder Fenstern.
-- #31 Backups verschlüsseln (optional).
-- #32 Blockweises Wiederherstellen aus einer Version.
+- #28 Phase 5, item 10: math, Mermaid, footnotes (new packages, mind the strict CSP).
+- #29 Phase 5, item 11: attachments other than images, with a size limit.
+- #30 Phase 5, item 12: several notes in tabs or windows.
+- #31 Encrypt backups (optional).
+- #32 Block-wise restore from a version.
 
-## Vor D2 und D4
+## Before D2 and D4
 
-Screenshots der App (hell, dunkel, Split-Ansicht) ansehen, damit der Entwurf nicht am Bild vorbei geht.
+Look at screenshots of the app (light, dark, split view) so the design does not miss the actual picture.
