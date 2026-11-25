@@ -50,6 +50,7 @@ Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand
 
 ## Arbeitsweise
 
+- Regeln für Beiträge von Agenten (Commit-Trailer, PR-Rollen, keine Werbe-Footer): @AGENTS.md
 - Gesprächssprache Deutsch, kurz und konkret. Pro Thema ein PR, erst bei grüner CI melden. Bugs vor Features.
   Bei größeren, mehrdeutigen Aufgaben vorher kurz fragen.
 - Design: Standard-Horizon. Eigene Looks wurden abgelehnt (PR #9). UI5-Komponenten nie verändern.
