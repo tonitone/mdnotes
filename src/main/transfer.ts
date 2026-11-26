@@ -1,7 +1,6 @@
 import { BrowserWindow, app, dialog } from 'electron';
 import { randomBytes } from 'node:crypto';
-import { constants } from 'node:fs';
-import { copyFile, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { ExportFormat, ImportReport } from '../shared/api';
@@ -14,6 +13,7 @@ import { markdownToWiki } from '../shared/markdown/wiki';
 import { t, type MessageKey } from '../shared/i18n';
 import { slugify } from '../shared/note';
 import type { Workspace } from './workspace';
+import { assetFile, copyAssetFiles, readAssetFile } from './asset-policy';
 
 /** Export and import of notes. Runs in the main process. */
 
@@ -31,9 +31,9 @@ async function loadAssets(ws: Workspace, body: string): Promise<Map<string, Uint
   // Only images are embedded; attachments stay links.
   for (const name of referencedAssets(body).filter(isImageAssetName)) {
     try {
-      assets.set(name, new Uint8Array(await readFile(path.join(ws.root, ASSET_DIR, name))));
+      assets.set(name, await readAssetFile(ws.root, name));
     } catch {
-      // Image is gone: the export shows its alt text.
+      // Image is gone or refused by the asset policy: the export shows its alt text.
     }
   }
   return assets;
@@ -77,19 +77,7 @@ function timestamp(date = new Date()): string {
 
 /** Copies the images and attachments a note references into `<targetDir>/assets/`. */
 async function copyAssets(ws: Workspace, body: string, targetDir: string): Promise<void> {
-  const names = referencedAssets(body);
-  if (names.length === 0) return;
-  const dir = path.join(targetDir, ASSET_DIR);
-  await mkdir(dir, { recursive: true });
-  for (const name of names) {
-    try {
-      await copyFile(path.join(ws.root, ASSET_DIR, name), path.join(dir, name), constants.COPYFILE_EXCL);
-    } catch (err) {
-      // EEXIST: same name means same content. ENOENT: image is gone, keep exporting.
-      const code = (err as NodeJS.ErrnoException).code;
-      if (code !== 'EEXIST' && code !== 'ENOENT') throw err;
-    }
-  }
+  await copyAssetFiles(ws.root, referencedAssets(body), targetDir);
 }
 
 async function renderPdf(html: string): Promise<Buffer> {
@@ -129,10 +117,18 @@ export async function exportNote(ws: Workspace, parent: BrowserWindow, id: strin
   } else if (format === 'docx') {
     await writeFile(target, await renderDocx(ws, doc.body, doc.title));
   } else {
+    // Only images the asset policy accepts are handed to the print window, by their checked path.
+    const files = new Map<string, string>();
+    for (const name of referencedAssets(doc.body).filter(isImageAssetName)) {
+      const file = await assetFile(ws.root, name).catch(() => null);
+      if (file) files.set(name, file);
+    }
     const html = markdownToPrintDocument(doc.body, doc.title, {
       resolveImage: (src) => {
         const name = assetNameFromPath(src);
-        return name ? pathToFileURL(path.join(ws.root, ASSET_DIR, name)).href : src;
+        const file = name ? files.get(name) : undefined;
+        // A refused or missing image keeps its relative path, which does not resolve next to the temp file.
+        return file ? pathToFileURL(file).href : src;
       },
     });
     await writeFile(target, await renderPdf(html));
