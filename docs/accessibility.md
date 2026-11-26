@@ -74,6 +74,8 @@ Bei jedem Punkt: Was wird angesagt? Stimmt es mit dem überein, was man sieht?
 - [ ] Code-Block: Sprachauswahl und „Code kopieren“ sind erreichbar, „Code kopiert“
       wird angesagt.
 - [ ] Bild einfügen: Der Dialog „Bildbeschreibung“ öffnet sich, der Fokus steht im Feld.
+- [ ] Anhang einfügen („Weitere Aktionen“ → „Datei anhängen …“): „1 Datei angehängt.“ wird angesagt,
+      der Link wird mit Dateinamen vorgelesen, Strg/Cmd+Eingabe öffnet ihn.
 - [ ] Speicherstatus („Speichert …“, „Gespeichert um …“) wird höflich angesagt,
       ohne das Tippen zu unterbrechen.
 - [ ] Esc, danach Tab verlässt den Editor (keine Tastaturfalle).

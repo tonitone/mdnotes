@@ -4,7 +4,18 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { BackupKind, BackupSettings, ExportFormat, MenuCommand, NotesChangedEvent } from '../shared/api';
-import { ASSET_DIR, MAX_ASSET_BYTES, MIME_BY_EXT, assetNameFor, isAssetName, isImageMime } from '../shared/assets';
+import {
+  ASSET_DIR,
+  MAX_ASSET_BYTES,
+  MAX_ATTACHMENT_BYTES,
+  MIME_BY_EXT,
+  assetNameFor,
+  attachmentNameFor,
+  attachmentNameFromPath,
+  isAllowedAttachment,
+  isImageAssetName,
+  isImageMime,
+} from '../shared/assets';
 import { VERSION_NAME_RE } from '../shared/history';
 import { isLanguageChoice, resolveLocale, setLocale, t, type LanguageChoice } from '../shared/i18n';
 import { isNoteId } from '../shared/note';
@@ -24,6 +35,7 @@ import {
 import { RecoveryStore } from './recovery';
 import { exportAll, exportNote, importFromDialog, importTexts } from './transfer';
 import { Workspace } from './workspace';
+import { assetFile } from './asset-policy';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const devServerUrl = process.env.ELECTRON_RENDERER_URL; // set by electron-vite in dev mode
@@ -166,11 +178,14 @@ function hardenSession(): void {
   });
 }
 
-/** Serves images from the workspace's assets folder as mdnotes-asset://local/<name>. */
+/**
+ * Serves images from the workspace's assets folder as mdnotes-asset://local/<name>.
+ * Other attachments are never served: the window must not render a stored HTML or PDF file.
+ */
 function registerAssetProtocol(): void {
   protocol.handle(ASSET_SCHEME, async (request) => {
     const name = decodeURIComponent(new URL(request.url).pathname.replace(/^\//, ''));
-    if (!workspace || !isAssetName(name)) return new Response(null, { status: 404 });
+    if (!workspace || !isImageAssetName(name)) return new Response(null, { status: 404 });
     try {
       const bytes = await workspace.fs.readAsset(name);
       return new Response(bytes.slice().buffer as ArrayBuffer, {
@@ -245,6 +260,22 @@ function requireTrashName(name: unknown): string {
 }
 
 const EXPORT_FORMATS: readonly ExportFormat[] = ['markdown', 'wiki', 'pdf', 'html', 'docx'];
+
+function requireFileName(name: unknown): string {
+  if (typeof name !== 'string' || name.length === 0 || name.length > 255 || /[\0\r\n]/.test(name)) {
+    throw new Error('Invalid file name.');
+  }
+  return name;
+}
+
+/** An existing attachment as an absolute path, checked by the asset policy (asset-policy.ts). */
+async function requireAttachmentFile(src: unknown): Promise<string> {
+  const name = typeof src === 'string' && src.length <= 300 ? attachmentNameFromPath(src) : null;
+  if (!name) throw new Error('Invalid attachment.');
+  const file = await assetFile(requireWorkspace().root, name);
+  if (!file) throw new Error(t('main.attachmentMissing'));
+  return file;
+}
 
 function requireFormat(format: unknown): ExportFormat {
   if (!EXPORT_FORMATS.includes(format as ExportFormat)) throw new Error('Invalid export format.');
@@ -344,6 +375,24 @@ function registerIpc(): void {
     const name = await assetNameFor(bytes, mime);
     await requireWorkspace().fs.writeAsset(name, bytes);
     return `${ASSET_DIR}/${name}`;
+  });
+  handle('assets:saveAttachment', async (bytes, fileName) => {
+    if (!(bytes instanceof Uint8Array) || bytes.byteLength === 0 || bytes.byteLength > MAX_ATTACHMENT_BYTES) {
+      throw new Error('Invalid attachment data.');
+    }
+    const original = requireFileName(fileName);
+    if (!isAllowedAttachment(original)) throw new Error('Blocked file type.');
+    const name = await attachmentNameFor(bytes, original);
+    await requireWorkspace().fs.writeAsset(name, bytes);
+    return `${ASSET_DIR}/${name}`;
+  });
+  handle('assets:open', async (src) => {
+    // The stored extension is never one that runs code (BLOCKED_EXTENSIONS).
+    const error = await shell.openPath(await requireAttachmentFile(src));
+    if (error) throw new Error(error);
+  });
+  handle('assets:reveal', async (src) => {
+    shell.showItemInFolder(await requireAttachmentFile(src));
   });
 
   handle('transfer:exportNote', (id, format) => exportNote(requireWorkspace(), requireWindow(), requireId(id), requireFormat(format)));

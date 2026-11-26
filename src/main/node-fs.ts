@@ -1,8 +1,8 @@
 import { randomBytes } from 'node:crypto';
 import { constants, promises as fsp } from 'node:fs';
 import path from 'node:path';
-import { ASSET_DIR, isAssetName } from '../shared/assets';
 import { FileExistsError, type FsPort } from '../shared/fs-port';
+import { readAssetFile, writeAssetFile } from './asset-policy';
 import { HISTORY_DIR, VERSION_NAME_RE } from '../shared/history';
 import { isNoteId } from '../shared/note';
 import { MAX_FOLDER_DEPTH, isSkippedDir, isValidRelativePath } from '../shared/workspace-path';
@@ -239,22 +239,13 @@ export class NodeFs implements FsPort {
     await fsp.rm(this.resolveIn(TRASH_DIR, trashName));
   }
 
+  /** Same name means same content (content-addressed). The checks live in asset-policy.ts. */
   async writeAsset(name: string, bytes: Uint8Array): Promise<boolean> {
-    if (!isAssetName(name)) throw new Error(`Invalid asset name: ${name}`);
-    await fsp.mkdir(path.join(this.root, ASSET_DIR), { recursive: true });
-    try {
-      await fsp.writeFile(this.resolveIn(ASSET_DIR, name), bytes, { flag: 'wx' });
-      return true;
-    } catch (err) {
-      // Same name means same content (content-addressed), so nothing to do.
-      if ((err as NodeJS.ErrnoException).code === 'EEXIST') return false;
-      throw err;
-    }
+    return writeAssetFile(this.root, name, bytes);
   }
 
   async readAsset(name: string): Promise<Uint8Array> {
-    if (!isAssetName(name)) throw new Error(`Invalid asset name: ${name}`);
-    return new Uint8Array(await fsp.readFile(this.resolveIn(ASSET_DIR, name)));
+    return readAssetFile(this.root, name);
   }
 
   private historyDir(id: string): string {

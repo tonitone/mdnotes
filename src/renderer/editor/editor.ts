@@ -12,6 +12,8 @@ import { getLocale, t } from '../../shared/i18n';
 import { cspNonce } from './csp';
 import { linkPreview, noteLinks, type LinkHandlers } from './wikilinks';
 import { tableKeymap } from './table-commands';
+import { attachments, type AttachmentHandlers } from './attachments';
+import { attachmentMarkdown, fileKind } from '../../shared/assets';
 import { formatCommand, formatKeymap, type FormatHooks } from './format-commands';
 import type { FormatKind, FormatOutcome } from './format';
 
@@ -71,6 +73,8 @@ export interface NoteEditor {
   setLivePreview(on: boolean): void;
   /** Applies a Markdown format to the selection. Returns false when the editor is read-only. */
   format(kind: FormatKind): boolean;
+  /** Stores files and inserts them at the cursor: images inline, other files as attachment links. */
+  insertFiles(files: File[]): Promise<void>;
 }
 
 export interface EditorOptions {
@@ -81,20 +85,77 @@ export interface EditorOptions {
   saveImages: (files: File[]) => Promise<string[]>;
   /** Called after images were inserted, with the position of each `![` and its path. */
   onImagesInserted: (inserted: Array<{ from: number; path: string }>) => void;
+  /** Stores pasted or dropped files that are not images; returns their names and relative paths. */
+  saveAttachments: (files: File[]) => Promise<Array<{ name: string; path: string }>>;
+  /** Opens or reveals a stored attachment. */
+  attachments: AttachmentHandlers;
   /** Called after a shortcut or toolbar action changed the text. */
   onFormat: (outcome: FormatOutcome) => void;
   /** Notes a `[[link]]` can point to, and how to open one. */
   links: LinkHandlers;
 }
 
-function imageFiles(data: DataTransfer | null): File[] {
-  return data ? [...data.files].filter((f) => f.type.startsWith('image/')) : [];
+function droppedFiles(data: DataTransfer | null): File[] {
+  // Markdown files are imported as notes (app.ts), not attached.
+  return data ? [...data.files].filter((f) => !/\.(md|markdown)$/i.test(f.name)) : [];
+}
+
+/**
+ * True while the note that was open when an insert started is still the one in
+ * the editor. Storing files is asynchronous; if the user opened another note in
+ * the meantime, the insert is dropped instead of landing in the wrong note.
+ */
+type StillCurrent = () => boolean;
+
+/** Inserts `[name](path)` for each stored attachment at `pos`, one per line. */
+async function insertAttachments(
+  view: EditorView,
+  files: File[],
+  pos: number,
+  options: EditorOptions,
+  stillCurrent: StillCurrent,
+): Promise<void> {
+  const saved = await options.saveAttachments(files);
+  if (saved.length === 0 || !stillCurrent() || view.state.readOnly) return;
+  pos = Math.min(pos, view.state.doc.length);
+  const line = view.state.doc.lineAt(pos);
+  const before = pos > line.from ? '\n' : '';
+  const after = pos < line.to ? '\n' : '';
+  const markdown = saved.map(({ name, path }) => attachmentMarkdown(name, path)).join('\n');
+  view.dispatch({
+    changes: { from: pos, insert: before + markdown + after },
+    selection: { anchor: pos + before.length + markdown.length },
+    scrollIntoView: true,
+  });
+}
+
+/**
+ * Images become `![](…)`, everything else an attachment link (`fileKind` decides,
+ * the same rule the app uses to store them). Unsupported images go the image way,
+ * so the app reports them. Images first, then the other files.
+ */
+async function insertFiles(view: EditorView, files: File[], pos: number, options: EditorOptions, stillCurrent: StillCurrent): Promise<void> {
+  const isImage = (f: File) => fileKind(f.name, f.type).kind !== 'attachment';
+  const images = files.filter(isImage);
+  const others = files.filter((f) => !isImage(f));
+  if (images.length > 0) {
+    await insertImages(view, images, pos, options, stillCurrent);
+    pos = view.state.selection.main.head;
+  }
+  if (others.length > 0) await insertAttachments(view, others, pos, options, stillCurrent);
 }
 
 /** Inserts `![](path)` for each stored image at `pos`, one per line. */
-async function insertImages(view: EditorView, files: File[], pos: number, options: EditorOptions): Promise<void> {
+async function insertImages(
+  view: EditorView,
+  files: File[],
+  pos: number,
+  options: EditorOptions,
+  stillCurrent: StillCurrent,
+): Promise<void> {
   const paths = await options.saveImages(files);
-  if (paths.length === 0) return;
+  if (paths.length === 0 || !stillCurrent() || view.state.readOnly) return;
+  pos = Math.min(pos, view.state.doc.length);
   const line = view.state.doc.lineAt(pos);
   // Put images on their own line so the live preview can render them.
   const before = pos > line.from ? '\n' : '';
@@ -121,6 +182,12 @@ export function createEditor(parent: HTMLElement, options: EditorOptions): NoteE
   };
   const preview = new Compartment();
   let previewOn = true;
+  // Counts loaded notes (setDoc); a pending file insert only applies to the note it started in.
+  let generation = 0;
+  const currentGuard = (): StillCurrent => {
+    const started = generation;
+    return () => generation === started;
+  };
   const previewExtension = () =>
     previewOn ? [livePreview, tablePreview, linkPreview, mathPreview, diagramPreview, footnotePreview] : [];
   const readOnlyExtension = (on: boolean) => [EditorState.readOnly.of(on), EditorView.editable.of(!on)];
@@ -136,6 +203,7 @@ export function createEditor(parent: HTMLElement, options: EditorOptions): NoteE
     syntaxHighlighting(codeHighlight),
     assetResolver.of(options.resolveAsset),
     noteLinks(options.links),
+    attachments(options.attachments),
     preview.of(previewExtension()),
     placeholder(t('editor.placeholder')),
     fioriTheme,
@@ -173,18 +241,19 @@ export function createEditor(parent: HTMLElement, options: EditorOptions): NoteE
     }),
     EditorView.domEventHandlers({
       paste(event, view) {
-        const files = imageFiles(event.clipboardData);
+        const files = droppedFiles(event.clipboardData);
         if (files.length === 0 || view.state.readOnly) return false;
         event.preventDefault();
-        void insertImages(view, files, view.state.selection.main.head, options);
+        void insertFiles(view, files, view.state.selection.main.head, options, currentGuard());
         return true;
       },
       drop(event, view) {
-        const files = imageFiles(event.dataTransfer);
+        const files = droppedFiles(event.dataTransfer);
         if (files.length === 0 || view.state.readOnly) return false;
         event.preventDefault();
+        // Markdown files dropped together with others are still imported by the document handler.
         const pos = view.posAtCoords({ x: event.clientX, y: event.clientY }) ?? view.state.selection.main.head;
-        void insertImages(view, files, pos, options);
+        void insertFiles(view, files, pos, options, currentGuard());
         return true;
       },
     }),
@@ -202,11 +271,18 @@ export function createEditor(parent: HTMLElement, options: EditorOptions): NoteE
   return {
     view,
     setDoc(text, opts = {}) {
+      generation++;
       view.setState(EditorState.create({ doc: text, extensions: extensions(!!opts.readOnly) }));
     },
     getDoc: () => view.state.doc.toString(),
     focus: () => view.focus(),
     format: (kind) => formatCommand(kind, formatHooks)(view),
+    insertFiles: async (files) => {
+      if (view.state.readOnly) return;
+      const stillCurrent = currentGuard();
+      await insertFiles(view, files, view.state.selection.main.head, options, stillCurrent);
+      if (stillCurrent()) view.focus();
+    },
     setLivePreview(on) {
       if (on === previewOn) return;
       previewOn = on;

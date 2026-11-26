@@ -8,7 +8,9 @@ import {
   type DecorationSet,
   type ViewUpdate,
 } from '@codemirror/view';
+import { attachmentNameFromPath } from '../../shared/assets';
 import { t } from '../../shared/i18n';
+import { AttachmentWidget } from './attachments';
 import { markdownToHtml } from '../../shared/markdown/html';
 
 /**
@@ -309,6 +311,14 @@ function buildDecorations(view: EditorView): DecorationSet {
             if (state.sliceDoc(marks[0].to, marks[0].to + 1) === '^' && !node.node.getChild('URL')) break;
             const textFrom = marks[0].to;
             const textTo = marks[1].from;
+            // A file in `assets/` that is not an image: an attachment chip (attachments.ts).
+            const urlNode = node.node.getChild('URL');
+            const src = urlNode ? state.sliceDoc(urlNode.from, urlNode.to) : '';
+            if (!isActive(node.from) && attachmentNameFromPath(src)) {
+              const name = state.sliceDoc(textFrom, textTo).replace(/\\([\\[\]])/g, '$1') || src;
+              ranges.push(Decoration.replace({ widget: new AttachmentWidget(name, src) }).range(node.from, node.to));
+              return false;
+            }
             if (textTo > textFrom) ranges.push(mark('cm-md-link').range(textFrom, textTo));
             if (!isActive(node.from)) {
               ranges.push(hidden.range(marks[0].from, marks[0].to));

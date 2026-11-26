@@ -134,6 +134,22 @@ describe('backup', () => {
     assert.deepEqual(await restoreNotes(store, fs, folder, info.file, ['eins.md']), { imported: 0, skipped: 1, warnings: [] });
   });
 
+  it('backs up attachments and restores them with their note', async () => {
+    await writeFile(path.join(workspace, 'drei.md'), '# Drei\n\n[Bericht.pdf](assets/fedcba9876543210.pdf)\n');
+    await writeFile(path.join(workspace, 'assets', 'fedcba9876543210.pdf'), Buffer.from([4, 5]));
+    // Never part of the workspace's assets: a blocked extension is skipped.
+    await writeFile(path.join(workspace, 'assets', '1111111111111111.exe'), Buffer.from([9]));
+    const info = await createBackup(workspace, folder, { kind: 'manual', includeHistory: false, keep: 10 });
+    assert.equal((await verifyBackup(folder, info.file)).files, 5);
+    const target = path.join(root, 'other');
+    await mkdir(target);
+    const fs = new NodeFs(target);
+    const store = new NoteStore(fs);
+    await store.scan();
+    await restoreNotes(store, fs, folder, info.file, ['drei.md']);
+    assert.deepEqual([...(await fs.readAsset('fedcba9876543210.pdf'))], [4, 5]);
+  });
+
   it('restores a whole backup only into an empty folder', async () => {
     const info = await createBackup(workspace, folder, { kind: 'manual', includeHistory: false, keep: 10 });
     const target = path.join(root, 'restored');

@@ -154,6 +154,15 @@ export interface NotesApi {
   saveAsset(bytes: Uint8Array, mime: string): Promise<string>;
   /** URL the UI can load for a relative image path, or `null` if not local. */
   assetUrl(src: string): string | null;
+  /**
+   * Stores another file (PDF, document, archive …) in `assets/` and returns the
+   * relative path for Markdown. Files that can run code are refused.
+   */
+  saveAttachment(bytes: Uint8Array, fileName: string): Promise<string>;
+  /** Opens a stored attachment (`assets/…`) with the system's default app. */
+  openAttachment(src: string): Promise<void>;
+  /** Shows a stored attachment in the file manager (Finder, Explorer …). */
+  revealAttachment(src: string): Promise<void>;
 
   /** Exports one note with a save dialog. Returns the saved path, or `null` if cancelled. */
   exportNote(id: string, format: ExportFormat): Promise<string | null>;

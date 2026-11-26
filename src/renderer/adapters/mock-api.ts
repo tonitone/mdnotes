@@ -1,5 +1,5 @@
 import type { BackupInfo, BackupSettings, ExportFormat, ImportReport, NotesApi, NotesChangedEvent } from '../../shared/api';
-import { assetNameFor, assetNameFromPath } from '../../shared/assets';
+import { assetNameFor, assetNameFromPath, attachmentNameFor, attachmentNameFromPath, isAllowedAttachment, isImageAssetName } from '../../shared/assets';
 import { MemoryFs } from '../../shared/fs-port';
 import { markdownToHtmlDocument } from '../../shared/markdown/html';
 import { markdownToWiki } from '../../shared/markdown/wiki';
@@ -81,6 +81,10 @@ declare global {
     /** e2e tests: change a note's file as if another program did it. */
     __mdnotesExternalEdit?: (id: string, body: string) => Promise<void>;
     __mdnotesExternalFile?: (path: string, text: string) => Promise<void>;
+    /** e2e tests: attachments opened or shown in the folder, as `open:assets/…` or `reveal:assets/…`. */
+    __mdnotesAttachmentActions?: string[];
+    /** e2e tests: delay in ms before an image or attachment is stored, to test notes switched meanwhile. */
+    __mdnotesAssetDelayMs?: number;
   }
 }
 
@@ -141,6 +145,14 @@ export async function createMockApi(): Promise<NotesApi> {
   const assetUrls = new Map<string, string>();
   const changeListeners = new Set<(event: NotesChangedEvent) => void>();
   const exports: MockExport[] = (window.__mdnotesExports = []);
+  const attachmentActions: string[] = (window.__mdnotesAttachmentActions = []);
+  const assetDelay = () => new Promise((resolve) => window.setTimeout(resolve, window.__mdnotesAssetDelayMs ?? 0));
+  const requireAttachment = async (src: string): Promise<string> => {
+    const name = attachmentNameFromPath(src);
+    if (!name) throw new Error('Invalid attachment.');
+    await fs.readAsset(name); // throws if it is gone
+    return `assets/${name}`;
+  };
   // Browser mode keeps backups and recovery data in memory only.
   let backupSettings: BackupSettings = { folder: null, auto: 'off', includeHistory: false, keep: 10 };
   // Resolved on use: the locale is only set after the mock is created.
@@ -196,6 +208,7 @@ export async function createMockApi(): Promise<NotesApi> {
     deleteFromTrash: (name) => store.deleteFromTrash(name),
 
     async saveAsset(bytes, mime) {
+      await assetDelay();
       const name = await assetNameFor(bytes, mime);
       if (await fs.writeAsset(name, bytes)) {
         assetUrls.set(name, URL.createObjectURL(new Blob([bytes.slice().buffer as ArrayBuffer], { type: mime })));
@@ -204,7 +217,20 @@ export async function createMockApi(): Promise<NotesApi> {
     },
     assetUrl(src) {
       const name = assetNameFromPath(src);
-      return name ? (assetUrls.get(name) ?? null) : null;
+      return name && isImageAssetName(name) ? (assetUrls.get(name) ?? null) : null;
+    },
+    async saveAttachment(bytes, fileName) {
+      await assetDelay();
+      if (!isAllowedAttachment(fileName)) throw new Error('Blocked file type.');
+      const name = await attachmentNameFor(bytes, fileName);
+      await fs.writeAsset(name, bytes);
+      return `assets/${name}`;
+    },
+    async openAttachment(src) {
+      attachmentActions.push(`open:${await requireAttachment(src)}`);
+    },
+    async revealAttachment(src) {
+      attachmentActions.push(`reveal:${await requireAttachment(src)}`);
     },
 
     async exportNote(id, format) {

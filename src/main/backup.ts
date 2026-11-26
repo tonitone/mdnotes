@@ -2,7 +2,8 @@ import { createHash } from 'node:crypto';
 import { promises as fsp } from 'node:fs';
 import path from 'node:path';
 import type { BackupInfo, BackupKind, ImportReport } from '../shared/api';
-import { ASSET_DIR, isAssetName, referencedAssets } from '../shared/assets';
+import { ASSET_DIR, referencedAssets } from '../shared/assets';
+import { listAssetFiles } from './asset-policy';
 import { HISTORY_DIR, VERSION_NAME_RE } from '../shared/history';
 import { isNoteId, parseNote, titleFromBody } from '../shared/note';
 import type { NoteStore } from '../shared/note-store';
@@ -74,8 +75,10 @@ export async function collectWorkspace(root: string, includeHistory: boolean): P
   for (const rel of await new NodeFs(root).list()) {
     if (isNotePath(rel)) await add(rel);
   }
-  for (const e of await readDirSafe(path.join(root, ASSET_DIR))) {
-    if (e.isFile() && isAssetName(e.name)) await add(`${ASSET_DIR}/${e.name}`);
+  // Images and attachments, only those the asset policy accepts (no links, nothing outside the workspace).
+  for (const { name, file } of await listAssetFiles(root)) {
+    const stat = await fsp.stat(file);
+    entries.push({ path: `${ASSET_DIR}/${name}`, data: new Uint8Array(await fsp.readFile(file)), mtime: stat.mtime });
   }
   if (includeHistory) {
     for (const d of await readDirSafe(path.join(root, HISTORY_DIR))) {
