@@ -1,10 +1,86 @@
-# Rules for AI Agent Contributions
+# AI Contribution Rules
 
-Agents write code, tests, commit messages, issues, pull request descriptions, and reviews themselves. Their contributions should be traceable without a signature on every post.
+## Identity
 
-1. **Commits:** End each commit that implements changes written by an agent with `Generated-by: <tool name>`, for example `Generated-by: Claude Code`. Do not use `Co-authored-by` for AI tools. Review-only work does not need a commit trailer.
-2. **Pull requests:** State the actual roles once in the PR description, for example `Implementation: Claude Code · Review: GPT agent`. If the review has not happened yet, write `Review: pending`.
-3. **Issues and comments:** An identifiable bot account is enough. If the author account does not identify the agent, name it once in the post. Each comment should add a finding, a decision, or a new result rather than just announce activity.
-4. **No promotion:** Do not add “Powered by” or “Generated with” footers, use product links as signatures, or put vendor names in titles unless they are relevant to the task.
-5. **Merging:** The review agent merges a PR once CI is green and no finding is open. The implementing agent never merges its own PR. A human (the owner) decides and merges PRs that change workflows under `.github/`, the release configuration or this file, and every PR or issue labelled `needs-owner-decision`. Record a human review only if it actually took place.
-6. **Existing history:** These rules apply going forward. Leave old commit messages unchanged. If an earlier contribution is missing important attribution, add it to the relevant PR or issue instead.
+All commits and comments are made from the repository owner's GitHub account.
+This is intentional. Every contribution must therefore identify the agent itself.
+
+## Comments, reviews and PR descriptions
+
+Start every comment, review and PR description with exactly one header line, before any other text:
+
+    <Icon> **<Action>:** <Agent> · <Model> · effort: <level> <Status>
+
+Actions: Review, Fix, Implementation, Question
+
+Examples:
+
+    <img src="https://avatars.githubusercontent.com/u/76263028?s=32" height="16" alt=""> **Implementation:** Claude Code · effort: high 🟢
+    <img src="https://avatars.githubusercontent.com/u/76263028?s=32" height="16" alt=""> **Review:** Claude Code · effort: high 🔴
+    <img src="https://avatars.githubusercontent.com/u/14957082?s=32" height="16" alt=""> **Review:** Codex · GPT-6.2 Sol · effort: high 🟡
+
+`<Icon>` is a small picture that only loosens up the line: the GitHub profile picture of the agent's vendor,
+served by GitHub. It is optional; leave it out for agents not listed here.
+
+| Agent | Icon |
+| --- | --- |
+| Claude Code | `<img src="https://avatars.githubusercontent.com/u/76263028?s=32" height="16" alt="">` |
+| Codex | `<img src="https://avatars.githubusercontent.com/u/14957082?s=32" height="16" alt="">` |
+
+`<Status>` is one emoji at the end of the line:
+
+| Status | Meaning |
+| --- | --- |
+| 🟢 | done, no findings, CI green |
+| 🟡 | findings that do not block |
+| 🔴 | blocking finding, or something failed |
+| 🔵 | question to the owner, waits for an answer |
+
+- Leave out `· <Model>` or `· effort: <level>` when that value may not be stated or is not known (see Accuracy).
+  `<Agent>` is always required.
+- A PR description also names the roles once, after the header, for example
+  `Implementation: Claude Code · Review: Codex`. Write `Review: pending` until the review has happened.
+- Each comment adds a finding, a decision, or a new result. Do not post comments that only announce activity.
+- A **Question** to the owner also sets the label `needs-owner-decision` on the issue or PR and offers 2 to 3 options.
+  The asking agent removes the label after the owner has answered.
+- The review agent ends every review with the marker `<!-- reviewed-sha: <sha> -->` for the reviewed commit.
+  The implementing agent uses it to detect a new review.
+
+## Commits
+
+Every commit with substantive changes carries these trailers:
+
+    Agent: <Agent>
+    Model: <Model>
+    Effort: <level>
+    Role: <implementation|fix|test|docs>
+
+If the commit addresses a review finding, add:
+
+    Review-finding-by: <Agent> (<Model>, <level>)
+
+Leave out the `Model:` or `Effort:` trailer (and the matching part of `Review-finding-by`) when that value may not be
+stated or is not known. `Agent:` and `Role:` are always required.
+
+## Accuracy
+
+Use the exact model name and effort level from your own current configuration, in the form the provider uses
+(for example `GPT-6.2 Sol`). An effort level counts as known only if it is set in your configuration
+or in the task that started you. If you do not know a value, or your environment does not allow you to state it in
+repository content, leave it out. Never guess and never copy another agent's values.
+
+## Merging
+
+The review agent merges a PR once CI is green and no finding is open. The implementing agent never merges its own PR.
+The owner decides and merges PRs that change workflows under `.github/`, the release configuration or this file,
+and every PR or issue labelled `needs-owner-decision`. Record a human review only if it actually took place.
+
+## No product advertising
+
+No "Generated by", "Generated with", provider links or `Co-authored-by` trailers, and no vendor names in titles
+unless they are relevant to the task. Some agent environments append such a footer automatically. That is not a
+breach by the agent; anyone may remove it.
+
+## Historical commits
+
+Do not rewrite history. Add missing attribution in the relevant PR or issue.
