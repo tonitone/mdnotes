@@ -6,18 +6,21 @@ Toni ist Product Owner und Tester: Er legt Issues an, bestimmt die Reihenfolge u
 Hintergrund und Begründungen stehen in den claude.ai Artifacts „Plan: Markdown-Editor“ (Backlog Phase 5)
 und „Plan: Design-Überarbeitung mdnotes“. Neue Issues werden auf Englisch geschrieben.
 
-## Stand (25. November 2026)
+## Stand (26. November 2026)
 
 Erledigt: Phase 5.1 bis 5.4 und die Design-Überarbeitung D1 bis D7 (#14 bis #28), dazu #36 bis #39, #45, #48, #53, #54,
-#69, #74 und #77. #29 (Anhänge) schließt PR #80.
+#69, #74 und #77.
+
+**In Arbeit:** #29 Andere Dateien als Bilder anhängen (Phase 5, Punkt 11), PR #80 wartet auf Review und Merge.
 
 **Als Nächstes, in dieser Reihenfolge:** nichts freigegeben. Neue Issues ohne Label kommen nach Nummer dran.
 
-**Zurückgestellt (Label `later`):**
+**Zurückgestellt (Label `later`, Meilenstein „Later“):** Diese Punkte standen im Backlog von Phase 5 von Anfang an
+in der Gruppe „Später“ und wurden beim Anlegen am 22. Oktober so markiert. Seitdem hat sie niemand neu eingeplant.
 
-- #30 Mehrere Notizen in Tabs oder Fenstern (Phase 5, Punkt 12).
-- #31 Backups verschlüsseln (optional).
-- #32 Blockweises Wiederherstellen aus einer Version.
+- #30 Mehrere Notizen in Tabs oder Fenstern (Phase 5, Punkt 12). Großer Umbau von Layout und Zustand.
+- #31 Backups verschlüsseln (optional). Der Workspace liegt nicht in einem Cloud-Sync, ob es kommt, ist offen.
+- #32 Blockweises Wiederherstellen aus einer Version. Baut auf dem Versionen-Dialog mit Diff auf.
 
 ## Automatisierung
 

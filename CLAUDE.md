@@ -1,6 +1,6 @@
 # Projektkontext für Claude
 
-Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand: Phase 4 abgeschlossen.
+Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand: Phase 5 und Design-Überarbeitung abgeschlossen.
 
 ## Feste Entscheidungen
 
@@ -27,7 +27,7 @@ Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand
 
 ## Stand und nächste Schritte
 
-- Phase 1 bis 4 sind fertig. CI prüft Typen, Unit-Tests (`tests/unit`), UI- und
+- Phase 1 bis 5 und die Design-Überarbeitung (D1 bis D7) sind fertig. CI prüft Typen, Unit-Tests (`tests/unit`), UI- und
   Barrierefreiheitstests im Browser-Modus (`tests/e2e`) und einen Smoke-Test der echten
   Electron-App auf macOS, Windows und Linux (`tests/electron`).
 - Neue npm-Pakete nur zusammen mit aktualisierter `package-lock.json` (CI nutzt `npm ci`).
@@ -42,7 +42,8 @@ Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand
   strenge CSP. Signierung und Auto-Update entfallen (kein App-Store).
 - UI-Tests (`tests/e2e`) laufen gegen den Produktions-Build (`E2E_DEV=1` für den Dev-Server)
   und importieren `test`/`expect` aus `tests/e2e/fixtures.ts` (prüft CSP-Verstöße).
-- Offen: Backups verschlüsseln (optional, #31), blockweises Wiederherstellen aus einer Version (#32).
+- Offen: Anhänge außer Bildern (#29, PR #80), zurückgestellt mit `later`: Tabs/Fenster (#30),
+  Backups verschlüsseln (#31), blockweises Wiederherstellen aus einer Version (#32).
 - Nächstes: Offene Pakete sind GitHub-Issues. Reihenfolge, Freigabe (Label `later`) und der automatische Ablauf
   (Umsetzer, Review-Agent, offene Entscheidungen mit `needs-owner-decision`) stehen in `docs/roadmap.md`.
   Ein PR pro Issue, die Beschreibung enthält `Closes #n`. Hintergrund: claude.ai Artifacts „Plan: Markdown-Editor“
