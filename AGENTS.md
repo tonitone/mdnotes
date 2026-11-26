@@ -9,15 +9,32 @@ This is intentional. Every contribution must therefore identify the agent itself
 
 Start every comment, review and PR description with exactly one header line, before any other text:
 
-    **<Action>:** <Agent> · <Model> · effort: <level>
+    <Icon> **<Action>:** <Agent> · <Model> · effort: <level> <Status>
 
 Actions: Review, Fix, Implementation, Question
 
 Examples:
 
-    **Implementation:** Claude Code · effort: high
-    **Fix:** Claude Code · effort: medium
-    **Review:** Codex · GPT-6.2 Sol · effort: high
+    <img src="https://avatars.githubusercontent.com/u/76263028?s=32" height="16" alt=""> **Implementation:** Claude Code · effort: high 🟢
+    <img src="https://avatars.githubusercontent.com/u/76263028?s=32" height="16" alt=""> **Review:** Claude Code · effort: high 🔴
+    <img src="https://avatars.githubusercontent.com/u/14957082?s=32" height="16" alt=""> **Review:** Codex · GPT-6.2 Sol · effort: high 🟡
+
+`<Icon>` is a small picture that only loosens up the line: the GitHub profile picture of the agent's vendor,
+served by GitHub. It is optional; leave it out for agents not listed here.
+
+| Agent | Icon |
+| --- | --- |
+| Claude Code | `<img src="https://avatars.githubusercontent.com/u/76263028?s=32" height="16" alt="">` |
+| Codex | `<img src="https://avatars.githubusercontent.com/u/14957082?s=32" height="16" alt="">` |
+
+`<Status>` is one emoji at the end of the line:
+
+| Status | Meaning |
+| --- | --- |
+| 🟢 | done, no findings, CI green |
+| 🟡 | findings that do not block |
+| 🔴 | blocking finding, or something failed |
+| 🔵 | question to the owner, waits for an answer |
 
 - Leave out `· <Model>` or `· effort: <level>` when that value may not be stated or is not known (see Accuracy).
   `<Agent>` is always required.
