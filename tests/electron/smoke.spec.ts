@@ -125,6 +125,28 @@ test('exports a note with its image as HTML and Word document', async () => {
   }
 });
 
+test('keeps an existing Markdown target when the destination assets folder is a link', async () => {
+  test.skip(process.platform === 'win32', 'symbolic links need extra rights on Windows');
+  await listItems().filter({ hasText: 'Hallo' }).click();
+  const folder = path.join(root, 'md-export');
+  const outside = path.join(root, 'md-export-outside');
+  await mkdir(folder);
+  await mkdir(outside);
+  const target = path.join(folder, 'hallo.md');
+  await writeFile(target, 'original');
+  // The note references an image, so the export needs `assets/` next to the target.
+  await symlink(outside, path.join(folder, 'assets'), 'dir');
+  await app.evaluate(({ dialog }, file) => {
+    dialog.showSaveDialog = (async () => ({ canceled: false, filePath: file })) as typeof dialog.showSaveDialog;
+  }, target);
+  await page.locator('#exportButton').click();
+  await page.locator('#exportMenu ui5-menu-item[data-format="markdown"]').click();
+  await expect(page.locator('#errorRegion')).toContainText('Der Export ist fehlgeschlagen.', { timeout: 10_000 });
+  expect(await readFile(target, 'utf8')).toBe('original');
+  expect(await readdir(outside)).toEqual([]);
+  await page.locator('#errorRegion ui5-message-strip').evaluate((strip) => strip.remove());
+});
+
 test('creates a note on disk, saves it and renames it after its title', async () => {
   await page.locator('#newNoteButton').click();
   await expect(page.locator('.cm-content')).toBeFocused();
