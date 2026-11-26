@@ -1,6 +1,6 @@
 import { constants, promises as fsp } from 'node:fs';
 import path from 'node:path';
-import { ASSET_DIR, isAssetName } from '../shared/assets';
+import { ASSET_DIR, isAssetName, referencedAssets } from '../shared/assets';
 
 /**
  * One rule for every place that touches `assets/` (saving, reusing a stored
@@ -122,6 +122,21 @@ export async function copyAssetFiles(root: string, names: string[], targetDir: s
     }
   }
   return copied;
+}
+
+/**
+ * Writes a Markdown export to `target` and copies the assets it references into
+ * `assets/` next to it. The destination assets folder is checked before the target
+ * is written: the save dialog may point at an existing file, and a refused folder
+ * must fail the export while that file still has its original contents.
+ */
+export async function writeMarkdownExport(root: string, body: string, target: string): Promise<void> {
+  const dir = path.dirname(target);
+  const names = referencedAssets(body);
+  // Throws for a linked or outside assets folder; a missing one is created by the copy below.
+  if (names.length > 0) await assetDir(dir, { create: false });
+  await fsp.writeFile(target, body, 'utf8');
+  await copyAssetFiles(root, names, dir);
 }
 
 /**

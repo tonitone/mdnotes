@@ -3,7 +3,15 @@ import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from 'node:
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
-import { AssetPolicyError, assetFile, copyAssetFiles, listAssetFiles, readAssetFile, writeAssetFile } from '../../src/main/asset-policy';
+import {
+  AssetPolicyError,
+  assetFile,
+  copyAssetFiles,
+  listAssetFiles,
+  readAssetFile,
+  writeAssetFile,
+  writeMarkdownExport,
+} from '../../src/main/asset-policy';
 import { collectWorkspace } from '../../src/main/backup';
 import { NodeFs } from '../../src/main/node-fs';
 
@@ -94,6 +102,28 @@ describe('asset policy', () => {
     await mkdir(target);
     await symlink(outside, path.join(target, 'assets'), 'dir');
     await assert.rejects(copyAssetFiles(workspace, [PDF], target), AssetPolicyError);
+    assert.deepEqual(await readdir(outside), []);
+  });
+
+  it('writes a Markdown export and copies its assets next to it', async () => {
+    await writeAssetFile(workspace, PDF, bytes('%PDF'));
+    const target = path.join(root, 'export');
+    await mkdir(target);
+    const body = `# Note\n\n[file.pdf](assets/${PDF})\n`;
+    await writeMarkdownExport(workspace, body, path.join(target, 'note.md'));
+    assert.equal(await readFile(path.join(target, 'note.md'), 'utf8'), body);
+    assert.equal(await readFile(path.join(target, 'assets', PDF), 'utf8'), '%PDF');
+  });
+
+  it('keeps an existing Markdown target unchanged when the destination assets folder is refused', links, async () => {
+    await writeAssetFile(workspace, PDF, bytes('%PDF'));
+    const target = path.join(root, 'export');
+    await mkdir(target);
+    const file = path.join(target, 'note.md');
+    await writeFile(file, 'original');
+    await symlink(outside, path.join(target, 'assets'), 'dir');
+    await assert.rejects(writeMarkdownExport(workspace, `[file.pdf](assets/${PDF})`, file), AssetPolicyError);
+    assert.equal(await readFile(file, 'utf8'), 'original');
     assert.deepEqual(await readdir(outside), []);
   });
 

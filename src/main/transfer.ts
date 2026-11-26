@@ -13,7 +13,7 @@ import { markdownToWiki } from '../shared/markdown/wiki';
 import { t, type MessageKey } from '../shared/i18n';
 import { slugify } from '../shared/note';
 import type { Workspace } from './workspace';
-import { assetFile, copyAssetFiles, readAssetFile } from './asset-policy';
+import { assetFile, copyAssetFiles, readAssetFile, writeMarkdownExport } from './asset-policy';
 
 /** Export and import of notes. Runs in the main process. */
 
@@ -108,8 +108,7 @@ export async function exportNote(ws: Workspace, parent: BrowserWindow, id: strin
   const target = result.filePath;
 
   if (format === 'markdown') {
-    await writeFile(target, doc.body, 'utf8');
-    await copyAssets(ws, doc.body, path.dirname(target));
+    await writeMarkdownExport(ws.root, doc.body, target);
   } else if (format === 'wiki') {
     await writeFile(target, markdownToWiki(doc.body), 'utf8');
   } else if (format === 'html') {
