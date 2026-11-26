@@ -3,7 +3,8 @@ import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from 'node:
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
-import { AssetPolicyError, assetFile, copyAssetFiles, readAssetFile, writeAssetFile } from '../../src/main/asset-policy';
+import { AssetPolicyError, assetFile, copyAssetFiles, listAssetFiles, readAssetFile, writeAssetFile } from '../../src/main/asset-policy';
+import { collectWorkspace } from '../../src/main/backup';
 import { NodeFs } from '../../src/main/node-fs';
 
 const PDF = '0123456789abcdef.pdf';
@@ -85,6 +86,44 @@ describe('asset policy', () => {
     assert.deepEqual(await readdir(path.join(target, 'assets')), [PDF]);
     // A second export into the same folder keeps the existing copy (same name, same content).
     assert.deepEqual(await copyAssetFiles(workspace, [PDF], target), []);
+  });
+
+  it('never writes an export through a linked destination assets folder', links, async () => {
+    await writeAssetFile(workspace, PDF, bytes('%PDF'));
+    const target = path.join(root, 'export');
+    await mkdir(target);
+    await symlink(outside, path.join(target, 'assets'), 'dir');
+    await assert.rejects(copyAssetFiles(workspace, [PDF], target), AssetPolicyError);
+    assert.deepEqual(await readdir(outside), []);
+  });
+
+  it('never replaces an existing entry in the export destination, not even a link', links, async () => {
+    await writeAssetFile(workspace, PDF, bytes('%PDF'));
+    await writeFile(path.join(outside, 'victim.pdf'), 'keep');
+    const target = path.join(root, 'export');
+    await mkdir(path.join(target, 'assets'), { recursive: true });
+    await symlink(path.join(outside, 'victim.pdf'), path.join(target, 'assets', PDF));
+    assert.deepEqual(await copyAssetFiles(workspace, [PDF], target), []);
+    assert.equal(await readFile(path.join(outside, 'victim.pdf'), 'utf8'), 'keep');
+  });
+
+  it('backs up only assets the policy accepts', links, async () => {
+    await writeFile(path.join(workspace, 'notiz.md'), '# Notiz\n');
+    await writeAssetFile(workspace, PDF, bytes('%PDF'));
+    await writeFile(path.join(outside, 'secret.png'), 'secret');
+    await symlink(path.join(outside, 'secret.png'), path.join(workspace, 'assets', PNG));
+    await mkdir(path.join(workspace, 'assets', 'aaaaaaaaaaaaaaaa.zip'));
+    assert.deepEqual((await listAssetFiles(workspace)).map((a) => a.name), [PDF]);
+    const paths = (await collectWorkspace(workspace, false)).map((e) => e.path);
+    assert.deepEqual(paths.sort(), [`assets/${PDF}`, 'notiz.md']);
+  });
+
+  it('backs up no assets from a linked assets folder', links, async () => {
+    await writeFile(path.join(workspace, 'notiz.md'), '# Notiz\n');
+    await writeFile(path.join(outside, PDF), 'secret');
+    await symlink(outside, path.join(workspace, 'assets'), 'dir');
+    assert.deepEqual(await listAssetFiles(workspace), []);
+    assert.deepEqual((await collectWorkspace(workspace, false)).map((e) => e.path), ['notiz.md']);
   });
 
   it('allows a workspace that is itself reached through a link', links, async () => {

@@ -92,14 +92,17 @@ export async function readAssetFile(root: string, name: string): Promise<Uint8Ar
 }
 
 /**
- * Copies stored assets into `<targetDir>/assets/` for an export. Missing files and
- * files the policy refuses are left out; the export itself goes on.
+ * Copies stored assets into `<targetDir>/assets/` for an export. The destination
+ * folder follows the same rule as the source (a real folder inside `targetDir`, not
+ * a link), so the export never writes outside the chosen folder; an existing entry
+ * is never replaced. Missing files and files the policy refuses are left out; the
+ * export itself goes on.
  */
 export async function copyAssetFiles(root: string, names: string[], targetDir: string): Promise<string[]> {
   const copied: string[] = [];
   if (names.length === 0) return copied;
-  const target = path.join(targetDir, ASSET_DIR);
-  await fsp.mkdir(target, { recursive: true });
+  await fsp.mkdir(targetDir, { recursive: true });
+  const target = (await assetDir(targetDir, { create: true }))!;
   for (const name of names) {
     let source: string | null;
     try {
@@ -119,4 +122,30 @@ export async function copyAssetFiles(root: string, names: string[], targetDir: s
     }
   }
   return copied;
+}
+
+/**
+ * Names of all stored assets that pass the policy, for a backup. A linked or
+ * invalid assets folder yields none, and linked or non-regular entries are left out.
+ */
+export async function listAssetFiles(root: string): Promise<Array<{ name: string; file: string }>> {
+  let dir: string | null;
+  try {
+    dir = await assetDir(root, { create: false });
+  } catch (err) {
+    if (err instanceof AssetPolicyError) return [];
+    throw err;
+  }
+  if (!dir) return [];
+  const result: Array<{ name: string; file: string }> = [];
+  for (const name of (await fsp.readdir(dir)).sort()) {
+    if (!isAssetName(name)) continue;
+    try {
+      const file = await assetFile(root, name);
+      if (file) result.push({ name, file });
+    } catch (err) {
+      if (!(err instanceof AssetPolicyError)) throw err;
+    }
+  }
+  return result;
 }
