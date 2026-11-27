@@ -190,6 +190,7 @@ export const de = {
   'announce.exported': 'Exportiert: {target}',
   'announce.exportedAll': 'Alle Notizen exportiert nach {folder}',
   'announce.versionRestored': 'Version wiederhergestellt. Der vorherige Stand bleibt als Version erhalten.',
+  'announce.blocksRestored': 'Blöcke übernommen. Der vorherige Stand bleibt als Version erhalten.',
   'announce.recovered': 'Ungespeicherte Änderungen wiederhergestellt.',
   'announce.theirsLoaded': 'Externe Version geladen.',
   'announce.mineSaved': 'Deine Version wurde gespeichert.',
@@ -248,6 +249,12 @@ export const de = {
   'versions.lines.one': '{count} Zeile',
   'versions.lines.other': '{count} Zeilen',
   'versions.restoreFailed': 'Die Version konnte nicht wiederhergestellt werden.',
+  'versions.takeBlock': 'Block {n} aus dieser Version übernehmen',
+  'versions.pending': 'Übernommene Blöcke sind noch nicht gespeichert.',
+  'versions.apply': 'Übernommene Blöcke speichern',
+  'versions.reset': 'Zurücksetzen',
+  'versions.applyFailed': 'Die übernommenen Blöcke konnten nicht gespeichert werden.',
+  'versions.loadFailed': 'Die Version konnte nicht geladen werden.',
 
   // Backup dialog
   'backup.title': 'Backup',

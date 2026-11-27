@@ -36,8 +36,8 @@ The detailed feature list. The README has the short version.
   editing the app asks which version wins
 - Themes light, dark and two high-contrast variants, density compact or cozy
 - Versions: created automatically after a pause in editing, compare old against current,
-  restore without data loss (retention: everything for 24 hours, then daily for
-  30 days, then weekly)
+  restore a whole version or take single changed blocks (also from several versions)
+  without data loss (retention: everything for 24 hours, then daily for 30 days, then weekly)
 - Backups as ZIP with SHA-256 checksums in a folder of their own, manual, on quit or daily;
   safety copy before an import and before deleting forever; restore single notes or a whole backup
 - Crash recovery: unsaved text is offered at the next start after a crash

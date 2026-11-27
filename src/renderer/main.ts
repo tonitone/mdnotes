@@ -47,6 +47,7 @@ import '@ui5/webcomponents-fiori/dist/illustrations/NoEntries.js';
 import '@ui5/webcomponents-icons/dist/accept.js';
 import '@ui5/webcomponents-icons/dist/edit.js';
 import '@ui5/webcomponents-icons/dist/history.js';
+import '@ui5/webcomponents-icons/dist/arrow-right.js';
 import '@ui5/webcomponents-icons/dist/save.js';
 import '@ui5/webcomponents-icons/dist/shield.js';
 import '@ui5/webcomponents-icons/dist/action.js';

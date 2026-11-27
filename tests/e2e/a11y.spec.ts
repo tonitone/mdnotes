@@ -269,6 +269,7 @@ test('versions dialog with a diff', async ({ page }) => {
   await page.keyboard.type('\nNeue Zeile');
   await page.locator('#versionsButton').click();
   await expect(dialog(page).locator('.cm-mergeView')).toBeVisible();
+  await expect(dialog(page).locator('.versions-take ui5-button')).toHaveCount(1);
   await expectNoSeriousViolations(page, 'versions');
   await closeDialog(page);
 });

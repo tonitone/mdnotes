@@ -410,6 +410,7 @@ function registerIpc(): void {
   handle('versions:list', (id) => requireWorkspace().store.listVersions(requireId(id)));
   handle('versions:read', (id, name) => requireWorkspace().store.readVersion(requireId(id), requireVersionName(name)));
   handle('versions:restore', (id, name) => requireWorkspace().store.restoreVersion(requireId(id), requireVersionName(name)));
+  handle('versions:restoreBlocks', (id, body) => requireWorkspace().store.restoreBlocks(requireId(id), requireText(body)));
   handle('labels:rename', (from, to) => requireWorkspace().store.renameLabel(requireText(from, 200), requireText(to, 200)));
 
   handle('backup:getSettings', () => config.backup);

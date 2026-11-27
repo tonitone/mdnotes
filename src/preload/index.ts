@@ -52,6 +52,7 @@ const api: NotesApi = {
   listVersions: (id) => ipcRenderer.invoke('versions:list', id),
   readVersion: (id, name) => ipcRenderer.invoke('versions:read', id, name),
   restoreVersion: (id, name) => ipcRenderer.invoke('versions:restore', id, name),
+  restoreBlocks: (id, body) => ipcRenderer.invoke('versions:restoreBlocks', id, body),
   renameLabel: (from, to) => ipcRenderer.invoke('labels:rename', from, to),
 
   getBackupSettings: () => ipcRenderer.invoke('backup:getSettings'),

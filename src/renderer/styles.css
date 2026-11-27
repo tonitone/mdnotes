@@ -442,6 +442,7 @@ ui5-illustrated-message {
 /* Versions dialog */
 
 .versions-layout {
+  --versions-take-width: 2.5rem;
   display: grid;
   grid-template-columns: minmax(12rem, 18rem) 1fr;
   gap: 1rem;
@@ -467,7 +468,7 @@ ui5-illustrated-message {
 
 .versions-columns {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr var(--versions-take-width) 1fr;
   color: var(--sapContent_LabelColor);
   font-size: var(--sapFontSmallSize);
   padding-bottom: 0.25rem;
@@ -485,6 +486,19 @@ ui5-illustrated-message {
 
 .versions-diff .cm-mergeView {
   min-height: 100%;
+}
+
+/* Column between the two sides with one take button per changed block. The
+   merge view positions each wrapper (top); the UI5 button inside stays as is. */
+.versions-diff .cm-mergeView .cm-merge-revert {
+  position: relative;
+  width: var(--versions-take-width);
+}
+
+.versions-take {
+  position: absolute;
+  inset-inline: 0;
+  text-align: center;
 }
 
 /* Diff colors from the SAP semantic palette, so high-contrast themes work. */

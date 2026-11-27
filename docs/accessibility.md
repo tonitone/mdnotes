@@ -107,6 +107,9 @@ Aufgabe, Tabelle, Code, Link); fett, kursiv und durchgestrichen auch im Menü
 - [ ] Tab bleibt im Dialog. Esc schließt ihn. Der Fokus kehrt zum Auslöser zurück.
 - [ ] Versionen: Die Liste ist bedienbar. Die Zusammenfassung („2 Änderungen: …“) wird
       nach der Auswahl angesagt. Beide Diff-Seiten haben einen Namen.
+- [ ] Versionen, Blöcke übernehmen: Jeder Knopf „Block n aus dieser Version übernehmen“ ist
+      mit Tab erreichbar und reagiert auf Enter und Leertaste. Danach steht der Fokus auf dem
+      nächsten Block (sonst auf „Übernommene Blöcke speichern“), „noch nicht gespeichert“ wird angesagt.
 - [ ] Backup: Auswahl „Automatisch sichern“ hat eine Beschriftung, „Backup gespeichert“
       wird angesagt.
 

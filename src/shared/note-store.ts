@@ -386,16 +386,30 @@ export class NoteStore {
    */
   restoreVersion(id: string, name: string, now: Date = new Date()): Promise<NoteDoc> {
     return this.serial(async () => {
-      const e = this.entry(id);
-      const body = await this.versions.read(id, name);
-      await this.versions.snapshot(id, e.body, now);
-      e.body = body;
-      e.title = titleFromBody(body);
-      e.preview = previewFromBody(body);
-      await this.write(id, e);
-      await this.versions.snapshot(id, body, new Date(now.getTime() + 1));
-      return this.read(id);
+      this.entry(id);
+      return this.replaceBody(id, await this.versions.read(id, name), now);
     });
+  }
+
+  /**
+   * Makes a text current that combines the current content with blocks taken
+   * from older versions. Like `restoreVersion()`, the current content is kept
+   * as a version first.
+   */
+  restoreBlocks(id: string, body: string, now: Date = new Date()): Promise<NoteDoc> {
+    return this.serial(() => this.replaceBody(id, body, now));
+  }
+
+  /** Replaces the body, with a version of the content before and after. */
+  private async replaceBody(id: string, body: string, now: Date): Promise<NoteDoc> {
+    const e = this.entry(id);
+    await this.versions.snapshot(id, e.body, now);
+    e.body = body;
+    e.title = titleFromBody(body);
+    e.preview = previewFromBody(body);
+    await this.write(id, e);
+    await this.versions.snapshot(id, body, new Date(now.getTime() + 1));
+    return this.read(id);
   }
 
   setLabels(id: string, labels: string[]): Promise<NoteSummary> {

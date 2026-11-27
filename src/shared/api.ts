@@ -178,6 +178,8 @@ export interface NotesApi {
   readVersion(id: string, name: string): Promise<string>;
   /** Makes a version current; the previous content stays available as a version. */
   restoreVersion(id: string, name: string): Promise<NoteDoc>;
+  /** Saves a text with blocks taken from versions; the previous content stays available as a version. */
+  restoreBlocks(id: string, body: string): Promise<NoteDoc>;
   /** Renames (or merges) a label in all notes. Returns the changed notes. */
   renameLabel(from: string, to: string): Promise<NoteSummary[]>;
 

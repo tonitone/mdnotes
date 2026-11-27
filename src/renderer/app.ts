@@ -1729,13 +1729,14 @@ export class App {
       // Make sure the current state is a version, so it can be compared and restored.
       this.applySaveResult(await this.api.finalizeNote(id));
       const title = this.notes.find((n) => n.id === id)?.title ?? '';
-      const doc = await openVersionDialog(this.api, id, title, this.editor.getDoc());
-      if (doc && id === this.currentId) {
+      const saved = await openVersionDialog(this.api, id, title, this.editor.getDoc());
+      if (saved && id === this.currentId) {
+        const { doc } = saved;
         this.loadDoc(doc.body);
         this.dirty = false;
         this.applySaveResult(doc);
         this.setStatus(t('status.savedAt', { time: formatTime(doc.modified) }), true);
-        announce(t('announce.versionRestored'));
+        announce(t(saved.blocks ? 'announce.blocksRestored' : 'announce.versionRestored'));
       }
     } catch (err) {
       this.showError(t('error.versions'), err);
