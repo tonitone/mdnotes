@@ -27,6 +27,8 @@ export const de = {
   'library.trash': 'Papierkorb',
   'library.labels': 'Labels',
   'library.noLabels': 'Noch keine Labels',
+  'library.folders': 'Ordner',
+  'library.workspace': 'Workspace',
   'notes.title': 'Notizen',
   'notes.labelTitle': 'Label: {label}',
   'notes.renameLabel': 'Label umbenennen',

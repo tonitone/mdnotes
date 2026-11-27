@@ -36,6 +36,10 @@
           <ui5-li id="allNotesItem" icon="documents" data-view="all" navigated data-i18n="library.allNotes">Alle Notizen</ui5-li>
           <ui5-li id="trashItem" icon="delete" data-view="trash" data-i18n="library.trash">Papierkorb</ui5-li>
         </ui5-list>
+        <!-- Shown only when the workspace has notes in subfolders. -->
+        <div id="folderSection" class="folder-section" hidden>
+          <ui5-tree id="folderTree" header-text="Ordner" accessible-name="Ordner" data-i18n-attr="header-text:library.folders; accessible-name:library.folders"></ui5-tree>
+        </div>
         <ui5-list id="labelList" header-text="Labels" accessible-name="Labels" no-data-text="Noch keine Labels" data-i18n-attr="header-text:library.labels; accessible-name:library.labels; no-data-text:library.noLabels"></ui5-list>
         <p class="workspace-path" id="workspacePath"></p>
       </section>
