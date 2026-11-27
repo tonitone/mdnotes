@@ -162,7 +162,33 @@ test('narrow window: tree, list, editor and back', async ({ page }) => {
   await expect(listItems(page).first()).toBeVisible();
   await expect(page.locator('#notesTitle')).toHaveText('archiv');
   await page.locator('#libraryButton').click();
-  // The library comes back with the chosen folder still marked.
+  // The library comes back with the chosen folder marked and focused.
   await expect(folder(page, 'archiv')).toBeVisible();
   await expect(folder(page, 'archiv')).toHaveJSProperty('navigated', true);
+  await expect(folder(page, 'archiv')).toBeFocused();
+});
+
+test('medium window: the library button shows the tree next to the list', async ({ page }) => {
+  // Between 600 and 1023 px the column layout shows two columns; with a note open these are list and editor.
+  await page.setViewportSize({ width: 800, height: 800 });
+  await addNestedNotes(page);
+  await listItems(page).filter({ hasText: 'Einkauf' }).click();
+  await expect(editor(page)).toContainText('Kaffee');
+  await expect(folder(page, 'archiv')).toBeHidden();
+
+  await page.locator('#libraryButton').click();
+  await expect(folder(page, 'archiv')).toBeVisible();
+  await expect(listItems(page).first()).toBeVisible();
+  await expect(page.locator('#allNotesItem')).toBeFocused();
+
+  // The open note is still there: choosing it in the list shows the editor again.
+  await listItems(page).filter({ hasText: 'Einkauf' }).click();
+  await expect(editor(page)).toBeVisible();
+
+  await page.locator('#libraryButton').click();
+  await choose(page, 'archiv');
+  await expect(page.locator('#notesTitle')).toHaveText('archiv');
+  await expect(listItems(page)).toHaveCount(1);
+  await expect(listItems(page).first()).toBeVisible();
+  await expect(listItems(page).first()).toContainText('Alte Notiz');
 });

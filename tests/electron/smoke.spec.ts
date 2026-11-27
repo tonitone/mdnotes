@@ -241,14 +241,9 @@ test('shows the subfolder in the folder tree and filters by it', async () => {
   // The root carries the workspace folder's name.
   await expect(page.locator('#folderTree ui5-tree-item[data-folder=""]')).toHaveJSProperty('text', path.basename(workspace));
 
-  // The trash test before closed the editor. In a narrow window only the list is shown then; the library button opens the library.
+  // On a small runner screen (Windows) the window is narrow and the library is hidden; the library button shows it.
   const libraryButton = page.locator('#libraryButton');
   if (await libraryButton.isVisible()) await libraryButton.click();
-  // Between 600 and 1023 px (the window on a small runner screen) the column layout shows only the list and the
-  // editor, and the library button cannot change that. Show the library column alone then.
-  if (!(await folder.waitFor({ state: 'visible', timeout: 2000 }).then(() => true, () => false))) {
-    await page.locator('#fcl').evaluate((fcl) => ((fcl as HTMLElement & { layout: string }).layout = 'OneColumn'));
-  }
   await expect(folder).toBeVisible();
   await folder.click({ position: { x: 150, y: 12 } });
   await expect(listItems()).toHaveCount(1);
