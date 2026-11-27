@@ -37,7 +37,7 @@ Issues zu den geplanten Aufgaben selbst (`chore(automation)`) nimmt der Umsetzer
 
 | Rolle | Wer | Zeitplan |
 | --- | --- | --- |
-| Umsetzer | geplante Aufgabe „mdnotes issue implementer“, Claude Opus | werktags stündlich von 9 bis 14 Uhr (Europe/Berlin), dazu bei jedem Ereignis an seinem PR |
+| Umsetzer | geplante Aufgabe „mdnotes issue implementer“, Claude Opus | täglich stündlich in zwei Fenstern, 9 bis 15 Uhr und 22 bis 1 Uhr (Europe/Berlin), Läufe um 9 bis 14, 22, 23 und 0 Uhr, dazu bei jedem Ereignis an seinem PR |
 | Review und Merge | GPT-Agent, markiert seine Reviews mit `<!-- reviewed-sha: <sha> -->` | eigener Zeitplan außerhalb dieses Repos |
 | Product Owner, Tester | Toni | legt Issues an, gibt frei, beantwortet offene Entscheidungen |
 
