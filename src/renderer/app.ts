@@ -23,6 +23,7 @@ import { extractOutline, type OutlineEntry } from '../shared/markdown/outline';
 import { countText } from '../shared/markdown/count';
 import { linksTo } from '../shared/wikilinks';
 import { folderOf } from '../shared/workspace-path';
+import { ancestorsOf, buildFolderTree, findFolder, type FolderNode } from '../shared/folder-tree';
 import { isShortcutsDialogOpen, openShortcutsDialog } from './shortcuts-dialog';
 import { createEditor, type NoteEditor } from './editor/editor';
 import { FORMAT_SHORTCUTS } from './editor/format-commands';
@@ -53,7 +54,8 @@ const RECOVERY_DELAY_MS = 2000;
 /** How long the "Undo" strip stays after a note was moved to the trash. */
 const UNDO_VISIBLE_MS = 10000;
 
-type View = { kind: 'all' } | { kind: 'trash' } | { kind: 'label'; label: string };
+/** `folder` is a workspace-relative path with `/`; `''` is the workspace root. */
+type View = { kind: 'all' } | { kind: 'trash' } | { kind: 'label'; label: string } | { kind: 'folder'; folder: string };
 
 /** Edit with live preview, source next to a rendered preview, or preview only. */
 type ViewMode = 'edit' | 'split' | 'preview';
@@ -80,6 +82,12 @@ const $ = <T extends HTMLElement = Ui5Element>(id: string) => {
   if (!node) throw new Error(`Missing element: #${id}`);
   return node as T;
 };
+
+/** Resolves once UI5 has rendered and the browser has laid out the next frame (e.g. a new column layout). */
+async function columnsRendered(): Promise<void> {
+  await renderFinished();
+  await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+}
 
 function sameLabel(a: string, b: string): boolean {
   return a.toLocaleLowerCase() === b.toLocaleLowerCase();
@@ -123,6 +131,12 @@ export class App {
   /** Pin toggle chosen in the list's context menu; runs once the menu has closed. */
   private pendingContextPin = false;
   private undoTimer = 0;
+  /** The workspace folder's own name, shown as the root of the folder tree. */
+  private workspaceName = '';
+  /** Folders the user expanded in the tree (the root starts expanded). Kept while the workspace is open. */
+  private expandedFolders = new Set<string>(['']);
+  /** Paths and counts of the tree last rendered; the tree is only rebuilt when they change. */
+  private folderTreeKey = '';
 
   private readonly els = {
     fcl: $('fcl'),
@@ -142,6 +156,8 @@ export class App {
     allNotesItem: $('allNotesItem'),
     trashItem: $('trashItem'),
     labelList: $('labelList'),
+    folderSection: $('folderSection'),
+    folderTree: $('folderTree'),
     notesTitle: $('notesTitle'),
     notesList: $('notesList'),
     newNoteButton: $('newNoteButton'),
@@ -285,6 +301,20 @@ export class App {
       const label = (event as CustomEvent<{ item: HTMLElement }>).detail.item?.dataset.label;
       if (label) void this.setView({ kind: 'label', label });
     });
+    els.folderTree.addEventListener('item-click', (event: Event) => {
+      const folder = (event as CustomEvent<{ item: HTMLElement }>).detail.item?.dataset.folder;
+      if (folder !== undefined) void this.setView({ kind: 'folder', folder });
+    });
+    els.folderTree.addEventListener('item-toggle', (event: Event) => {
+      const item = (event as CustomEvent<{ item: Ui5Element }>).detail.item;
+      // The tree switches `expanded` right after this event; remember the new state.
+      queueMicrotask(() => {
+        const folder = item?.dataset.folder;
+        if (folder === undefined) return;
+        if (item.expanded) this.expandedFolders.add(folder);
+        else this.expandedFolders.delete(folder);
+      });
+    });
 
     // Fiori master-detail pattern: no selection mode (which renders invalid
     // aria-selected on role=listitem), the open note is marked as `navigated`.
@@ -292,9 +322,10 @@ export class App {
       const item = (event as CustomEvent<{ item: HTMLElement }>).detail.item;
       if (item?.dataset.id && item.dataset.id !== this.currentId) void this.openNote(item.dataset.id);
       if (item?.dataset.trash && item.dataset.trash !== this.currentTrash) void this.openTrashEntry(item.dataset.trash);
-      // The open entry is still behind the list in a narrow window (e.g. after the logo click): show it again.
+      // The open entry can be hidden behind the list (narrow window after the logo click, or a medium
+      // window after the library button): show it again.
       const isCurrent = item?.dataset.id ? item.dataset.id === this.currentId : item?.dataset.trash === this.currentTrash;
-      if (isCurrent && narrowQuery.matches) this.setLayout('ThreeColumnsEndExpanded');
+      if (isCurrent && !els.fcl.endColumnVisible) this.setLayout('ThreeColumnsEndExpanded');
     });
 
     els.searchInput.addEventListener('input', () => {
@@ -416,13 +447,7 @@ export class App {
       this.setLayout('TwoColumnsMidExpanded');
       (els.notesList.querySelector('[navigated]') as HTMLElement | null)?.focus();
     });
-    els.libraryButton.addEventListener('click', () => {
-      // In a wide window the button reopens a collapsed column next to the others.
-      this.libraryCollapsed = false;
-      this.setLayout(narrowQuery.matches ? 'OneColumn' : 'ThreeColumnsEndExpanded');
-      const current = (els.libraryList.querySelector('[navigated]') ?? els.labelList.querySelector('[navigated]')) as HTMLElement | null;
-      (current ?? els.allNotesItem).focus();
-    });
+    els.libraryButton.addEventListener('click', () => void this.showLibrary());
     // Fired on resize and user interaction, not when the app sets the layout.
     els.fcl.addEventListener('layout-change', (event: Event) => {
       // Remember the user's choice for the library column; resizing must not change it.
@@ -590,6 +615,31 @@ export class App {
     this.els.fcl.layout = keepLibraryHidden ? 'ThreeColumnsStartHiddenEndExpanded' : layout;
     // Column visibility is known after UI5 has rendered the new layout.
     requestAnimationFrame(() => this.updateColumnButtons());
+  }
+
+  /**
+   * Shows the library column and moves the focus to the chosen entry (view, folder or label).
+   * Narrow: the library alone. Wide: next to list and editor, also after the user collapsed it.
+   * In between (600 to 1023 px) the column layout shows only two columns, so the library comes with the list.
+   */
+  private async showLibrary(): Promise<void> {
+    const { els } = this;
+    this.libraryCollapsed = false;
+    this.setLayout(narrowQuery.matches ? 'OneColumn' : 'ThreeColumnsEndExpanded');
+    await columnsRendered();
+    if (!els.fcl.startColumnVisible) {
+      this.setLayout('TwoColumnsMidExpanded');
+      await columnsRendered();
+    }
+    const target = (els.libraryList.querySelector('[navigated]') ??
+      els.folderTree.querySelector('[navigated]') ??
+      els.labelList.querySelector('[navigated]') ??
+      els.allNotesItem) as HTMLElement;
+    // A column that was hidden can take a few frames before its entries accept the focus.
+    for (let frame = 0; frame < 10 && document.activeElement !== target; frame++) {
+      await target.focus();
+      if (document.activeElement !== target) await columnsRendered();
+    }
   }
 
   /** Wide: all columns. Narrow: keep an open entry, otherwise show the list instead of the empty editor. */
@@ -761,6 +811,10 @@ export class App {
     this.closeEditor();
     this.notes = await this.api.listNotes();
     this.view = { kind: 'all' };
+    // The last segment of the path, with either separator.
+    this.workspaceName = workspace.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || t('library.workspace');
+    this.expandedFolders = new Set(['']);
+    this.folderTreeKey = '';
     this.renderLibrary();
     this.renderList();
     await this.checkRecovery();
@@ -769,6 +823,8 @@ export class App {
   private async setView(view: View, options: { keepEditor?: boolean } = {}): Promise<void> {
     await this.flush();
     this.view = view;
+    // The path to a chosen folder is shown expanded.
+    if (view.kind === 'folder') for (const folder of ancestorsOf(view.folder)) this.expandedFolders.add(folder);
     if (!options.keepEditor) this.closeEditor();
     if (view.kind === 'trash') this.trash = await this.api.listTrash();
     this.renderLibrary();
@@ -823,17 +879,92 @@ export class App {
       this.els.allNotesItem.navigated = true;
     }
 
+    const tree = this.renderFolderTree();
+    // A folder without notes (in it or below) is no longer in the tree: fall back to all notes.
+    const folderView = this.view.kind === 'folder' ? this.view : null;
+    const folder = folderView && tree ? findFolder(tree, folderView.folder) : undefined;
+    if (folderView && !folder) {
+      this.view = { kind: 'all' };
+      this.els.allNotesItem.navigated = true;
+      this.markFolder(null);
+    }
+
     this.els.notesTitle.textContent =
       this.view.kind === 'trash'
         ? t('library.trash')
         : this.view.kind === 'label'
           ? t('notes.labelTitle', { label: this.view.label })
-          : t('notes.title');
+          : this.view.kind === 'folder'
+            ? this.folderName(folder!)
+            : t('notes.title');
     this.els.newNoteButton.hidden = this.view.kind === 'trash';
     // The trash is always in the order of deletion.
     this.els.sortButton.hidden = this.view.kind === 'trash';
     this.els.renameLabelButton.hidden = this.view.kind !== 'label';
     this.updateCompactObserver();
+  }
+
+  /** The name shown for a folder; the root carries the workspace folder's name. */
+  private folderName(node: FolderNode): string {
+    return node.path === '' ? this.workspaceName : node.name;
+  }
+
+  /**
+   * Builds the folder tree from the notes' paths. Hidden for a flat workspace (no subfolder holds a note).
+   * Rebuilt only when folders or counts change, so choosing a folder keeps the focus in the tree.
+   * Returns the root node, or `null` while the tree is hidden.
+   */
+  private renderFolderTree(): FolderNode | null {
+    const root = buildFolderTree(this.notes.map((n) => n.fileName), collationLocale());
+    const hasFolders = root.children.length > 0;
+    this.els.folderSection.hidden = !hasFolders;
+    if (!hasFolders) {
+      this.folderTreeKey = '';
+      this.els.folderTree.replaceChildren();
+      return null;
+    }
+    const parts: string[] = [];
+    const walk = (node: FolderNode) => {
+      parts.push(`${node.path}\u0000${node.count}`);
+      node.children.forEach(walk);
+    };
+    walk(root);
+    const key = `${this.workspaceName}\u0001${parts.join('\u0001')}`;
+    if (key !== this.folderTreeKey) {
+      this.folderTreeKey = key;
+      const focused = (document.activeElement as HTMLElement | null)?.closest?.('#folderTree ui5-tree-item') as HTMLElement | null;
+      const build = (node: FolderNode): Ui5Element =>
+        el('ui5-tree-item', {
+          text: this.folderName(node),
+          icon: 'folder-blank',
+          additionalText: String(node.count),
+          tooltip: node.path || this.workspaceName,
+          expanded: node.children.length > 0 && this.expandedFolders.has(node.path),
+          'data-folder': node.path,
+        }, node.children.map(build));
+      this.els.folderTree.replaceChildren(build(root));
+      // Keep the keyboard position when the tree changes under the user's focus.
+      const refocus = focused?.dataset.folder;
+      if (refocus !== undefined) {
+        void renderFinished().then(() => this.folderTreeItem(refocus)?.focus());
+      }
+    }
+    this.markFolder(this.view.kind === 'folder' ? this.view.folder : null);
+    return root;
+  }
+
+  private folderTreeItem(folder: string): Ui5Element | undefined {
+    return [...this.els.folderTree.querySelectorAll<Ui5Element>('ui5-tree-item')].find((item) => item.dataset.folder === folder);
+  }
+
+  /** Marks the chosen folder (or none) and expands the path to it. */
+  private markFolder(folder: string | null): void {
+    const ancestors = new Set(folder === null ? [] : ancestorsOf(folder));
+    for (const item of this.els.folderTree.querySelectorAll<Ui5Element>('ui5-tree-item')) {
+      const path = item.dataset.folder ?? '';
+      item.navigated = path === folder;
+      if (ancestors.has(path)) item.expanded = true;
+    }
   }
 
   private async runSearch(): Promise<void> {
@@ -845,7 +976,12 @@ export class App {
   /** Search results in the order of relevance; otherwise the notes in the chosen order, pinned first. */
   private visibleNotes(): Array<NoteSummary & { snippet?: string }> {
     const { view } = this;
-    const inView = (n: NoteSummary) => view.kind !== 'label' || n.labels.some((l) => sameLabel(l, view.label));
+    const inView = (n: NoteSummary) =>
+      view.kind === 'label'
+        ? n.labels.some((l) => sameLabel(l, view.label))
+        : view.kind === 'folder'
+          ? folderOf(n.fileName) === view.folder
+          : true;
     if (!this.searchHits) return sortNotes(this.notes.filter(inView), this.sort, collationLocale());
     const byId = new Map(this.notes.map((n) => [n.id, n]));
     return this.searchHits
@@ -894,7 +1030,8 @@ export class App {
   private noteItem(note: NoteSummary & { snippet?: string }): Ui5Element {
     const text = note.snippet ?? (note.preview || t('notes.noText'));
     // Notes from a subfolder name their folder first; root notes show nothing extra.
-    const folder = folderOf(note.fileName);
+    // A folder's own list leaves it out (all entries share it), search results keep it.
+    const folder = this.view.kind === 'folder' && !this.searchHits ? '' : folderOf(note.fileName);
     const description = folder ? t('notes.inFolder', { folder, text }) : text;
     // The date shown is the one the list is sorted and grouped by.
     const time = formatModified(this.sort === 'created' && !this.searchHits ? createdTime(note) : note.modified);
@@ -1092,10 +1229,9 @@ export class App {
       this.els.searchInput.value = '';
       this.query = '';
       this.searchHits = null;
-      if (this.view.kind !== 'all') {
-        this.view = { kind: 'all' };
-        this.renderLibrary();
-      }
+      // New notes are created in the root, so the view switches to all notes; the counts change in any case.
+      this.view = { kind: 'all' };
+      this.renderLibrary();
       this.closeEditor();
       this.currentId = doc.id;
       this.renderList();

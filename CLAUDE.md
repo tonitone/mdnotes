@@ -7,7 +7,7 @@ Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand
 - Electron (nicht Tauri), TypeScript, electron-vite, Node.js 22/24 LTS.
 - UI5 Web Components exakt 2.27.2, Themes SAP Horizon (hell, dunkel, hcb, hcw). Kein Corporate-Theme.
 - CodeMirror 6 mit selbst gebauter Live Preview (`src/renderer/editor/live-preview.ts`). Kein WYSIWYG.
-- Plain `.md`-Dateien in einem wählbaren Workspace, auch in Unterordnern (flache Liste, kein Ordnerbaum),
+- Plain `.md`-Dateien in einem wählbaren Workspace, auch in Unterordnern ("Alle Notizen" als flache Liste, dazu ein Ordnerbaum in der Bibliothek, `src/shared/folder-tree.ts`),
   alles lokal: kein Netzwerk, kein Account, keine Telemetrie. Der Dateiname einer Notiz ist intern der Pfad
   relativ zum Workspace mit `/` (`src/shared/workspace-path.ts`).
 - Plattformen: macOS, Windows, Linux. Linux ist ein vollwertiges Ziel.

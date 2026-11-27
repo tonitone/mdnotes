@@ -234,6 +234,27 @@ test('moves notes to the trash folder', async () => {
   expect((await readdir(workspace)).includes('extern.md')).toBe(false);
 });
 
+test('shows the subfolder in the folder tree and filters by it', async () => {
+  const folder = page.locator('#folderTree ui5-tree-item[data-folder="projekte"]');
+  await expect(folder).toHaveJSProperty('text', 'projekte');
+  await expect(folder).toHaveJSProperty('additionalText', '1');
+  // The root carries the workspace folder's name.
+  await expect(page.locator('#folderTree ui5-tree-item[data-folder=""]')).toHaveJSProperty('text', path.basename(workspace));
+
+  // On a small runner screen (Windows) the window is narrow and the library is hidden; the library button shows it.
+  const libraryButton = page.locator('#libraryButton');
+  if (await libraryButton.isVisible()) await libraryButton.click();
+  await expect(folder).toBeVisible();
+  await folder.click({ position: { x: 150, y: 12 } });
+  await expect(listItems()).toHaveCount(1);
+  await expect(listItems().first()).toContainText('Im Unterordner');
+
+  // Back to all notes through the logo, which also lets the app set the layout for the window width again.
+  await page.locator('#shell').getByRole('link', { name: 'mdnotes', exact: true }).click();
+  await expect(listItems().filter({ hasText: 'Hallo' })).toHaveCount(1);
+  await expect(listItems().filter({ hasText: 'Hallo' })).toBeVisible();
+});
+
 test('reports no Content Security Policy violations', async () => {
   // Open the appearance menu as well, so its styles are applied once.
   await page.locator('#themeItem').click();

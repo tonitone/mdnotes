@@ -20,6 +20,8 @@ export const en: Messages = {
   'library.trash': 'Trash',
   'library.labels': 'Labels',
   'library.noLabels': 'No labels yet',
+  'library.folders': 'Folders',
+  'library.workspace': 'Workspace',
   'notes.title': 'Notes',
   'notes.labelTitle': 'Label: {label}',
   'notes.renameLabel': 'Rename label',

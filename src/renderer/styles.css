@@ -325,6 +325,17 @@ ui5-illustrated-message {
   max-height: 50%;
 }
 
+/* The tree scrolls inside its own container; the ui5-tree host itself is not styled. */
+.folder-section {
+  flex: 0 1 auto;
+  max-height: 40%;
+  overflow: auto;
+}
+
+.folder-section[hidden] {
+  display: none;
+}
+
 /* Holds the "Undo" strip after a note was moved to the trash; stays on top of everything. */
 #undoRegion {
   position: fixed;
