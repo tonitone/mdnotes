@@ -235,21 +235,29 @@ test('moves notes to the trash folder', async () => {
 });
 
 test('shows the subfolder in the folder tree and filters by it', async () => {
-  // On a small screen (the Windows runner) the window is narrower than 1024 px, where the column layout
-  // shows only the list and the editor. Show the library next to the list; choosing "All notes" at the end
-  // lets the app set its own layout again.
-  await page.locator('#fcl').evaluate((fcl) => ((fcl as HTMLElement & { layout: string }).layout = 'ThreeColumnsMidExpanded'));
   const folder = page.locator('#folderTree ui5-tree-item[data-folder="projekte"]');
-  await expect(folder).toBeVisible();
   await expect(folder).toHaveJSProperty('text', 'projekte');
   await expect(folder).toHaveJSProperty('additionalText', '1');
   // The root carries the workspace folder's name.
   await expect(page.locator('#folderTree ui5-tree-item[data-folder=""]')).toHaveJSProperty('text', path.basename(workspace));
+
+  // The trash test before closed the editor. In a narrow window only the list is shown then; the library button opens the library.
+  const libraryButton = page.locator('#libraryButton');
+  if (await libraryButton.isVisible()) await libraryButton.click();
+  // Between 600 and 1023 px (the window on a small runner screen) the column layout shows only the list and the
+  // editor, and the library button cannot change that. Show the library column alone then.
+  if (!(await folder.waitFor({ state: 'visible', timeout: 2000 }).then(() => true, () => false))) {
+    await page.locator('#fcl').evaluate((fcl) => ((fcl as HTMLElement & { layout: string }).layout = 'OneColumn'));
+  }
+  await expect(folder).toBeVisible();
   await folder.click({ position: { x: 150, y: 12 } });
   await expect(listItems()).toHaveCount(1);
   await expect(listItems().first()).toContainText('Im Unterordner');
-  await page.locator('#allNotesItem').click();
+
+  // Back to all notes through the logo, which also lets the app set the layout for the window width again.
+  await page.locator('#shell').getByRole('link', { name: 'mdnotes', exact: true }).click();
   await expect(listItems().filter({ hasText: 'Hallo' })).toHaveCount(1);
+  await expect(listItems().filter({ hasText: 'Hallo' })).toBeVisible();
 });
 
 test('reports no Content Security Policy violations', async () => {
