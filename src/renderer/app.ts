@@ -83,6 +83,12 @@ const $ = <T extends HTMLElement = Ui5Element>(id: string) => {
   return node as T;
 };
 
+/** Resolves once UI5 has rendered and the browser has laid out the next frame (e.g. a new column layout). */
+async function columnsRendered(): Promise<void> {
+  await renderFinished();
+  await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+}
+
 function sameLabel(a: string, b: string): boolean {
   return a.toLocaleLowerCase() === b.toLocaleLowerCase();
 }
@@ -316,9 +322,10 @@ export class App {
       const item = (event as CustomEvent<{ item: HTMLElement }>).detail.item;
       if (item?.dataset.id && item.dataset.id !== this.currentId) void this.openNote(item.dataset.id);
       if (item?.dataset.trash && item.dataset.trash !== this.currentTrash) void this.openTrashEntry(item.dataset.trash);
-      // The open entry is still behind the list in a narrow window (e.g. after the logo click): show it again.
+      // The open entry can be hidden behind the list (narrow window after the logo click, or a medium
+      // window after the library button): show it again.
       const isCurrent = item?.dataset.id ? item.dataset.id === this.currentId : item?.dataset.trash === this.currentTrash;
-      if (isCurrent && narrowQuery.matches) this.setLayout('ThreeColumnsEndExpanded');
+      if (isCurrent && !els.fcl.endColumnVisible) this.setLayout('ThreeColumnsEndExpanded');
     });
 
     els.searchInput.addEventListener('input', () => {
@@ -440,15 +447,7 @@ export class App {
       this.setLayout('TwoColumnsMidExpanded');
       (els.notesList.querySelector('[navigated]') as HTMLElement | null)?.focus();
     });
-    els.libraryButton.addEventListener('click', () => {
-      // In a wide window the button reopens a collapsed column next to the others.
-      this.libraryCollapsed = false;
-      this.setLayout(narrowQuery.matches ? 'OneColumn' : 'ThreeColumnsEndExpanded');
-      const current = (els.libraryList.querySelector('[navigated]') ??
-        els.folderTree.querySelector('[navigated]') ??
-        els.labelList.querySelector('[navigated]')) as HTMLElement | null;
-      (current ?? els.allNotesItem).focus();
-    });
+    els.libraryButton.addEventListener('click', () => void this.showLibrary());
     // Fired on resize and user interaction, not when the app sets the layout.
     els.fcl.addEventListener('layout-change', (event: Event) => {
       // Remember the user's choice for the library column; resizing must not change it.
@@ -616,6 +615,31 @@ export class App {
     this.els.fcl.layout = keepLibraryHidden ? 'ThreeColumnsStartHiddenEndExpanded' : layout;
     // Column visibility is known after UI5 has rendered the new layout.
     requestAnimationFrame(() => this.updateColumnButtons());
+  }
+
+  /**
+   * Shows the library column and moves the focus to the chosen entry (view, folder or label).
+   * Narrow: the library alone. Wide: next to list and editor, also after the user collapsed it.
+   * In between (600 to 1023 px) the column layout shows only two columns, so the library comes with the list.
+   */
+  private async showLibrary(): Promise<void> {
+    const { els } = this;
+    this.libraryCollapsed = false;
+    this.setLayout(narrowQuery.matches ? 'OneColumn' : 'ThreeColumnsEndExpanded');
+    await columnsRendered();
+    if (!els.fcl.startColumnVisible) {
+      this.setLayout('TwoColumnsMidExpanded');
+      await columnsRendered();
+    }
+    const target = (els.libraryList.querySelector('[navigated]') ??
+      els.folderTree.querySelector('[navigated]') ??
+      els.labelList.querySelector('[navigated]') ??
+      els.allNotesItem) as HTMLElement;
+    // A column that was hidden can take a few frames before its entries accept the focus.
+    for (let frame = 0; frame < 10 && document.activeElement !== target; frame++) {
+      await target.focus();
+      if (document.activeElement !== target) await columnsRendered();
+    }
   }
 
   /** Wide: all columns. Narrow: keep an open entry, otherwise show the list instead of the empty editor. */
