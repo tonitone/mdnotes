@@ -265,6 +265,7 @@ export async function createMockApi(): Promise<NotesApi> {
     listVersions: async (id) => (await store.listVersions(id)).map(({ name, time }) => ({ name, time })),
     readVersion: (id, name) => store.readVersion(id, name),
     restoreVersion: (id, name) => store.restoreVersion(id, name),
+    restoreBlocks: (id, body) => store.restoreBlocks(id, body),
     renameLabel: (from, to) => store.renameLabel(from, to),
 
     getBackupSettings: async () => settings(),

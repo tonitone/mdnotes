@@ -114,6 +114,19 @@ for (const backend of backends) {
       assert.equal(await store.readVersion(note.id, versions[1].name), '# Neu');
     });
 
+    it('saves taken blocks and keeps the previous content as a version', async () => {
+      const note = await store.create();
+      await store.save(note.id, '# Titel\n\nNeu\n\nEnde');
+      await store.finalize(note.id);
+
+      const restored = await store.restoreBlocks(note.id, '# Titel\n\nAlt\n\nEnde');
+      assert.equal(restored.body, '# Titel\n\nAlt\n\nEnde');
+      assert.equal(restored.title, 'Titel');
+      const versions = await store.listVersions(note.id);
+      assert.equal(await store.readVersion(note.id, versions[0].name), '# Titel\n\nAlt\n\nEnde');
+      assert.equal(await store.readVersion(note.id, versions[1].name), '# Titel\n\nNeu\n\nEnde');
+    });
+
     it('keeps the previous content as a version when the file changes outside', async () => {
       const note = await store.create();
       await store.save(note.id, '# Vorher');
