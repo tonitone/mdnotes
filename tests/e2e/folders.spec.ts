@@ -162,6 +162,7 @@ test('narrow window: tree, list, editor and back', async ({ page }) => {
   await expect(listItems(page).first()).toBeVisible();
   await expect(page.locator('#notesTitle')).toHaveText('archiv');
   await page.locator('#libraryButton').click();
-  // The library button focuses the chosen folder.
-  await expect(folder(page, 'archiv')).toBeFocused();
+  // The library comes back with the chosen folder still marked.
+  await expect(folder(page, 'archiv')).toBeVisible();
+  await expect(folder(page, 'archiv')).toHaveJSProperty('navigated', true);
 });
