@@ -23,26 +23,29 @@ Erledigt: Phase 5.1 bis 5.4 und die Design-Überarbeitung D1 bis D7 (#14 bis #28
 
 **Ablauf.** Ein Issue nach dem anderen:
 
-1. Der Umsetzer nimmt das nächste freigegebene Issue, setzt es auf einem Branch `feat/…` oder `fix/…` um und öffnet einen PR mit `Closes #n`.
-2. Der Review-Agent reviewt den PR. Der Umsetzer behebt die Befunde, danach reviewt der Review-Agent erneut.
-3. Ist die CI grün und kein Befund mehr offen, mergt der Review-Agent den PR.
-4. Der Merge weckt den Umsetzer, und er nimmt sofort das nächste Issue.
+1. Toni gibt das Startsignal (im Chat, der Umsetzer wird dann von Hand mit `START` oder `START #n` angestoßen).
+2. Der Umsetzer nimmt das genannte oder das nächste freigegebene Issue, setzt es auf einem Branch `feat/…` oder `fix/…` um
+   und öffnet einen PR mit `Closes #n`.
+3. Der Review-Agent reviewt den PR. Der Umsetzer behebt die Befunde, danach reviewt der Review-Agent erneut.
+4. Ist die CI grün und kein Befund mehr offen, mergt der Review-Agent den PR. Der Umsetzer meldet den Merge und hört auf.
 
-Solange ein PR offen ist, beginnt der Umsetzer nichts Neues. Die Kette wartet bewusst auf das Review.
+Ein neues Issue beginnt nur nach Tonis Startsignal, nie automatisch nach einem Merge. Die Betreuung des offenen PRs
+(Review-Befunde, CI) läuft dagegen automatisch. Solange ein PR offen ist, beginnt der Umsetzer nichts Neues,
+auch nicht mit Startsignal.
 
-**Freigabe.** Freigegeben sind alle offenen Issues ohne die Labels `later` und `needs-owner-decision`.
+**Freigabe.** Mit `START` ohne Nummer nimmt der Umsetzer das nächste freigegebene Issue. Freigegeben sind alle offenen Issues ohne die Labels `later` und `needs-owner-decision`.
 Zuerst kommen die Issues aus „Als Nächstes“ in dieser Reihenfolge, danach die übrigen nach Issue-Nummer.
 Toni gibt ein zurückgestelltes Issue frei, indem er `later` entfernt, und hält eines zurück, indem er `later` setzt.
 Issues zu den geplanten Aufgaben selbst (`chore(automation)`) nimmt der Umsetzer nicht. Sie werden mit Toni im Chat geklärt.
 
 | Rolle | Wer | Zeitplan |
 | --- | --- | --- |
-| Umsetzer | geplante Aufgabe „mdnotes issue implementer“, Claude Opus | werktags stündlich von 9 bis 14 Uhr (Europe/Berlin), dazu bei jedem Ereignis an seinem PR |
+| Umsetzer | geplante Aufgabe „mdnotes issue implementer“, Claude Opus | täglich stündlich in zwei Fenstern, 9 bis 15 Uhr und 22 bis 1 Uhr (Europe/Berlin), Läufe um 9 bis 14, 22, 23 und 0 Uhr, nur zur Betreuung des offenen PRs; dazu bei jedem Ereignis an seinem PR und beim Startsignal |
 | Review und Merge | GPT-Agent, markiert seine Reviews mit `<!-- reviewed-sha: <sha> -->` | eigener Zeitplan außerhalb dieses Repos |
-| Product Owner, Tester | Toni | legt Issues an, gibt frei, beantwortet offene Entscheidungen |
+| Product Owner, Tester | Toni | legt Issues an, gibt frei, gibt das Startsignal, beantwortet offene Entscheidungen |
 
-Der stündliche Lauf ist der Fallback. Findet er kein freigegebenes Issue, endet er nach wenigen Sekunden mit „nichts zu tun“.
-Eine Änderung an einem Issue (neues Issue, `later` entfernt) greift also spätestens beim nächsten Lauf.
+Der stündliche Lauf ist der Fallback für den offenen PR. Ohne offenen PR und ohne Startsignal endet er nach wenigen
+Sekunden mit „kein Startsignal“.
 
 **Regeln.**
 
