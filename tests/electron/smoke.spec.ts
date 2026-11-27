@@ -235,7 +235,12 @@ test('moves notes to the trash folder', async () => {
 });
 
 test('shows the subfolder in the folder tree and filters by it', async () => {
+  // On a small screen (the Windows runner) the window is narrower than 1024 px, where the column layout
+  // shows only the list and the editor. Show the library next to the list; choosing "All notes" at the end
+  // lets the app set its own layout again.
+  await page.locator('#fcl').evaluate((fcl) => ((fcl as HTMLElement & { layout: string }).layout = 'ThreeColumnsMidExpanded'));
   const folder = page.locator('#folderTree ui5-tree-item[data-folder="projekte"]');
+  await expect(folder).toBeVisible();
   await expect(folder).toHaveJSProperty('text', 'projekte');
   await expect(folder).toHaveJSProperty('additionalText', '1');
   // The root carries the workspace folder's name.
