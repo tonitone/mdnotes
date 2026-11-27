@@ -6,18 +6,21 @@ Toni ist Product Owner und Tester: Er legt Issues an, bestimmt die Reihenfolge u
 Hintergrund und Begründungen stehen in den claude.ai Artifacts „Plan: Markdown-Editor“ (Backlog Phase 5)
 und „Plan: Design-Überarbeitung mdnotes“. Neue Issues werden auf Englisch geschrieben.
 
-## Stand (25. November 2026)
+## Stand (27. November 2026)
 
 Erledigt: Phase 5.1 bis 5.4 und die Design-Überarbeitung D1 bis D7 (#14 bis #28), dazu #36 bis #39, #45, #48, #53, #54,
 #69, #74 und #77. #29 (Anhänge) schließt PR #80.
 
-**Als Nächstes, in dieser Reihenfolge:** nichts freigegeben. Neue Issues ohne Label kommen nach Nummer dran.
+**Als Nächstes, in dieser Reihenfolge:**
+
+1. #32 Blockweises Wiederherstellen aus einer Version.
+2. #30 Mehrere Notizen gleichzeitig, als eigene Fenster (Entscheidung im Issue, keine Tabs).
+
+Neue Issues ohne Label kommen danach nach Nummer dran.
 
 **Zurückgestellt (Label `later`):**
 
-- #30 Mehrere Notizen in Tabs oder Fenstern (Phase 5, Punkt 12).
-- #31 Backups verschlüsseln (optional).
-- #32 Blockweises Wiederherstellen aus einer Version.
+- #31 Backups verschlüsseln (optional). Der Plan liegt im claude.ai-Projekt mdnotes (`claude/plan-31-backup-encryption.md`).
 
 ## Automatisierung
 

@@ -42,7 +42,7 @@ Lokaler Markdown-Editor im Stil von Apple Notes, gestaltet nach SAP Fiori. Stand
   strenge CSP. Signierung und Auto-Update entfallen (kein App-Store).
 - UI-Tests (`tests/e2e`) laufen gegen den Produktions-Build (`E2E_DEV=1` für den Dev-Server)
   und importieren `test`/`expect` aus `tests/e2e/fixtures.ts` (prüft CSP-Verstöße).
-- Offen: Backups verschlüsseln (optional, #31), blockweises Wiederherstellen aus einer Version (#32).
+- Offen: Backups verschlüsseln (optional, #31; Plan im claude.ai-Projekt: `claude/plan-31-backup-encryption.md`).
 - Nächstes: Offene Pakete sind GitHub-Issues. Reihenfolge, Freigabe (Label `later`) und der automatische Ablauf
   (Umsetzer, Review-Agent, offene Entscheidungen mit `needs-owner-decision`) stehen in `docs/roadmap.md`.
   Ein PR pro Issue, die Beschreibung enthält `Closes #n`. Hintergrund: claude.ai Artifacts „Plan: Markdown-Editor“
