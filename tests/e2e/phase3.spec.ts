@@ -40,6 +40,61 @@ test.describe('versions', () => {
     await page.locator('#versionsButton').click();
     await expect(page.locator('ui5-dialog ui5-li')).toHaveCount(3);
   });
+
+  test('take a single block from an older version with the keyboard', async ({ page }) => {
+    await openApp(page);
+    await openNote(page, 'Sprint-Planung');
+    const original = await editorDoc(page);
+
+    // Two changes far apart, so the diff shows two blocks.
+    await editor(page).click();
+    await page.keyboard.press('Control+Home');
+    await page.keyboard.press('End');
+    await page.keyboard.type(' Q4');
+    await page.keyboard.press('Control+End');
+    await page.keyboard.type('\nNeue Zeile');
+    const changed = await editorDoc(page);
+    await page.locator('#versionsButton').click();
+
+    const dialog = page.locator('ui5-dialog');
+    await expect(dialog.locator('.versions-summary')).toContainText('2 Änderungen');
+    const take = dialog.locator('.versions-take[data-chunk="1"] ui5-button');
+    await expect(take).toHaveJSProperty('accessibleName', 'Block 2 aus dieser Version übernehmen');
+    await take.focus();
+    await page.keyboard.press('Enter');
+    await expect(dialog.locator('.versions-summary')).toContainText('1 Änderung');
+    await expect(dialog.locator('.versions-summary')).toContainText('noch nicht gespeichert');
+
+    await dialog.locator('ui5-button', { hasText: 'Übernommene Blöcke speichern' }).click();
+    await expect(page.locator('ui5-dialog')).toHaveCount(0);
+    const restored = await editorDoc(page);
+    expect(restored).not.toBe(changed);
+    expect(restored).not.toBe(original);
+    expect(restored).toContain('Q4');
+    expect(restored).not.toContain('Neue Zeile');
+    await expect(page.locator('#announcer')).toContainText('Blöcke übernommen');
+  });
+
+  test('reset taken blocks', async ({ page }) => {
+    await openApp(page);
+    await openNote(page, 'Sprint-Planung');
+    await editor(page).click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.type('\nNeue Zeile');
+    await page.locator('#versionsButton').click();
+
+    const dialog = page.locator('ui5-dialog');
+    const apply = dialog.locator('ui5-button', { hasText: 'Übernommene Blöcke speichern' });
+    await expect(apply).toHaveJSProperty('disabled', true);
+    await dialog.locator('.versions-take ui5-button').first().click();
+    await expect(dialog.locator('.versions-summary')).toContainText('identisch');
+    await expect(apply).toHaveJSProperty('disabled', false);
+
+    await dialog.locator('ui5-button', { hasText: 'Zurücksetzen' }).click();
+    await expect(dialog.locator('.versions-summary')).toContainText('1 Änderung');
+    await expect(dialog.locator('.versions-summary')).not.toContainText('noch nicht gespeichert');
+    await expect(apply).toHaveJSProperty('disabled', true);
+  });
 });
 
 test.describe('labels', () => {
