@@ -240,6 +240,7 @@ export const en: Messages = {
   'versions.apply': 'Save taken blocks',
   'versions.reset': 'Reset',
   'versions.applyFailed': 'The blocks you took could not be saved.',
+  'versions.loadFailed': 'The version could not be loaded.',
 
   'backup.title': 'Backup',
   'backup.kind.manual': 'Manual',

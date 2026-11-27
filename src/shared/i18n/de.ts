@@ -252,6 +252,7 @@ export const de = {
   'versions.apply': 'Übernommene Blöcke speichern',
   'versions.reset': 'Zurücksetzen',
   'versions.applyFailed': 'Die übernommenen Blöcke konnten nicht gespeichert werden.',
+  'versions.loadFailed': 'Die Version konnte nicht geladen werden.',
 
   // Backup dialog
   'backup.title': 'Backup',

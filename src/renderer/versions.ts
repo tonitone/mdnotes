@@ -3,7 +3,7 @@ import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import type { NoteDoc, NotesApi, VersionSummary } from '../shared/api';
 import { el, type Ui5Element } from './ui';
-import { t, tp } from '../shared/i18n';
+import { t, tp, type MessageKey } from '../shared/i18n';
 import { formatVersionTime } from './format';
 import { cspNonce } from './editor/csp';
 
@@ -97,6 +97,12 @@ export async function openVersionDialog(api: NotesApi, id: string, title: string
     let versionText = '';
     // The current text with the blocks taken so far.
     let working = current;
+    // Incremented by every `show()`; a load that finishes after a newer one started is dropped.
+    let loadSeq = 0;
+    // True while the selected version is read; the diff on screen belongs to another version then.
+    let loading = false;
+    // True while a restore is written; the dialog stays open until the result is known.
+    let writing = false;
 
     const list = el('ui5-list', { accessibleName: t('versions.list'), noDataText: t('versions.none') });
     const summary = el('p', { className: 'versions-summary', 'attr:role': 'status', 'attr:aria-live': 'polite' });
@@ -129,12 +135,17 @@ export async function openVersionDialog(api: NotesApi, id: string, title: string
     ]);
 
     const refresh = () => {
-      if (!merge) return;
+      const busy = loading || writing;
+      // The diff and its take buttons stay visible but unusable while busy.
+      diffHost.inert = busy;
+      diffHost.setAttribute('aria-busy', String(busy));
+      close.disabled = writing;
       const pending = working !== current;
+      apply.disabled = busy || !pending;
+      reset.disabled = busy || !pending;
+      restore.disabled = busy || !merge || versionText === current;
+      if (!merge || loading) return;
       summary.textContent = pending ? `${summarize(merge)} ${t('versions.pending')}` : summarize(merge);
-      apply.disabled = !pending;
-      reset.disabled = !pending;
-      restore.disabled = versionText === current;
     };
 
     /** Moves the focus to the take button of block `index` (or the nearest one), else to `fallback`. */
@@ -156,7 +167,7 @@ export async function openVersionDialog(api: NotesApi, id: string, title: string
       wrapper.addEventListener('mousedown', (event) => event.stopPropagation());
       button.addEventListener('click', () => {
         const index = Number(wrapper.dataset.chunk);
-        if (!merge || !takeChunk(merge, index)) return;
+        if (loading || writing || !merge || !takeChunk(merge, index)) return;
         working = merge.b.state.doc.toString();
         refresh();
         // The block's button disappears; the next block takes its number.
@@ -166,9 +177,32 @@ export async function openVersionDialog(api: NotesApi, id: string, title: string
     };
 
     const show = async (version: VersionSummary) => {
+      if (writing) return;
+      const seq = ++loadSeq;
       selected = version;
       for (const item of list.children as HTMLCollectionOf<Ui5Element>) item.navigated = item.dataset.name === version.name;
-      versionText = await api.readVersion(id, version.name);
+      loading = true;
+      refresh();
+      let text: string;
+      try {
+        text = await api.readVersion(id, version.name);
+      } catch (err) {
+        if (seq === loadSeq) {
+          loading = false;
+          // Keep the old diff out of reach: it is not the selected version.
+          observer?.disconnect();
+          merge?.destroy();
+          merge = null;
+          summary.textContent = t('versions.loadFailed');
+          refresh();
+        }
+        console.error(err);
+        return;
+      }
+      // A newer selection started meanwhile, or the dialog is writing: drop this result.
+      if (seq !== loadSeq || writing) return;
+      loading = false;
+      versionText = text;
       observer?.disconnect();
       merge?.destroy();
       merge = new MergeView({
@@ -205,34 +239,47 @@ export async function openVersionDialog(api: NotesApi, id: string, title: string
       if (version) void show(version);
     });
 
-    apply.addEventListener('click', async () => {
-      apply.disabled = true;
+    /**
+     * Runs one write at a time. While it runs, every other action and closing
+     * the dialog wait, so the editor always receives the committed result.
+     */
+    const commit = async (write: () => Promise<VersionDialogResult>, failed: MessageKey, focus: HTMLElement) => {
+      if (writing || loading) return;
+      writing = true;
+      refresh();
       try {
-        result = { doc: await api.restoreBlocks(id, working), blocks: true };
+        result = await write();
+        writing = false;
         dialog.open = false;
       } catch (err) {
-        summary.textContent = t('versions.applyFailed');
+        writing = false;
+        summary.textContent = t(failed);
         console.error(err);
-        apply.disabled = false;
+        refresh();
+        focus.focus();
       }
+    };
+
+    apply.addEventListener('click', () => {
+      void commit(async () => ({ doc: await api.restoreBlocks(id, working), blocks: true }), 'versions.applyFailed', apply);
     });
     reset.addEventListener('click', () => {
+      if (writing || loading) return;
       working = current;
       if (selected) void show(selected).then(() => focusTakeControl(0, close));
     });
-    restore.addEventListener('click', async () => {
-      if (!selected) return;
-      restore.disabled = true;
-      try {
-        result = { doc: await api.restoreVersion(id, selected.name), blocks: false };
-        dialog.open = false;
-      } catch (err) {
-        summary.textContent = t('versions.restoreFailed');
-        console.error(err);
-        restore.disabled = false;
-      }
+    restore.addEventListener('click', () => {
+      const version = selected;
+      if (!version) return;
+      void commit(async () => ({ doc: await api.restoreVersion(id, version.name), blocks: false }), 'versions.restoreFailed', restore);
     });
-    close.addEventListener('click', () => (dialog.open = false));
+    close.addEventListener('click', () => {
+      if (!writing) dialog.open = false;
+    });
+    // Escape and other close attempts wait for a running write.
+    dialog.addEventListener('before-close', (event: Event) => {
+      if (event.target === dialog && writing) event.preventDefault();
+    });
     dialog.addEventListener('close', () => {
       observer?.disconnect();
       merge?.destroy();
@@ -246,7 +293,10 @@ export async function openVersionDialog(api: NotesApi, id: string, title: string
     // Preselect the newest version that differs from the current text.
     void (async () => {
       for (const v of versions.slice(0, 2)) {
-        if ((await api.readVersion(id, v.name)) !== current || v === versions[Math.min(1, versions.length - 1)]) {
+        const text = await api.readVersion(id, v.name);
+        // The user already chose a version: keep it.
+        if (loadSeq > 0) return;
+        if (text !== current || v === versions[Math.min(1, versions.length - 1)]) {
           await show(v);
           return;
         }
