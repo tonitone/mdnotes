@@ -204,6 +204,30 @@ test('note list with a note from a subfolder', async ({ page }) => {
   await expectNoSeriousViolations(page, 'note from a subfolder');
 });
 
+// Folder tree in the library column, with a folder chosen and one expanded
+for (const theme of ['light', 'dark', 'hcb', 'hcw'] as const) {
+  test(`library column with the folder tree: theme ${theme}`, async ({ page }) => {
+    await page.addInitScript((value) => localStorage.setItem('mdnotes.theme', value), theme);
+    await openApp(page);
+    for (const [path, text] of [
+      ['projekte/plan.md', '# Projektplan\n\nMeilensteine'],
+      ['projekte/2026/ziele.md', '# Quartalsziele\n\nZiele'],
+      ['archiv/alt.md', '# Alte Notiz\n\nErledigt'],
+    ]) {
+      await page.evaluate(
+        ([p, t]) => (window as unknown as { __mdnotesExternalFile: (path: string, text: string) => Promise<void> }).__mdnotesExternalFile(p, t),
+        [path, text],
+      );
+    }
+    await page.locator('#folderTree ui5-tree-item[data-folder="projekte/2026"]').waitFor({ state: 'attached' });
+    await page.locator('#folderTree ui5-tree-item[data-folder="projekte"]').click({ position: { x: 150, y: 12 } });
+    await page.keyboard.press('ArrowRight');
+    await expect(page.locator('#folderTree ui5-tree-item[data-folder="projekte/2026"]')).toBeVisible();
+    await expect(listItems(page)).toHaveCount(1);
+    await expectNoSeriousViolations(page, `folder tree ${theme}`);
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Menus and dialogs
 // ---------------------------------------------------------------------------
