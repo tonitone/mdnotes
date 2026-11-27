@@ -7,6 +7,9 @@ The detailed feature list. The README has the short version.
   (hidden folders, `assets/` in the root and `node_modules/` are skipped, at most 10 levels deep).
   Symbolic links to notes or folders are followed, also outside the workspace; saving keeps the link.
   New notes go into the root, renaming keeps a note in its folder, restoring from the trash puts it into the root
+- Folder tree in the library, shown once a subfolder holds a note: choosing a folder lists the notes directly in it
+  (count per folder, search within the folder, the trash stays global). "All notes" stays the recursive overview.
+  Only folders that hold notes appear; creating, renaming or deleting folders is left to the file manager
 - Live preview: headings, emphasis, links, lists, tasks, quotes, images, tables
 - Formatting toolbar and shortcuts (Cmd/Ctrl+B, I, K, Shift+X)
 - Labels with suggestions, filter by label in the library, rename or merge labels across all notes
