@@ -75,11 +75,6 @@ test('lists a note from a subfolder with its folder', async () => {
   await expect(item).toHaveCount(1);
   await expect(item).toHaveAttribute('tooltip', 'projekte/unterordner.md');
 });
-  await expect(listItems()).toHaveCount(1);
-  await expect(listItems().first()).toContainText('Im Unterordner');
-  await page.locator('#allNotesItem').click();
-  await expect(listItems().filter({ hasText: 'Hallo' })).toHaveCount(1);
-});
 
 test('offers unsaved text left over from a crash', async () => {
   const notice = page.locator('#noticeRegion');
@@ -246,6 +241,11 @@ test('shows the subfolder in the folder tree and filters by it', async () => {
   // The root carries the workspace folder's name.
   await expect(page.locator('#folderTree ui5-tree-item[data-folder=""]')).toHaveJSProperty('text', path.basename(workspace));
   await folder.click({ position: { x: 150, y: 12 } });
+  await expect(listItems()).toHaveCount(1);
+  await expect(listItems().first()).toContainText('Im Unterordner');
+  await page.locator('#allNotesItem').click();
+  await expect(listItems().filter({ hasText: 'Hallo' })).toHaveCount(1);
+});
 
 test('reports no Content Security Policy violations', async () => {
   // Open the appearance menu as well, so its styles are applied once.
