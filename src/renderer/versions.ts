@@ -253,9 +253,10 @@ export async function openVersionDialog(api: NotesApi, id: string, title: string
         dialog.open = false;
       } catch (err) {
         writing = false;
-        summary.textContent = t(failed);
         console.error(err);
+        // Enable the controls first: refresh() rewrites the summary, the error must stay visible.
         refresh();
+        summary.textContent = t(failed);
         focus.focus();
       }
     };
