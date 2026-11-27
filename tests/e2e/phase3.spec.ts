@@ -163,6 +163,42 @@ test.describe('versions', () => {
     expect(await editorDoc(page)).toBe(original);
     await expect(page.locator('#announcer')).toContainText('Blöcke übernommen');
   });
+
+  test('a failed save stays visible and can be retried', async ({ page }) => {
+    await openApp(page);
+    await openNote(page, 'Sprint-Planung');
+    const original = await editorDoc(page);
+    await editor(page).click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.type('\nNeue Zeile');
+    await page.locator('#versionsButton').click();
+
+    const dialog = page.locator('ui5-dialog');
+    const summary = dialog.locator('.versions-summary');
+    const apply = dialog.locator('ui5-button', { hasText: 'Übernommene Blöcke speichern' });
+    const restore = dialog.locator('ui5-button', { hasText: 'Diese Version wiederherstellen' });
+    await dialog.locator('.versions-take ui5-button').first().click();
+    await expect(summary).toContainText('identisch');
+
+    await page.evaluate(() => (window.__mdnotesVersionWriteFailures = 2));
+    await apply.click();
+    await expect(summary).toHaveText('Die übernommenen Blöcke konnten nicht gespeichert werden.');
+    await expect(page.locator('ui5-dialog')).toHaveCount(1);
+    await expect(apply).toHaveJSProperty('disabled', false);
+
+    // The whole-version restore reports its failure the same way.
+    await dialog.locator('ui5-button', { hasText: 'Zurücksetzen' }).click();
+    await expect(restore).toHaveJSProperty('disabled', false);
+    await restore.click();
+    await expect(summary).toHaveText('Die Version konnte nicht wiederhergestellt werden.');
+    await expect(restore).toHaveJSProperty('disabled', false);
+
+    // Retry succeeds.
+    await dialog.locator('.versions-take ui5-button').first().click();
+    await apply.click();
+    await expect(page.locator('ui5-dialog')).toHaveCount(0);
+    expect(await editorDoc(page)).toBe(original);
+  });
 });
 
 test.describe('labels', () => {

@@ -89,10 +89,21 @@ declare global {
     __mdnotesVersionReadDelayMs?: Record<string, number>;
     /** e2e tests: delay in ms before a version or taken blocks are restored, to test a pending write. */
     __mdnotesVersionWriteDelayMs?: number;
+    /** e2e tests: number of following version or block restores that fail. */
+    __mdnotesVersionWriteFailures?: number;
   }
 }
 
 const wait = (ms: number) => (ms > 0 ? new Promise((resolve) => window.setTimeout(resolve, ms)) : Promise.resolve());
+
+/** e2e tests: delays a version write and lets it fail, as set by the test hooks. */
+async function versionWrite(): Promise<void> {
+  await wait(window.__mdnotesVersionWriteDelayMs ?? 0);
+  if ((window.__mdnotesVersionWriteFailures ?? 0) > 0) {
+    window.__mdnotesVersionWriteFailures = (window.__mdnotesVersionWriteFailures ?? 0) - 1;
+    throw new Error('Simulated write failure');
+  }
+}
 
 function download(fileName: string, content: string): void {
   const url = URL.createObjectURL(new Blob([content], { type: 'text/plain;charset=utf-8' }));
@@ -274,11 +285,11 @@ export async function createMockApi(): Promise<NotesApi> {
       return store.readVersion(id, name);
     },
     async restoreVersion(id, name) {
-      await wait(window.__mdnotesVersionWriteDelayMs ?? 0);
+      await versionWrite();
       return store.restoreVersion(id, name);
     },
     async restoreBlocks(id, body) {
-      await wait(window.__mdnotesVersionWriteDelayMs ?? 0);
+      await versionWrite();
       return store.restoreBlocks(id, body);
     },
     renameLabel: (from, to) => store.renameLabel(from, to),
