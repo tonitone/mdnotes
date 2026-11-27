@@ -85,8 +85,14 @@ declare global {
     __mdnotesAttachmentActions?: string[];
     /** e2e tests: delay in ms before an image or attachment is stored, to test notes switched meanwhile. */
     __mdnotesAssetDelayMs?: number;
+    /** e2e tests: delay in ms before a version is read, by version name, to test reads finishing out of order. */
+    __mdnotesVersionReadDelayMs?: Record<string, number>;
+    /** e2e tests: delay in ms before a version or taken blocks are restored, to test a pending write. */
+    __mdnotesVersionWriteDelayMs?: number;
   }
 }
+
+const wait = (ms: number) => (ms > 0 ? new Promise((resolve) => window.setTimeout(resolve, ms)) : Promise.resolve());
 
 function download(fileName: string, content: string): void {
   const url = URL.createObjectURL(new Blob([content], { type: 'text/plain;charset=utf-8' }));
@@ -263,9 +269,18 @@ export async function createMockApi(): Promise<NotesApi> {
     importTexts,
 
     listVersions: async (id) => (await store.listVersions(id)).map(({ name, time }) => ({ name, time })),
-    readVersion: (id, name) => store.readVersion(id, name),
-    restoreVersion: (id, name) => store.restoreVersion(id, name),
-    restoreBlocks: (id, body) => store.restoreBlocks(id, body),
+    async readVersion(id, name) {
+      await wait(window.__mdnotesVersionReadDelayMs?.[name] ?? 0);
+      return store.readVersion(id, name);
+    },
+    async restoreVersion(id, name) {
+      await wait(window.__mdnotesVersionWriteDelayMs ?? 0);
+      return store.restoreVersion(id, name);
+    },
+    async restoreBlocks(id, body) {
+      await wait(window.__mdnotesVersionWriteDelayMs ?? 0);
+      return store.restoreBlocks(id, body);
+    },
     renameLabel: (from, to) => store.renameLabel(from, to),
 
     getBackupSettings: async () => settings(),

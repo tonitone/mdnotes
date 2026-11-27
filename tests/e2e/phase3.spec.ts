@@ -95,6 +95,74 @@ test.describe('versions', () => {
     await expect(dialog.locator('.versions-summary')).not.toContainText('noch nicht gespeichert');
     await expect(apply).toHaveJSProperty('disabled', true);
   });
+
+  test('a superseded version read does not replace the diff', async ({ page }) => {
+    await openApp(page);
+    await openNote(page, 'Sprint-Planung');
+    await editor(page).click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.type('\nNeue Zeile');
+    await page.locator('#versionsButton').click();
+
+    const dialog = page.locator('ui5-dialog');
+    const items = dialog.locator('ui5-li');
+    const summary = dialog.locator('.versions-summary');
+    const diff = dialog.locator('.versions-diff');
+    // The older version is preselected; the newest one equals the current text.
+    await expect(summary).toContainText('1 Änderung');
+    const newest = (await items.nth(0).getAttribute('data-name'))!;
+    const older = (await items.nth(1).getAttribute('data-name'))!;
+
+    // The first read (older) finishes after the second one (newest).
+    await page.evaluate(
+      ([o, n]) => (window.__mdnotesVersionReadDelayMs = { [o]: 1500, [n]: 300 }),
+      [older, newest],
+    );
+    await items.nth(1).click();
+    await items.nth(0).click();
+    // While the selected version loads, the old diff and its take buttons are out of reach.
+    await expect(diff).toHaveAttribute('inert', '');
+    await expect(dialog.locator('ui5-button', { hasText: 'Diese Version wiederherstellen' })).toHaveJSProperty('disabled', true);
+
+    await expect(summary).toContainText('identisch');
+    await expect(diff).not.toHaveAttribute('inert', '');
+    await page.waitForTimeout(1700);
+    await expect(summary).toContainText('identisch');
+    await expect(dialog.locator('.versions-take')).toHaveCount(0);
+    await expect(items.nth(0)).toHaveJSProperty('navigated', true);
+    await expect(items.nth(1)).toHaveJSProperty('navigated', false);
+  });
+
+  test('the dialog stays open until taken blocks are saved', async ({ page }) => {
+    await openApp(page);
+    await openNote(page, 'Sprint-Planung');
+    const original = await editorDoc(page);
+    await editor(page).click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.type('\nNeue Zeile');
+    await page.locator('#versionsButton').click();
+
+    const dialog = page.locator('ui5-dialog');
+    await dialog.locator('.versions-take ui5-button').first().click();
+    await expect(dialog.locator('.versions-summary')).toContainText('identisch');
+
+    await page.evaluate(() => (window.__mdnotesVersionWriteDelayMs = 1500));
+    await dialog.locator('ui5-button', { hasText: 'Übernommene Blöcke speichern' }).click();
+    // Every other action and closing wait for the pending write.
+    await expect(dialog.locator('ui5-button', { hasText: 'Diese Version wiederherstellen' })).toHaveJSProperty('disabled', true);
+    await expect(dialog.locator('ui5-button', { hasText: 'Schließen' })).toHaveJSProperty('disabled', true);
+    await expect(dialog.locator('.versions-diff')).toHaveAttribute('inert', '');
+    // Selecting another version waits too; the click also puts the focus into the dialog for Escape.
+    await dialog.locator('ui5-li').nth(0).click();
+    await expect(dialog.locator('ui5-li').nth(1)).toHaveJSProperty('navigated', true);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('ui5-dialog')).toHaveCount(1);
+    await expect(page.locator('ui5-dialog')).toHaveJSProperty('open', true);
+
+    await expect(page.locator('ui5-dialog')).toHaveCount(0);
+    expect(await editorDoc(page)).toBe(original);
+    await expect(page.locator('#announcer')).toContainText('Blöcke übernommen');
+  });
 });
 
 test.describe('labels', () => {
